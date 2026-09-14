@@ -166,5 +166,27 @@ namespace RsyncZilla.Tests
             session.SiteName = "sumalab.com";
             Assert.Equal("debian@sumalab.com", session.Title);
         }
+
+        [Fact]
+        public void Disconnect_ShouldResetTabTitleToNewConnection()
+        {
+            var session = new RemoteSessionViewModel
+            {
+                Host = "myserver.com",
+                Username = "admin"
+            };
+
+            Assert.Equal("admin@myserver.com", session.Title);
+
+            // Disconnect should reset tab title
+            session.Disconnect();
+            Assert.True(session.IsTabNameReset);
+            Assert.Equal("New Connection", session.Title);
+
+            // Updating host or username should clear reset flag and recompute title
+            session.Host = "other.com";
+            Assert.False(session.IsTabNameReset);
+            Assert.Equal("admin@other.com", session.Title);
+        }
     }
 }

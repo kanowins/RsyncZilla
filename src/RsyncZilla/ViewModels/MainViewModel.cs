@@ -351,6 +351,7 @@ namespace RsyncZilla.ViewModels
                 var (success, error) = await ActiveSession.SftpService.ConnectAsync(Host.Trim(), Port, Username.Trim(), _cachedPassword);
                 if (success)
                 {
+                    ActiveSession.IsTabNameReset = false;
                     ActiveSession.NotifyConnectionChanged();
 
                     // Look up if this connection has previously saved paths

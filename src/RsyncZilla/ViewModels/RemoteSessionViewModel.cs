@@ -9,6 +9,19 @@ namespace RsyncZilla.ViewModels
     {
         public Guid Id { get; } = Guid.NewGuid();
 
+        private bool _isTabNameReset;
+        public bool IsTabNameReset
+        {
+            get => _isTabNameReset;
+            set
+            {
+                if (SetProperty(ref _isTabNameReset, value))
+                {
+                    OnPropertyChanged(nameof(Title));
+                }
+            }
+        }
+
         private string? _siteName;
         public string? SiteName
         {
@@ -17,6 +30,7 @@ namespace RsyncZilla.ViewModels
             {
                 if (SetProperty(ref _siteName, value))
                 {
+                    _isTabNameReset = false;
                     OnPropertyChanged(nameof(Title));
                 }
             }
@@ -30,6 +44,7 @@ namespace RsyncZilla.ViewModels
             {
                 if (SetProperty(ref _host, value))
                 {
+                    _isTabNameReset = false;
                     OnPropertyChanged(nameof(Title));
                     OnPropertyChanged(nameof(DisplayHost));
                 }
@@ -44,6 +59,7 @@ namespace RsyncZilla.ViewModels
             {
                 if (SetProperty(ref _username, value))
                 {
+                    _isTabNameReset = false;
                     OnPropertyChanged(nameof(Title));
                 }
             }
@@ -106,6 +122,9 @@ namespace RsyncZilla.ViewModels
         {
             get
             {
+                if (_isTabNameReset)
+                    return "New Connection";
+
                 var h = !string.IsNullOrWhiteSpace(Host) ? Host.Trim() : (SiteName?.Trim() ?? "");
 
                 if (!string.IsNullOrWhiteSpace(h))
@@ -167,6 +186,8 @@ namespace RsyncZilla.ViewModels
             }
             catch { }
 
+            _isTabNameReset = true;
+            _siteName = null;
             NotifyConnectionChanged();
         }
 
