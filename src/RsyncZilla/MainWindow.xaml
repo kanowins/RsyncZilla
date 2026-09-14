@@ -283,13 +283,20 @@
                          Margin="0,0,12,0"/>
 
                 <!-- Connect Button -->
-                <Button Grid.Column="8" 
-                        Content="{Binding ConnectionButtonText}"
-                        Command="{Binding ConnectCommand}"
-                        CommandParameter="{Binding ElementName=PasswordInput}"
-                        IsEnabled="{Binding IsConnecting, Converter={StaticResource InverseBoolConverter}}"
-                        Style="{StaticResource AccentButtonStyle}"
-                        MinWidth="120" Height="28"/>
+                <StackPanel Grid.Column="8" Orientation="Horizontal">
+                    <Button Content="{Binding ConnectionButtonText}"
+                            Command="{Binding ConnectCommand}"
+                            CommandParameter="{Binding ElementName=PasswordInput}"
+                            IsEnabled="{Binding IsConnecting, Converter={StaticResource InverseBoolConverter}}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            MinWidth="110" Height="28" Margin="0,0,6,0"/>
+
+                    <Button Content="📂 Sitios"
+                            Command="{Binding OpenSiteManagerCommand}"
+                            ToolTip="Gestor de conexiones guardadas"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Padding="8,4" Height="28"/>
+                </StackPanel>
 
                 <!-- Connection Indicator -->
                 <StackPanel Grid.Column="9" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -483,10 +490,10 @@
         <!-- 3. SPLITTER -->
         <GridSplitter Grid.Row="2" Height="4" HorizontalAlignment="Stretch" Background="#D0D0D0" Cursor="SizeNS"/>
 
-        <!-- 4. BOTTOM TABS: TRANSFERS & LOGS -->
+        <!-- 4. BOTTOM TABS: TRANSFERS, FAILED, COMPLETED & LOGS -->
         <TabControl Grid.Row="3" Margin="8,4,8,4">
-            <!-- TAB 1: ACTIVE TRANSFERS -->
-            <TabItem Header="🚀 Transferencias Activas">
+            <!-- TAB 1: ACTIVE & PENDING TRANSFERS QUEUE -->
+            <TabItem Header="🚀 Cola de Transferencias">
                 <Grid Background="#FFFFFF">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -495,13 +502,14 @@
 
                     <DataGrid Grid.Row="0" ItemsSource="{Binding ActiveTransfers}">
                         <DataGrid.Columns>
+                            <DataGridTextColumn Header="Estado" Binding="{Binding StatusBadge}" Width="110"/>
                             <DataGridTextColumn Header="Dirección" Binding="{Binding DirectionIcon}" Width="90"/>
                             <DataGridTextColumn Header="Archivo / Carpeta" Binding="{Binding FileName}" Width="200"/>
-                            <DataGridTemplateColumn Header="Progreso" Width="250">
+                            <DataGridTemplateColumn Header="Progreso" Width="220">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Grid Margin="4">
-                                            <ProgressBar Value="{Binding ProgressPercentage}" Minimum="0" Maximum="100" Height="16" Foreground="#0078D7" Background="#E0E0E0"/>
+                                            <ProgressBar Value="{Binding ProgressPercentage}" Minimum="0" Maximum="100" Height="16" Foreground="#0078D7" Background="#EAEAEA"/>
                                             <TextBlock Text="{Binding ProgressPercentage, StringFormat='{}{0}%'}" 
                                                        HorizontalAlignment="Center" VerticalAlignment="Center" 
                                                        FontSize="11" FontWeight="Bold" Foreground="#111111"/>
@@ -509,21 +517,52 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Velocidad" Binding="{Binding Speed}" Width="100"/>
-                            <DataGridTextColumn Header="ETA" Binding="{Binding Eta}" Width="80"/>
+                            <DataGridTextColumn Header="Velocidad" Binding="{Binding Speed}" Width="95"/>
+                            <DataGridTextColumn Header="ETA" Binding="{Binding Eta}" Width="75"/>
                             <DataGridTextColumn Header="Detalles" Binding="{Binding TransferredInfo}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="6">
-                        <Button Content="⏹ Cancelar activa" Command="{Binding CancelTransferCommand}" 
-                                Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,4,0"/>
+                        <Button Content="⏹ Cancelar todo (activa y pendientes)" Command="{Binding CancelAllTransfersCommand}" 
+                                Style="{StaticResource SecondaryButtonStyle}" Foreground="#C62828" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Grid>
             </TabItem>
 
-            <!-- TAB 2: COMPLETED TRANSFERS -->
-            <TabItem Header="✅ Historial de Transferencias">
+            <!-- TAB 2: FAILED TRANSFERS WITH RETRY -->
+            <TabItem Header="❌ Transferencias Fallidas">
+                <Grid Background="#FFFFFF">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <DataGrid Grid.Row="0" ItemsSource="{Binding FailedTransfers}" SelectedItem="{Binding SelectedFailedTransfer, Mode=TwoWay}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Estado" Binding="{Binding StatusBadge}" Width="110"/>
+                            <DataGridTextColumn Header="Dirección" Binding="{Binding DirectionIcon}" Width="90"/>
+                            <DataGridTextColumn Header="Archivo" Binding="{Binding FileName}" Width="190"/>
+                            <DataGridTextColumn Header="Error / Causa" Binding="{Binding ErrorMessage}" Width="280"/>
+                            <DataGridTextColumn Header="ExitCode" Binding="{Binding ExitCode}" Width="70"/>
+                            <DataGridTextColumn Header="Origen" Binding="{Binding SourcePath}" Width="*"/>
+                            <DataGridTextColumn Header="Destino" Binding="{Binding DestinationPath}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="6">
+                        <Button Content="🔄 Reintentar seleccionada" Command="{Binding RetrySelectedFailedCommand}" 
+                                Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
+                        <Button Content="🔄 Reintentar todas las fallidas" Command="{Binding RetryAllFailedCommand}" 
+                                Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
+                        <Button Content="Limpiar fallidas" Command="{Binding ClearFailedCommand}" 
+                                Style="{StaticResource SecondaryButtonStyle}"/>
+                    </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- TAB 3: COMPLETED TRANSFERS -->
+            <TabItem Header="✅ Historial de Éxitos">
                 <Grid Background="#FFFFFF">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -549,7 +588,7 @@
                 </Grid>
             </TabItem>
 
-            <!-- TAB 3: SERVER & RSYNC CONSOLE LOG -->
+            <!-- TAB 4: SERVER & RSYNC CONSOLE LOG -->
             <TabItem Header="📜 Registro de Servidor y rsync">
                 <Grid Background="#FAFAFA">
                     <Grid.RowDefinitions>

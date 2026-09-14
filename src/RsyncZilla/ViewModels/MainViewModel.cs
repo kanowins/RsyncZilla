@@ -18,6 +18,7 @@ namespace RsyncZilla.ViewModels
         private readonly LocalFileService _localService;
         private readonly SftpService _sftpService;
         private readonly RsyncService _rsyncService;
+        private readonly ConnectionManagerService _connectionManagerService;
 
         private string _host = "";
         public string Host
@@ -78,26 +79,41 @@ namespace RsyncZilla.ViewModels
 
         public ObservableCollection<TransferTask> ActiveTransfers { get; } = new();
         public ObservableCollection<TransferTask> CompletedTransfers { get; } = new();
+        public ObservableCollection<TransferTask> FailedTransfers { get; } = new();
         public ObservableCollection<LogEntry> LogEntries { get; } = new();
 
-        private CancellationTokenSource? _transferCts;
-        private readonly SemaphoreSlim _transferSemaphore = new(1, 1);
+        private TransferTask? _selectedFailedTransfer;
+        public TransferTask? SelectedFailedTransfer
+        {
+            get => _selectedFailedTransfer;
+            set => SetProperty(ref _selectedFailedTransfer, value);
+        }
+
+        private CancellationTokenSource? _currentTransferCts;
+        private readonly object _queueLock = new();
+        private bool _isProcessingQueue = false;
 
         public ICommand ConnectCommand { get; }
         public ICommand UploadSelectedCommand { get; }
         public ICommand DownloadSelectedCommand { get; }
-        public ICommand CancelTransferCommand { get; }
+        public ICommand CancelAllTransfersCommand { get; }
         public ICommand ClearCompletedCommand { get; }
+        public ICommand ClearFailedCommand { get; }
+        public ICommand RetrySelectedFailedCommand { get; }
+        public ICommand RetryAllFailedCommand { get; }
         public ICommand ClearLogsCommand { get; }
+        public ICommand OpenSiteManagerCommand { get; }
 
         public Func<IEnumerable<FileItem>>? GetLocalSelectedItemsFunc { get; set; }
         public Func<IEnumerable<FileItem>>? GetRemoteSelectedItemsFunc { get; set; }
+        public Action<SavedConnection>? ApplySavedConnectionAction { get; set; }
 
         public MainViewModel()
         {
             _localService = new LocalFileService();
             _sftpService = new SftpService();
             _rsyncService = new RsyncService();
+            _connectionManagerService = new ConnectionManagerService();
 
             LocalBrowser = new FileBrowserViewModel(_localService);
             RemoteBrowser = new FileBrowserViewModel(_sftpService);
@@ -109,9 +125,13 @@ namespace RsyncZilla.ViewModels
             ConnectCommand = new RelayCommand(async (param) => await ToggleConnectionAsync(param));
             UploadSelectedCommand = new RelayCommand(async () => await UploadSelectedAsync(), () => IsConnected);
             DownloadSelectedCommand = new RelayCommand(async () => await DownloadSelectedAsync(), () => IsConnected);
-            CancelTransferCommand = new RelayCommand(CancelActiveTransfer);
+            CancelAllTransfersCommand = new RelayCommand(CancelAllTransfers);
             ClearCompletedCommand = new RelayCommand(() => CompletedTransfers.Clear());
+            ClearFailedCommand = new RelayCommand(() => FailedTransfers.Clear());
+            RetrySelectedFailedCommand = new RelayCommand(() => RetrySelectedFailed(SelectedFailedTransfer), () => SelectedFailedTransfer != null);
+            RetryAllFailedCommand = new RelayCommand(RetryAllFailed, () => FailedTransfers.Any());
             ClearLogsCommand = new RelayCommand(() => LogEntries.Clear());
+            OpenSiteManagerCommand = new RelayCommand(OpenSiteManager);
 
             AddLog("RsyncZilla inicializado. Listo para conectar.", false);
             var rsyncPath = _rsyncService.FindRsyncBinary();
@@ -140,7 +160,7 @@ namespace RsyncZilla.ViewModels
 
             if (string.IsNullOrWhiteSpace(Host) || string.IsNullOrWhiteSpace(Username))
             {
-                MessageBox.Show("Por favor, ingrese Host y Nombre de usuario.", "Datos incompletos", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Por favor, ingrese Servidor (Host) y Nombre de usuario.", "Datos incompletos", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -154,7 +174,13 @@ namespace RsyncZilla.ViewModels
                 {
                     IsConnected = true;
                     StatusText = $"Conectado a {Username}@{Host}:{Port}";
-                    await RemoteBrowser.NavigateToAsync("/");
+
+                    // Save to connection manager (without password)
+                    _connectionManagerService.SaveOrUpdate(Host.Trim(), Username.Trim(), Port);
+
+                    // Navigate to user's remote home directory
+                    var initialPath = string.IsNullOrWhiteSpace(_sftpService.CurrentPath) ? "." : _sftpService.CurrentPath;
+                    await RemoteBrowser.NavigateToAsync(initialPath);
                 }
                 else
                 {
@@ -166,6 +192,23 @@ namespace RsyncZilla.ViewModels
             finally
             {
                 IsConnecting = false;
+            }
+        }
+
+        public void OpenSiteManager()
+        {
+            var dialog = new Views.ConnectionManagerDialog(_connectionManagerService)
+            {
+                Owner = Application.Current.MainWindow
+            };
+
+            if (dialog.ShowDialog() == true && dialog.SelectedConnection != null)
+            {
+                var conn = dialog.SelectedConnection;
+                Host = conn.Host;
+                Username = conn.Username;
+                Port = conn.Port;
+                ApplySavedConnectionAction?.Invoke(conn);
             }
         }
 
@@ -189,107 +232,210 @@ namespace RsyncZilla.ViewModels
             await DownloadItemsAsync(items, LocalBrowser.CurrentPath);
         }
 
-        public async Task UploadItemsAsync(IEnumerable<FileItem> items, string? targetRemotePath = null)
+        public Task UploadItemsAsync(IEnumerable<FileItem> items, string? targetRemotePath = null)
         {
-            if (!IsConnected) return;
+            if (!IsConnected) return Task.CompletedTask;
             var destPath = string.IsNullOrWhiteSpace(targetRemotePath) ? RemoteBrowser.CurrentPath : targetRemotePath;
 
             var validItems = items.Where(i => i != null && !i.IsParent).ToList();
-            if (!validItems.Any()) return;
+            if (!validItems.Any()) return Task.CompletedTask;
 
-            var connection = CreateConnectionProfile();
-
-            _ = Task.Run(async () =>
+            var tasks = validItems.Select(item => new TransferTask
             {
-                bool anySuccess = false;
-                foreach (var item in validItems)
-                {
-                    var task = new TransferTask
-                    {
-                        FileName = item.Name,
-                        SourcePath = item.FullPath,
-                        DestinationPath = destPath,
-                        Direction = TransferDirection.Upload
-                    };
+                FileName = item.Name,
+                SourcePath = item.FullPath,
+                DestinationPath = destPath,
+                Direction = TransferDirection.Upload
+            }).ToList();
 
-                    var success = await ExecuteTransferWithQueueAsync(task, connection);
-                    if (success) anySuccess = true;
-                }
-
-                if (anySuccess)
-                {
-                    await RemoteBrowser.RefreshAsync();
-                }
-            });
+            EnqueueTransfers(tasks);
+            return Task.CompletedTask;
         }
 
-        public async Task UploadPathsAsync(IEnumerable<string> localPaths, string? targetRemotePath = null)
+        public Task UploadPathsAsync(IEnumerable<string> localPaths, string? targetRemotePath = null)
         {
-            if (!IsConnected) return;
+            if (!IsConnected) return Task.CompletedTask;
             var destPath = string.IsNullOrWhiteSpace(targetRemotePath) ? RemoteBrowser.CurrentPath : targetRemotePath;
 
             var validPaths = localPaths.Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
-            if (!validPaths.Any()) return;
+            if (!validPaths.Any()) return Task.CompletedTask;
 
-            var connection = CreateConnectionProfile();
-
-            _ = Task.Run(async () =>
+            var tasks = validPaths.Select(path =>
             {
-                bool anySuccess = false;
-                foreach (var path in validPaths)
+                var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                return new TransferTask
                 {
-                    var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                    var task = new TransferTask
-                    {
-                        FileName = string.IsNullOrEmpty(name) ? path : name,
-                        SourcePath = path,
-                        DestinationPath = destPath,
-                        Direction = TransferDirection.Upload
-                    };
+                    FileName = string.IsNullOrEmpty(name) ? path : name,
+                    SourcePath = path,
+                    DestinationPath = destPath,
+                    Direction = TransferDirection.Upload
+                };
+            }).ToList();
 
-                    var success = await ExecuteTransferWithQueueAsync(task, connection);
-                    if (success) anySuccess = true;
-                }
-
-                if (anySuccess)
-                {
-                    await RemoteBrowser.RefreshAsync();
-                }
-            });
+            EnqueueTransfers(tasks);
+            return Task.CompletedTask;
         }
 
-        public async Task DownloadItemsAsync(IEnumerable<FileItem> items, string? targetLocalPath = null)
+        public Task DownloadItemsAsync(IEnumerable<FileItem> items, string? targetLocalPath = null)
         {
-            if (!IsConnected) return;
+            if (!IsConnected) return Task.CompletedTask;
             var destPath = string.IsNullOrWhiteSpace(targetLocalPath) ? LocalBrowser.CurrentPath : targetLocalPath;
 
             var validItems = items.Where(i => i != null && !i.IsParent).ToList();
-            if (!validItems.Any()) return;
+            if (!validItems.Any()) return Task.CompletedTask;
 
-            var connection = CreateConnectionProfile();
-
-            _ = Task.Run(async () =>
+            var tasks = validItems.Select(item => new TransferTask
             {
-                bool anySuccess = false;
-                foreach (var item in validItems)
-                {
-                    var task = new TransferTask
-                    {
-                        FileName = item.Name,
-                        SourcePath = item.FullPath,
-                        DestinationPath = destPath,
-                        Direction = TransferDirection.Download
-                    };
+                FileName = item.Name,
+                SourcePath = item.FullPath,
+                DestinationPath = destPath,
+                Direction = TransferDirection.Download
+            }).ToList();
 
-                    var success = await ExecuteTransferWithQueueAsync(task, connection);
-                    if (success) anySuccess = true;
-                }
+            EnqueueTransfers(tasks);
+            return Task.CompletedTask;
+        }
 
-                if (anySuccess)
+        public void EnqueueTransfers(IEnumerable<TransferTask> tasks)
+        {
+            var list = tasks.ToList();
+            if (!list.Any()) return;
+
+            RunOnUi(() =>
+            {
+                foreach (var t in list)
                 {
-                    await LocalBrowser.RefreshAsync();
+                    t.Status = TransferStatus.Pending;
+                    ActiveTransfers.Add(t);
                 }
             });
+
+            _ = ProcessQueueAsync();
+        }
+
+        private async Task ProcessQueueAsync()
+        {
+            lock (_queueLock)
+            {
+                if (_isProcessingQueue) return;
+                _isProcessingQueue = true;
+            }
+
+            try
+            {
+                while (true)
+                {
+                    TransferTask? nextTask = null;
+                    RunOnUi(() =>
+                    {
+                        nextTask = ActiveTransfers.FirstOrDefault(t => t.Status == TransferStatus.Pending);
+                    });
+
+                    if (nextTask == null) break;
+
+                    _currentTransferCts = new CancellationTokenSource();
+                    var connection = CreateConnectionProfile();
+
+                    try
+                    {
+                        var success = await _rsyncService.ExecuteTransferAsync(nextTask, connection, _currentTransferCts.Token);
+                        RunOnUi(() =>
+                        {
+                            ActiveTransfers.Remove(nextTask);
+                            if (success)
+                            {
+                                CompletedTransfers.Insert(0, nextTask);
+                            }
+                            else
+                            {
+                                FailedTransfers.Insert(0, nextTask);
+                            }
+                        });
+
+                        if (success)
+                        {
+                            if (nextTask.Direction == TransferDirection.Upload)
+                                await RemoteBrowser.RefreshAsync();
+                            else
+                                await LocalBrowser.RefreshAsync();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        nextTask.Status = TransferStatus.Failed;
+                        nextTask.ErrorMessage = ex.Message;
+                        RunOnUi(() =>
+                        {
+                            ActiveTransfers.Remove(nextTask);
+                            FailedTransfers.Insert(0, nextTask);
+                        });
+                    }
+                    finally
+                    {
+                        _currentTransferCts?.Dispose();
+                        _currentTransferCts = null;
+                    }
+                }
+            }
+            finally
+            {
+                lock (_queueLock)
+                {
+                    _isProcessingQueue = false;
+                }
+            }
+        }
+
+        public void CancelAllTransfers()
+        {
+            // Cancel running transfer
+            _currentTransferCts?.Cancel();
+
+            // Cancel all pending transfers
+            RunOnUi(() =>
+            {
+                var pending = ActiveTransfers.Where(t => t.Status == TransferStatus.Pending).ToList();
+                foreach (var t in pending)
+                {
+                    t.Status = TransferStatus.Cancelled;
+                    t.ErrorMessage = "Cancelado por el usuario.";
+                    ActiveTransfers.Remove(t);
+                    FailedTransfers.Insert(0, t);
+                }
+            });
+
+            AddLog("Todas las transferencias activas y pendientes han sido canceladas.", true);
+        }
+
+        public void RetrySelectedFailed(TransferTask? task)
+        {
+            if (task == null) return;
+            RunOnUi(() => FailedTransfers.Remove(task));
+            task.ProgressPercentage = 0;
+            task.Speed = "";
+            task.Eta = "";
+            task.TransferredInfo = "";
+            task.ErrorMessage = "";
+            task.ExitCode = null;
+            EnqueueTransfers(new[] { task });
+        }
+
+        public void RetryAllFailed()
+        {
+            var list = FailedTransfers.ToList();
+            if (!list.Any()) return;
+
+            RunOnUi(() => FailedTransfers.Clear());
+            foreach (var task in list)
+            {
+                task.ProgressPercentage = 0;
+                task.Speed = "";
+                task.Eta = "";
+                task.TransferredInfo = "";
+                task.ErrorMessage = "";
+                task.ExitCode = null;
+            }
+            EnqueueTransfers(list);
         }
 
         private ConnectionProfile CreateConnectionProfile()
@@ -301,46 +447,6 @@ namespace RsyncZilla.ViewModels
                 Password = _cachedPassword,
                 Port = Port
             };
-        }
-
-        private async Task<bool> ExecuteTransferWithQueueAsync(TransferTask task, ConnectionProfile connection)
-        {
-            await _transferSemaphore.WaitAsync();
-            RunOnUi(() => ActiveTransfers.Add(task));
-            _transferCts = new CancellationTokenSource();
-
-            try
-            {
-                var success = await _rsyncService.ExecuteTransferAsync(task, connection, _transferCts.Token);
-                RunOnUi(() =>
-                {
-                    ActiveTransfers.Remove(task);
-                    CompletedTransfers.Insert(0, task);
-                });
-                return success;
-            }
-            catch (Exception ex)
-            {
-                task.Status = TransferStatus.Failed;
-                task.ErrorMessage = ex.Message;
-                RunOnUi(() =>
-                {
-                    ActiveTransfers.Remove(task);
-                    CompletedTransfers.Insert(0, task);
-                });
-                return false;
-            }
-            finally
-            {
-                _transferCts?.Dispose();
-                _transferCts = null;
-                _transferSemaphore.Release();
-            }
-        }
-
-        private void CancelActiveTransfer()
-        {
-            _transferCts?.Cancel();
         }
 
         public void AddLog(string message, bool isError)

@@ -25,17 +25,19 @@ Diseñado para resolver el problema clásico de fallos silenciosos de transmisio
    - **Solo envía modificaciones:** Emplea los flags `-avzP --stats --update` para enviar exclusivamente archivos nuevos o deltas modificados.
    - **Escritura atómica:** rsync crea ficheros temporales ocultos antes de reemplazarlos, impidiendo que queden archivos corruptos o a medias.
 
-3. **Autenticación por Usuario y Contraseña Desatendida:**
-   - Implementa un helper nativo (`RsyncAskPass.exe`) y `SSH_ASKPASS` para alimentar las credenciales al subproceso de forma segura y transparente, sin ventanas emergentes molestas.
+3. **Autenticación y Gestor de Conexiones:**
+   - **Gestor de Sitios (📂 Sitios):** Almacena tus servidores habituales (Host, Usuario y Puerto) para conectarte en un clic.
+   - **Seguridad estricta:** **NUNCA guarda contraseñas** en disco.
+   - Permite consultar y eliminar conexiones guardadas en cualquier momento.
+   - Navega automáticamente al **directorio personal (`home`)** del usuario remoto al iniciar sesión.
+   - Asistente integrado `RsyncAskPass.exe` y `SSH_ASKPASS` para alimentar las credenciales al subproceso de forma segura y transparente, sin ventanas emergentes molestas.
 
-4. **Interfaz Moderna en Tema Oscuro (WPF .NET 8):**
-   - Barra superior de conexión rápida (Servidor, Usuario, Contraseña, Puerto 22).
-   - Botones rápidos de transferencia `[ ⏩ Subir ]` y `[ ⏪ Descargar ]`.
-   - Menú contextual con clic derecho en ambos paneles.
-   - Panel inferior con 3 pestañas:
-     - **🚀 Transferencias Activas:** Barra de progreso en tiempo real, velocidad (`MB/s`), tiempo restante (`ETA`) y detalles.
-     - **✅ Historial:** Registro de transferencias completadas con ExitCode verificado.
-     - **📜 Registro de Servidor y rsync:** Consola en tiempo real de eventos SFTP y comandos rsync.
+4. **Pestañas de Control de Transferencias y Logs:**
+   - **🚀 Cola de Transferencias:** Muestra la tarea en curso (con progreso, velocidad y ETA) junto con todas las tareas en espera (`⏳ Pendiente`).
+   - **⏹ Cancelar todo:** Detiene la transferencia activa de rsync de inmediato y retira todas las tareas pendientes de la cola.
+   - **❌ Transferencias Fallidas:** Pestaña dedicada con el motivo exacto del fallo y código de salida. Permite **reintentar la seleccionada** o **reintentar todas las fallidas** con un solo clic.
+   - **✅ Historial de Éxitos:** Registro detallado de transferencias finalizadas correctamente.
+   - **📜 Registro de Servidor y rsync:** Consola en tiempo real de eventos SFTP y comandos rsync.
 
 ---
 

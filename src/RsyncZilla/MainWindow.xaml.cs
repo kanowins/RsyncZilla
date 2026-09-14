@@ -35,6 +35,13 @@ namespace RsyncZilla
             _viewModel.GetLocalSelectedItemsFunc = () => LocalDataGrid.SelectedItems.Cast<FileItem>().ToList();
             _viewModel.GetRemoteSelectedItemsFunc = () => RemoteDataGrid.SelectedItems.Cast<FileItem>().ToList();
 
+            // Focus password field when a site is loaded from manager
+            _viewModel.ApplySavedConnectionAction = (conn) =>
+            {
+                PasswordInput.Password = "";
+                PasswordInput.Focus();
+            };
+
             // Auto-scroll logs safely
             ((INotifyCollectionChanged)_viewModel.LogEntries).CollectionChanged += (s, e) =>
             {
