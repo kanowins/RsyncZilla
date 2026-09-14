@@ -138,23 +138,37 @@ namespace RsyncZilla.Services
             ConnectionProfile connection,
             CancellationToken cancellationToken = default)
         {
+            return await ExecuteBatchTransferAsync(new[] { task }, connection, cancellationToken);
+        }
+
+        public async Task<bool> ExecuteBatchTransferAsync(
+            IReadOnlyList<TransferTask> tasks,
+            ConnectionProfile connection,
+            CancellationToken cancellationToken = default)
+        {
+            if (tasks == null || tasks.Count == 0) return true;
+
             const int maxRetries = 3;
             int attempt = 0;
+
+            var currentBatch = tasks.ToList();
 
             while (attempt < maxRetries)
             {
                 attempt++;
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var (success, reason, errorDetail) = await RunSingleTransferAttemptAsync(task, connection, cancellationToken);
+                var (success, reason, errorDetail) = await RunSingleBatchAttemptAsync(currentBatch, connection, cancellationToken);
 
-                if (success)
+                // Any files that completed successfully are done
+                var uncompleted = currentBatch.Where(t => t.Status != TransferStatus.Completed).ToList();
+                if (!uncompleted.Any())
                 {
                     return true;
                 }
 
                 // If user cancelled, don't retry
-                if (cancellationToken.IsCancellationRequested || task.Status == TransferStatus.Cancelled)
+                if (cancellationToken.IsCancellationRequested || uncompleted.Any(t => t.Status == TransferStatus.Cancelled))
                 {
                     return false;
                 }
@@ -162,23 +176,38 @@ namespace RsyncZilla.Services
                 // If error is PERMISSION DENIED or AUTHENTICATION FAILED, do NOT retry!
                 if (reason == RsyncFailureReason.PermissionDenied)
                 {
-                    task.ErrorMessage = $"Permission error: cannot write or read file at destination. {errorDetail}";
-                    LogMessageReceived?.Invoke($"[rsync] 🚫 Permanent permission error on '{task.FileName}'. Will not retry.", true);
+                    foreach (var t in uncompleted.Where(t => string.IsNullOrEmpty(t.ErrorMessage)))
+                    {
+                        t.ErrorMessage = $"Permission error: cannot write or read file at destination. {errorDetail}";
+                    }
+                    LogMessageReceived?.Invoke($"[rsync] 🚫 Permanent permission error on batch. Will not retry.", true);
                     return false;
                 }
 
                 if (reason == RsyncFailureReason.AuthenticationFailed)
                 {
-                    task.ErrorMessage = $"SSH authentication error. Please verify credentials. {errorDetail}";
-                    LogMessageReceived?.Invoke($"[rsync] 🚫 Authentication failure on '{task.FileName}'. Will not retry.", true);
+                    foreach (var t in uncompleted)
+                    {
+                        t.ErrorMessage = $"SSH authentication error. Please verify credentials. {errorDetail}";
+                    }
+                    LogMessageReceived?.Invoke($"[rsync] 🚫 Authentication failure on batch. Will not retry.", true);
                     return false;
                 }
 
-                // If it's a CONNECTION ERROR and we have attempts left: retry!
+                // If some files failed individually (e.g. exit code 23 partial errors), but it was NOT a connection drop
+                if (reason != RsyncFailureReason.ConnectionError)
+                {
+                    return false;
+                }
+
+                // If it's a CONNECTION ERROR and we have attempts left: retry remaining files!
                 if (attempt < maxRetries)
                 {
-                    LogMessageReceived?.Invoke($"[rsync] ⚠️ Connection failure on '{task.FileName}'. Automatically retrying ({attempt}/{maxRetries}) in 2 seconds...", true);
-                    task.ErrorMessage = $"Connection failure. Retrying ({attempt}/{maxRetries})...";
+                    LogMessageReceived?.Invoke($"[rsync] ⚠️ Connection failure on batch. Automatically retrying ({attempt}/{maxRetries}) in 2 seconds...", true);
+                    foreach (var t in uncompleted)
+                    {
+                        t.ErrorMessage = $"Connection failure. Retrying ({attempt}/{maxRetries})...";
+                    }
                     try
                     {
                         await Task.Delay(2000, cancellationToken);
@@ -187,11 +216,16 @@ namespace RsyncZilla.Services
                     {
                         return false;
                     }
+                    currentBatch = uncompleted;
                 }
                 else
                 {
-                    task.ErrorMessage = $"Connection failure after {maxRetries} attempts: {errorDetail}";
-                    LogMessageReceived?.Invoke($"[rsync] ❌ Exhausted {maxRetries} connection retries for '{task.FileName}'.", true);
+                    foreach (var t in uncompleted)
+                    {
+                        if (string.IsNullOrEmpty(t.ErrorMessage))
+                            t.ErrorMessage = $"Connection failure after {maxRetries} attempts: {errorDetail}";
+                    }
+                    LogMessageReceived?.Invoke($"[rsync] ❌ Exhausted {maxRetries} connection retries for batch.", true);
                     return false;
                 }
             }
@@ -199,50 +233,64 @@ namespace RsyncZilla.Services
             return false;
         }
 
-        private async Task<(bool success, RsyncFailureReason reason, string errorDetail)> RunSingleTransferAttemptAsync(
-            TransferTask task,
+        private async Task<(bool success, RsyncFailureReason reason, string errorDetail)> RunSingleBatchAttemptAsync(
+            IReadOnlyList<TransferTask> tasks,
             ConnectionProfile connection,
             CancellationToken cancellationToken)
         {
             var rsyncPath = FindRsyncBinary();
             if (!File.Exists(rsyncPath))
             {
-                task.Status = TransferStatus.Failed;
-                task.ErrorMessage = $"rsync.exe not found at: {rsyncPath}";
-                return (false, RsyncFailureReason.Other, task.ErrorMessage);
+                foreach (var t in tasks)
+                {
+                    t.Status = TransferStatus.Failed;
+                    t.ErrorMessage = $"rsync.exe not found at: {rsyncPath}";
+                }
+                return (false, RsyncFailureReason.Other, $"rsync.exe not found at: {rsyncPath}");
             }
 
-            task.Status = TransferStatus.Running;
-            task.StartTime = DateTime.Now;
+            foreach (var t in tasks)
+            {
+                t.Status = TransferStatus.Running;
+                t.StartTime = DateTime.Now;
+            }
 
             var rsyncCygwinDir = Path.GetDirectoryName(rsyncPath) ?? "";
             var askPassBinary = FindAskPassBinary();
             var askPassCygwinPath = ToCygwinPath(askPassBinary);
 
-            // Clean SSH command without nested double quote conflicts
             string sshCommand = $"ssh -p {connection.Port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=15 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -o LogLevel=ERROR";
 
-            string sourceArg;
+            var firstTask = tasks[0];
+            var direction = firstTask.Direction;
+
+            var sourceArgsBuilder = new StringBuilder();
             string destArg;
 
-            if (task.Direction == TransferDirection.Upload)
+            if (direction == TransferDirection.Upload)
             {
-                sourceArg = ToCygwinPath(task.SourcePath);
-                var remoteDest = task.DestinationPath.EndsWith("/") ? task.DestinationPath : task.DestinationPath + "/";
-                destArg = $"{connection.Username}@{connection.Host}:{remoteDest}";
+                foreach (var t in tasks)
+                {
+                    sourceArgsBuilder.Append($"\"{ToCygwinPath(t.SourcePath)}\" ");
+                }
+                var remoteDest = firstTask.DestinationPath.EndsWith("/") ? firstTask.DestinationPath : firstTask.DestinationPath + "/";
+                destArg = $"\"{connection.Username}@{connection.Host}:{remoteDest}\"";
             }
             else
             {
-                sourceArg = $"{connection.Username}@{connection.Host}:{task.SourcePath}";
-                var localDest = ToCygwinPath(task.DestinationPath);
+                foreach (var t in tasks)
+                {
+                    sourceArgsBuilder.Append($"\"{connection.Username}@{connection.Host}:{t.SourcePath}\" ");
+                }
+                var localDest = ToCygwinPath(firstTask.DestinationPath);
                 if (!localDest.EndsWith("/")) localDest += "/";
-                destArg = localDest;
+                destArg = $"\"{localDest}\"";
             }
 
-            // Args with -s (protect-args) to prevent remote shell splitting filenames with spaces
-            var args = $"-avzP -s --stats --update -e \"{sshCommand}\" \"{sourceArg}\" \"{destArg}\"";
+            var args = $"-avzP -s --stats --update -e \"{sshCommand}\" {sourceArgsBuilder.ToString().TrimEnd()} {destArg}";
 
-            LogMessageReceived?.Invoke($"[rsync] Transferring: {task.FileName}", false);
+            var batchDescription = tasks.Count == 1 ? tasks[0].FileName : $"{tasks.Count} files ({tasks[0].FileName}, ...)";
+            LogMessageReceived?.Invoke($"[rsync] Transferring batch: {batchDescription}", false);
 
             var startInfo = new ProcessStartInfo
             {
@@ -257,7 +305,6 @@ namespace RsyncZilla.Services
                 StandardErrorEncoding = Encoding.UTF8
             };
 
-            // Set up environment variables
             startInfo.EnvironmentVariables["RSYNC_PASSWORD"] = connection.Password;
             startInfo.EnvironmentVariables["SSH_ASKPASS"] = askPassCygwinPath;
             startInfo.EnvironmentVariables["SSH_ASKPASS_REQUIRE"] = "force";
@@ -267,6 +314,17 @@ namespace RsyncZilla.Services
             startInfo.EnvironmentVariables["PATH"] = $"{rsyncCygwinDir};{currentPath}";
 
             var errorOutput = new StringBuilder();
+
+            // Fast lookup table by filename and basename
+            var taskLookup = new Dictionary<string, TransferTask>(StringComparer.OrdinalIgnoreCase);
+            foreach (var t in tasks)
+            {
+                taskLookup[t.FileName] = t;
+                var baseName = Path.GetFileName(t.SourcePath.TrimEnd('/', '\\'));
+                if (!string.IsNullOrEmpty(baseName)) taskLookup[baseName] = t;
+            }
+
+            TransferTask? activeTask = tasks.Count == 1 ? tasks[0] : null;
 
             try
             {
@@ -279,17 +337,43 @@ namespace RsyncZilla.Services
                     var line = e.Data.Trim();
                     LogMessageReceived?.Invoke($"[rsync] {line}", false);
 
+                    // 1. Check if line announces a new file
+                    var candidateName = line;
+                    if (taskLookup.TryGetValue(candidateName, out var foundTask) ||
+                        tasks.FirstOrDefault(t => candidateName.EndsWith("/" + t.FileName, StringComparison.OrdinalIgnoreCase) || candidateName.Equals(t.FileName, StringComparison.OrdinalIgnoreCase)) is { } matchedTask && (foundTask = matchedTask) != null)
+                    {
+                        if (activeTask != null && activeTask != foundTask && activeTask.Status == TransferStatus.Running)
+                        {
+                            activeTask.Status = TransferStatus.Completed;
+                            activeTask.ProgressPercentage = 100;
+                            activeTask.EndTime = DateTime.Now;
+                        }
+
+                        activeTask = foundTask;
+                        if (activeTask.Status != TransferStatus.Completed && activeTask.Status != TransferStatus.Failed)
+                        {
+                            activeTask.Status = TransferStatus.Running;
+                        }
+                        return;
+                    }
+
+                    // 2. Check for progress matching
                     var match = ProgressRegex.Match(line);
-                    if (match.Success)
+                    if (match.Success && activeTask != null)
                     {
                         var bytesStr = match.Groups[1].Value;
                         if (int.TryParse(match.Groups[2].Value, out int percent))
                         {
-                            task.ProgressPercentage = percent;
+                            activeTask.ProgressPercentage = percent;
+                            if (percent == 100 && line.Contains("(xfr#"))
+                            {
+                                activeTask.Status = TransferStatus.Completed;
+                                activeTask.EndTime = DateTime.Now;
+                            }
                         }
-                        task.Speed = match.Groups[3].Value;
-                        task.Eta = match.Groups[4].Value;
-                        task.TransferredInfo = $"{bytesStr} bytes ({task.Speed}, {task.Eta} remaining)";
+                        activeTask.Speed = match.Groups[3].Value;
+                        activeTask.Eta = match.Groups[4].Value;
+                        activeTask.TransferredInfo = $"{bytesStr} bytes ({activeTask.Speed}, {activeTask.Eta} remaining)";
                     }
                 };
 
@@ -297,8 +381,21 @@ namespace RsyncZilla.Services
                 {
                     if (!string.IsNullOrEmpty(e.Data))
                     {
-                        errorOutput.AppendLine(e.Data);
-                        LogMessageReceived?.Invoke($"[rsync stderr] {e.Data}", true);
+                        var errLine = e.Data.Trim();
+                        errorOutput.AppendLine(errLine);
+                        LogMessageReceived?.Invoke($"[rsync stderr] {errLine}", true);
+
+                        // Check if error mentions any specific task in the batch
+                        foreach (var t in tasks)
+                        {
+                            if (errLine.Contains(t.FileName, StringComparison.OrdinalIgnoreCase) ||
+                                (!string.IsNullOrEmpty(t.SourcePath) && errLine.Contains(Path.GetFileName(t.SourcePath.TrimEnd('/', '\\')), StringComparison.OrdinalIgnoreCase)))
+                            {
+                                t.Status = TransferStatus.Failed;
+                                t.ErrorMessage = errLine;
+                                break;
+                            }
+                        }
                     }
                 };
 
@@ -313,7 +410,11 @@ namespace RsyncZilla.Services
                         if (!process.HasExited)
                         {
                             process.Kill(true);
-                            task.Status = TransferStatus.Cancelled;
+                            foreach (var t in tasks)
+                            {
+                                if (t.Status != TransferStatus.Completed)
+                                    t.Status = TransferStatus.Cancelled;
+                            }
                         }
                     }
                     catch { }
@@ -322,37 +423,84 @@ namespace RsyncZilla.Services
                     await process.WaitForExitAsync();
                 }
 
-                task.ExitCode = process.ExitCode;
-                task.EndTime = DateTime.Now;
-
-                if (cancellationToken.IsCancellationRequested || task.Status == TransferStatus.Cancelled)
+                if (cancellationToken.IsCancellationRequested)
                 {
-                    task.Status = TransferStatus.Cancelled;
-                    task.ErrorMessage = "Transfer cancelled by user.";
-                    return (false, RsyncFailureReason.Other, task.ErrorMessage);
+                    foreach (var t in tasks)
+                    {
+                        if (t.Status != TransferStatus.Completed)
+                        {
+                            t.Status = TransferStatus.Cancelled;
+                            t.ErrorMessage = "Transfer cancelled by user.";
+                        }
+                    }
+                    return (false, RsyncFailureReason.Other, "Cancelled by user");
                 }
 
                 if (process.ExitCode == 0)
                 {
-                    task.Status = TransferStatus.Completed;
-                    task.ProgressPercentage = 100;
-                    task.Eta = "0:00:00";
-                    LogMessageReceived?.Invoke($"[rsync] ✅ {task.FileName} transferred successfully (ExitCode: 0)", false);
+                    foreach (var t in tasks)
+                    {
+                        t.ExitCode = 0;
+                        t.EndTime = DateTime.Now;
+                        if (t.Status != TransferStatus.Failed)
+                        {
+                            t.Status = TransferStatus.Completed;
+                            t.ProgressPercentage = 100;
+                            t.Eta = "0:00:00";
+                        }
+                    }
+                    LogMessageReceived?.Invoke($"[rsync] ✅ Batch completed successfully ({tasks.Count} items)", false);
                     return (true, RsyncFailureReason.Other, "");
+                }
+                else if (process.ExitCode == 23 || process.ExitCode == 24)
+                {
+                    // Partial transfer due to error - some files succeeded, some failed
+                    foreach (var t in tasks)
+                    {
+                        t.ExitCode = process.ExitCode;
+                        t.EndTime = DateTime.Now;
+                        if (t.Status != TransferStatus.Failed)
+                        {
+                            t.Status = TransferStatus.Completed;
+                            t.ProgressPercentage = 100;
+                            t.Eta = "0:00:00";
+                        }
+                    }
+                    var failedCount = tasks.Count(t => t.Status == TransferStatus.Failed);
+                    var successCount = tasks.Count(t => t.Status == TransferStatus.Completed);
+                    LogMessageReceived?.Invoke($"[rsync] ⚠️ Batch completed with partial errors: {successCount} succeeded, {failedCount} failed.", true);
+                    return (true, RsyncFailureReason.Other, errorOutput.ToString().Trim());
                 }
                 else
                 {
-                    task.Status = TransferStatus.Failed;
                     var err = errorOutput.ToString().Trim();
-                    task.ErrorMessage = string.IsNullOrEmpty(err) ? $"rsync returned exit code {process.ExitCode}" : err;
                     var reason = ClassifyError(process.ExitCode, err);
-                    return (false, reason, task.ErrorMessage);
+                    foreach (var t in tasks)
+                    {
+                        t.ExitCode = process.ExitCode;
+                        t.EndTime = DateTime.Now;
+                        if (t.Status != TransferStatus.Completed)
+                        {
+                            t.Status = TransferStatus.Failed;
+                            if (string.IsNullOrEmpty(t.ErrorMessage))
+                            {
+                                t.ErrorMessage = string.IsNullOrEmpty(err) ? $"rsync returned exit code {process.ExitCode}" : err;
+                            }
+                        }
+                    }
+                    return (false, reason, err);
                 }
             }
             catch (Exception ex)
             {
-                task.Status = TransferStatus.Failed;
-                task.ErrorMessage = ex.Message;
+                foreach (var t in tasks)
+                {
+                    if (t.Status != TransferStatus.Completed)
+                    {
+                        t.Status = TransferStatus.Failed;
+                        t.ErrorMessage = ex.Message;
+                    }
+                }
                 var reason = ClassifyError(-1, ex.Message);
                 return (false, reason, ex.Message);
             }

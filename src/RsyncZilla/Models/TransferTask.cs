@@ -34,21 +34,41 @@ namespace RsyncZilla.Models
         public string SourcePath
         {
             get => _sourcePath;
-            set => SetProperty(ref _sourcePath, value);
+            set
+            {
+                if (SetProperty(ref _sourcePath, value))
+                {
+                    OnPropertyChanged(nameof(DisplaySource));
+                }
+            }
         }
 
         private string _destinationPath = string.Empty;
         public string DestinationPath
         {
             get => _destinationPath;
-            set => SetProperty(ref _destinationPath, value);
+            set
+            {
+                if (SetProperty(ref _destinationPath, value))
+                {
+                    OnPropertyChanged(nameof(DisplayDestination));
+                }
+            }
         }
 
         private TransferDirection _direction;
         public TransferDirection Direction
         {
             get => _direction;
-            set => SetProperty(ref _direction, value);
+            set
+            {
+                if (SetProperty(ref _direction, value))
+                {
+                    OnPropertyChanged(nameof(DirectionIcon));
+                    OnPropertyChanged(nameof(DisplaySource));
+                    OnPropertyChanged(nameof(DisplayDestination));
+                }
+            }
         }
 
         private TransferStatus _status = TransferStatus.Pending;
@@ -104,7 +124,20 @@ namespace RsyncZilla.Models
         public DateTime? EndTime { get; set; }
         public int? ExitCode { get; set; }
 
-        public ConnectionProfile? ConnectionProfile { get; set; }
+        private ConnectionProfile? _connectionProfile;
+        public ConnectionProfile? ConnectionProfile
+        {
+            get => _connectionProfile;
+            set
+            {
+                if (SetProperty(ref _connectionProfile, value))
+                {
+                    OnPropertyChanged(nameof(DisplaySource));
+                    OnPropertyChanged(nameof(DisplayDestination));
+                }
+            }
+        }
+
         public Guid? SessionId { get; set; }
 
         public bool IsRunning => Status == TransferStatus.Running;
@@ -120,6 +153,42 @@ namespace RsyncZilla.Models
         };
 
         public string DirectionIcon => Direction == TransferDirection.Upload ? "⬆️ Upload" : "⬇️ Download";
+
+        public string DisplaySource
+        {
+            get
+            {
+                if (Direction == TransferDirection.Upload)
+                {
+                    return SourcePath;
+                }
+                return FormatRemotePath(SourcePath);
+            }
+        }
+
+        public string DisplayDestination
+        {
+            get
+            {
+                if (Direction == TransferDirection.Upload)
+                {
+                    return FormatRemotePath(DestinationPath);
+                }
+                return DestinationPath;
+            }
+        }
+
+        private string FormatRemotePath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return path ?? "";
+            if (ConnectionProfile != null && !string.IsNullOrWhiteSpace(ConnectionProfile.Host))
+            {
+                var userPrefix = !string.IsNullOrWhiteSpace(ConnectionProfile.Username) ? $"{ConnectionProfile.Username}@" : "";
+                var portSuffix = (ConnectionProfile.Port != 22 && ConnectionProfile.Port > 0) ? $":{ConnectionProfile.Port}" : "";
+                return $"{userPrefix}{ConnectionProfile.Host}{portSuffix}:{path}";
+            }
+            return path;
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

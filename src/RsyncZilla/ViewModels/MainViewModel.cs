@@ -583,38 +583,57 @@ namespace RsyncZilla.ViewModels
             {
                 while (true)
                 {
-                    TransferTask? nextTask = null;
+                    List<TransferTask> batch = new();
                     RunOnUi(() =>
                     {
-                        nextTask = ActiveTransfers.FirstOrDefault(t => t.Status == TransferStatus.Pending);
+                        var firstPending = ActiveTransfers.FirstOrDefault(t => t.Status == TransferStatus.Pending);
+                        if (firstPending != null)
+                        {
+                            var targetProfile = firstPending.ConnectionProfile ?? CreateConnectionProfile();
+                            var targetDirection = firstPending.Direction;
+                            var targetDest = firstPending.DestinationPath;
+
+                            // Take up to 100 pending tasks sharing the same connection profile, direction, and destination path
+                            batch = ActiveTransfers
+                                .Where(t => t.Status == TransferStatus.Pending &&
+                                            t.Direction == targetDirection &&
+                                            string.Equals(t.DestinationPath, targetDest, StringComparison.OrdinalIgnoreCase) &&
+                                            AreProfilesEqual(t.ConnectionProfile ?? CreateConnectionProfile(), targetProfile))
+                                .Take(100)
+                                .ToList();
+                        }
                     });
 
-                    if (nextTask == null) break;
+                    if (!batch.Any()) break;
 
                     _currentTransferCts = new CancellationTokenSource();
-                    var connection = nextTask.ConnectionProfile ?? CreateConnectionProfile();
+                    var connection = batch[0].ConnectionProfile ?? CreateConnectionProfile();
 
                     try
                     {
-                        var success = await _rsyncService.ExecuteTransferAsync(nextTask, connection, _currentTransferCts.Token);
+                        var success = await _rsyncService.ExecuteBatchTransferAsync(batch, connection, _currentTransferCts.Token);
                         RunOnUi(() =>
                         {
-                            ActiveTransfers.Remove(nextTask);
-                            if (success)
+                            foreach (var t in batch)
                             {
-                                CompletedTransfers.Insert(0, nextTask);
-                            }
-                            else
-                            {
-                                FailedTransfers.Insert(0, nextTask);
+                                ActiveTransfers.Remove(t);
+                                if (t.Status == TransferStatus.Completed)
+                                {
+                                    CompletedTransfers.Insert(0, t);
+                                }
+                                else if (t.Status == TransferStatus.Failed)
+                                {
+                                    FailedTransfers.Insert(0, t);
+                                }
                             }
                         });
 
-                        if (success)
+                        var anySuccess = batch.Any(t => t.Status == TransferStatus.Completed);
+                        if (anySuccess)
                         {
-                            if (nextTask.Direction == TransferDirection.Upload)
+                            if (batch[0].Direction == TransferDirection.Upload)
                             {
-                                var targetSession = RemoteSessions.FirstOrDefault(s => s.Id == nextTask.SessionId) ?? ActiveSession;
+                                var targetSession = RemoteSessions.FirstOrDefault(s => s.Id == batch[0].SessionId) ?? ActiveSession;
                                 if (targetSession != null)
                                 {
                                     await targetSession.RemoteBrowser.RefreshAsync();
@@ -628,12 +647,16 @@ namespace RsyncZilla.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        nextTask.Status = TransferStatus.Failed;
-                        nextTask.ErrorMessage = ex.Message;
                         RunOnUi(() =>
                         {
-                            ActiveTransfers.Remove(nextTask);
-                            FailedTransfers.Insert(0, nextTask);
+                            foreach (var t in batch)
+                            {
+                                t.Status = TransferStatus.Failed;
+                                if (string.IsNullOrEmpty(t.ErrorMessage))
+                                    t.ErrorMessage = ex.Message;
+                                ActiveTransfers.Remove(t);
+                                FailedTransfers.Insert(0, t);
+                            }
                         });
                     }
                     finally
@@ -650,6 +673,16 @@ namespace RsyncZilla.ViewModels
                     _isProcessingQueue = false;
                 }
             }
+        }
+
+        private static bool AreProfilesEqual(ConnectionProfile a, ConnectionProfile b)
+        {
+            if (ReferenceEquals(a, b)) return true;
+            if (a == null || b == null) return false;
+            return string.Equals(a.Host, b.Host, StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(a.Username, b.Username, StringComparison.OrdinalIgnoreCase) &&
+                   a.Port == b.Port &&
+                   string.Equals(a.Password, b.Password, StringComparison.Ordinal);
         }
 
         public void CancelAllTransfers()

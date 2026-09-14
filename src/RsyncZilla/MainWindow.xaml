@@ -751,8 +751,8 @@
                             <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="190"/>
                             <DataGridTextColumn Header="Error / Cause" Binding="{Binding ErrorMessage}" Width="280"/>
                             <DataGridTextColumn Header="Exit Code" Binding="{Binding ExitCode}" Width="70"/>
-                            <DataGridTextColumn Header="Source" Binding="{Binding SourcePath}" Width="*"/>
-                            <DataGridTextColumn Header="Destination" Binding="{Binding DestinationPath}" Width="*"/>
+                            <DataGridTextColumn Header="Source" Binding="{Binding DisplaySource}" Width="*"/>
+                            <DataGridTextColumn Header="Destination" Binding="{Binding DisplayDestination}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -791,8 +791,8 @@
                             <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90"/>
                             <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="220"/>
                             <DataGridTextColumn Header="Exit Code" Binding="{Binding ExitCode}" Width="70"/>
-                            <DataGridTextColumn Header="Source" Binding="{Binding SourcePath}" Width="*"/>
-                            <DataGridTextColumn Header="Destination" Binding="{Binding DestinationPath}" Width="*"/>
+                            <DataGridTextColumn Header="Source" Binding="{Binding DisplaySource}" Width="*"/>
+                            <DataGridTextColumn Header="Destination" Binding="{Binding DisplayDestination}" Width="*"/>
                             <DataGridTextColumn Header="Completed At" Binding="{Binding EndTime, StringFormat='HH:mm:ss'}" Width="95"/>
                         </DataGrid.Columns>
                     </DataGrid>
