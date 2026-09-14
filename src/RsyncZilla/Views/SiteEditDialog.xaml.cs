@@ -8,7 +8,6 @@ namespace RsyncZilla.Views
 {
     public partial class SiteEditDialog : Window
     {
-        public string SiteName => SiteNameTextBox.Text.Trim();
         public string Host => HostTextBox.Text.Trim();
         public int Port => int.TryParse(PortTextBox.Text.Trim(), out var p) ? p : 22;
         public string Username => UsernameTextBox.Text.Trim();
@@ -22,7 +21,6 @@ namespace RsyncZilla.Views
             if (existing != null)
             {
                 Title = "Edit Site - RsyncZilla";
-                SiteNameTextBox.Text = existing.Name;
                 HostTextBox.Text = existing.Host;
                 PortTextBox.Text = existing.Port.ToString();
                 UsernameTextBox.Text = existing.Username;

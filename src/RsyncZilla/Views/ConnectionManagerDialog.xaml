@@ -29,12 +29,11 @@
                       Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F9FAFB"
                       MouseDoubleClick="ConnectionsGrid_MouseDoubleClick">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="140"/>
-                    <DataGridTextColumn Header="Host" Binding="{Binding Host}" Width="160"/>
-                    <DataGridTextColumn Header="User" Binding="{Binding Username}" Width="100"/>
+                    <DataGridTextColumn Header="Host" Binding="{Binding Host}" Width="170"/>
+                    <DataGridTextColumn Header="User" Binding="{Binding Username}" Width="110"/>
                     <DataGridTextColumn Header="Port" Binding="{Binding Port}" Width="60"/>
-                    <DataGridTextColumn Header="Last Local Path" Binding="{Binding LastLocalPath}" Width="130"/>
-                    <DataGridTextColumn Header="Last Remote Path" Binding="{Binding LastRemotePath}" Width="130"/>
+                    <DataGridTextColumn Header="Last Local Path" Binding="{Binding LastLocalPath}" Width="150"/>
+                    <DataGridTextColumn Header="Last Remote Path" Binding="{Binding LastRemotePath}" Width="150"/>
                     <DataGridTextColumn Header="Last Used" Binding="{Binding LastUsed, StringFormat='MM/dd/yyyy HH:mm'}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>

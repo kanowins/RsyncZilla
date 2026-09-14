@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="New Site - RsyncZilla"
         Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
-        Width="500" Height="380"
+        Width="500" Height="325"
         WindowStartupLocation="CenterOwner"
         Background="#F0F2F5" Foreground="#111111"
         FontFamily="Segoe UI, Segoe UI Emoji, Arial"
@@ -26,13 +26,11 @@
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="6"/>
+                <RowDefinition Height="8"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="6"/>
+                <RowDefinition Height="8"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="6"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="6"/>
+                <RowDefinition Height="8"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
@@ -40,14 +38,9 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Site Name -->
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="Site Name:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#333333"/>
-            <TextBox Grid.Row="0" Grid.Column="1" x:Name="SiteNameTextBox" Padding="6,4" Height="28" VerticalContentAlignment="Center"
-                     ToolTip="A friendly name for this connection (e.g. My VPS)"/>
-
             <!-- Host & Port -->
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="Host / Server:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#333333"/>
-            <Grid Grid.Row="2" Grid.Column="1">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Host / Server:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#333333"/>
+            <Grid Grid.Row="0" Grid.Column="1">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -60,13 +53,13 @@
             </Grid>
 
             <!-- Username -->
-            <TextBlock Grid.Row="4" Grid.Column="0" Text="Username:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#333333"/>
-            <TextBox Grid.Row="4" Grid.Column="1" x:Name="UsernameTextBox" Padding="6,4" Height="28" VerticalContentAlignment="Center"
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Username:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#333333"/>
+            <TextBox Grid.Row="2" Grid.Column="1" x:Name="UsernameTextBox" Padding="6,4" Height="28" VerticalContentAlignment="Center"
                      ToolTip="SSH / SFTP user (e.g. root, ubuntu, deploy)"/>
 
             <!-- Initial Local Path -->
-            <TextBlock Grid.Row="6" Grid.Column="0" Text="Local Path (optional):" VerticalAlignment="Center" Foreground="#333333"/>
-            <Grid Grid.Row="6" Grid.Column="1">
+            <TextBlock Grid.Row="4" Grid.Column="0" Text="Local Path (optional):" VerticalAlignment="Center" Foreground="#333333"/>
+            <Grid Grid.Row="4" Grid.Column="1">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -78,8 +71,8 @@
             </Grid>
 
             <!-- Initial Remote Path -->
-            <TextBlock Grid.Row="8" Grid.Column="0" Text="Remote Path (opt):" VerticalAlignment="Center" Foreground="#333333"/>
-            <TextBox Grid.Row="8" Grid.Column="1" x:Name="RemotePathTextBox" Padding="6,4" Height="28" VerticalContentAlignment="Center"
+            <TextBlock Grid.Row="6" Grid.Column="0" Text="Remote Path (opt):" VerticalAlignment="Center" Foreground="#333333"/>
+            <TextBox Grid.Row="6" Grid.Column="1" x:Name="RemotePathTextBox" Padding="6,4" Height="28" VerticalContentAlignment="Center"
                      ToolTip="Default remote directory (e.g. /var/www/html or leave blank for user home)"/>
         </Grid>
 

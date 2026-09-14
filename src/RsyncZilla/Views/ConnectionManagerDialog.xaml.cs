@@ -51,9 +51,9 @@ namespace RsyncZilla.Views
                     editDialog.Host, 
                     editDialog.Username, 
                     editDialog.Port, 
-                    editDialog.SiteName, 
-                    editDialog.LocalPath, 
-                    editDialog.RemotePath);
+                    customName: null, 
+                    localPath: editDialog.LocalPath, 
+                    remotePath: editDialog.RemotePath);
 
                 LoadConnections();
 
@@ -75,7 +75,7 @@ namespace RsyncZilla.Views
         {
             if (ConnectionsGrid.SelectedItem is SavedConnection conn)
             {
-                var credDialog = new ConnectCredentialsDialog(conn.Host, conn.Username, conn.Port, conn.Name)
+                var credDialog = new ConnectCredentialsDialog(conn.Host, conn.Username, conn.Port)
                 {
                     Owner = this
                 };
