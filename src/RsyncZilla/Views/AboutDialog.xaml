@@ -3,7 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="About RsyncZilla"
         Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
-        Height="560" Width="490"
+        SizeToContent="Height"
+        Width="510"
+        MaxHeight="800"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="#F0F2F5" Foreground="#111111"
@@ -12,7 +14,7 @@
     <Grid Margin="18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- Header with App Icon, Title, Author -->
-            <RowDefinition Height="*"/>    <!-- Info Groups -->
+            <RowDefinition Height="Auto"/> <!-- Info Groups -->
             <RowDefinition Height="Auto"/> <!-- Bottom Buttons -->
         </Grid.RowDefinitions>
 

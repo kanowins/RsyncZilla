@@ -439,7 +439,7 @@
                 <MenuItem Header="Check for _Updates..." Command="{Binding CheckForUpdatesCommand}"/>
                 <Separator/>
                 <MenuItem Header="🌐 RsyncZilla on GitHub..." Command="{Binding OpenUrlCommand}" CommandParameter="https://github.com/kanowins/filezilla"/>
-                <MenuItem Header="🎮 Visit Sumalab Games..." Command="{Binding OpenUrlCommand}" CommandParameter="https://sumalab.com"/>
+                <MenuItem Header="🎮 Developed by Sumalab..." Command="{Binding OpenUrlCommand}" CommandParameter="https://sumalab.com"/>
                 <Separator/>
                 <MenuItem Header="_About RsyncZilla..." Command="{Binding ShowAboutCommand}"/>
             </MenuItem>
