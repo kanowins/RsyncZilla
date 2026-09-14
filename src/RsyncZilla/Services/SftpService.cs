@@ -248,6 +248,31 @@ namespace RsyncZilla.Services
             return await DeleteItemsAsync(new[] { (path, isDirectory) });
         }
 
+        public async Task<bool> RenameItemAsync(string oldPath, string newName)
+        {
+            if (_client == null || !_client.IsConnected) return false;
+            if (string.IsNullOrWhiteSpace(oldPath) || string.IsNullOrWhiteSpace(newName)) return false;
+
+            var parent = GetParentDirectory(oldPath);
+            var newPath = parent == "/" ? $"/{newName.Trim()}" : $"{parent}/{newName.Trim()}";
+            if (string.Equals(oldPath, newPath, StringComparison.Ordinal)) return true;
+
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    _client.RenameFile(oldPath, newPath);
+                    LogMessageReceived?.Invoke($"Renamed remote item '{oldPath}' to '{newPath}'", false);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    LogMessageReceived?.Invoke($"Error renaming remote item '{oldPath}' to '{newPath}': {ex.Message}", true);
+                    return false;
+                }
+            });
+        }
+
         private static void DeleteDirectoryRecursive(SftpClient client, string path)
         {
             foreach (var item in client.ListDirectory(path))

@@ -272,6 +272,36 @@ namespace RsyncZilla.ViewModels
             await DeleteItemsAsync(new[] { item });
         }
 
+        public async Task RenameItemAsync(FileItem item, string newName)
+        {
+            if (item == null || item.IsParent || item.IsDrive) return;
+            if (string.IsNullOrWhiteSpace(newName) || string.Equals(item.Name, newName.Trim(), StringComparison.Ordinal)) return;
+
+            var trimmedNewName = newName.Trim();
+            try
+            {
+                if (IsRemote)
+                {
+                    if (_sftpService == null || !_sftpService.IsConnected) return;
+                    var success = await _sftpService.RenameItemAsync(item.FullPath, trimmedNewName);
+                    if (success)
+                    {
+                        await RefreshAsync();
+                    }
+                }
+                else
+                {
+                    if (_localService == null) return;
+                    _localService.RenameItem(item.FullPath, trimmedNewName, item.IsDirectory);
+                    await RefreshAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = ex.Message;
+            }
+        }
+
         private static string GetRemoteParent(string path)
         {
             if (path == "/" || string.IsNullOrEmpty(path)) return "/";

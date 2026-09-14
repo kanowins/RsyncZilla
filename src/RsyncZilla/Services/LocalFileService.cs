@@ -190,6 +190,30 @@ namespace RsyncZilla.Services
             Directory.CreateDirectory(path);
         }
 
+        public void RenameItem(string oldPath, string newName, bool isDirectory)
+        {
+            if (string.IsNullOrWhiteSpace(oldPath) || string.IsNullOrWhiteSpace(newName)) return;
+            var parent = Path.GetDirectoryName(oldPath);
+            if (string.IsNullOrEmpty(parent)) return;
+            var newPath = Path.Combine(parent, newName.Trim());
+            if (string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase)) return;
+
+            if (isDirectory)
+            {
+                if (Directory.Exists(oldPath))
+                {
+                    Directory.Move(oldPath, newPath);
+                }
+            }
+            else
+            {
+                if (File.Exists(oldPath))
+                {
+                    File.Move(oldPath, newPath);
+                }
+            }
+        }
+
         public void DeleteItem(string path, bool isDirectory)
         {
             if (isDirectory)

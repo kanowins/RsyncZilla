@@ -4,6 +4,8 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using RsyncZilla.Models;
@@ -24,6 +26,14 @@ namespace RsyncZilla
         private Point _remoteDragStart;
         private bool _isRemoteDragCandidate;
         private DataGridRow? _remoteDraggedRow;
+
+        // Right-click rubber-band marquee selection tracking
+        private Point _rightDragStartPoint;
+        private DataGrid? _rightDragGrid;
+        private bool _isRightDragCandidate;
+        private bool _isRightDragSelecting;
+        private SelectionAdorner? _selectionAdorner;
+        private readonly HashSet<FileItem> _rightDragInitialSelectedItems = new();
 
         public MainWindow()
         {
@@ -62,12 +72,46 @@ namespace RsyncZilla
         }
 
         // ==========================================
-        // PRESERVE MULTI-SELECTION ON RIGHT CLICK
+        // QUICK CONNECT ENTER KEY TRIGGER
+        // ==========================================
+
+        private void QuickConnect_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                if (_viewModel.ConnectCommand.CanExecute(PasswordInput))
+                {
+                    _viewModel.ConnectCommand.Execute(PasswordInput);
+                }
+            }
+        }
+
+        // ==========================================
+        // RIGHT-CLICK RUBBER-BAND SELECTION & CONTEXT MENU
         // ==========================================
 
         private void DataGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (sender is not DataGrid grid) return;
+
+            // Check if user clicked on column headers or scrollbars
             var dep = e.OriginalSource as DependencyObject;
+            var testObj = dep;
+            while (testObj != null && testObj != grid)
+            {
+                if (testObj is DataGridColumnHeader || testObj is ScrollBar)
+                {
+                    return;
+                }
+                testObj = VisualTreeHelper.GetParent(testObj);
+            }
+
+            _rightDragStartPoint = e.GetPosition(grid);
+            _rightDragGrid = grid;
+            _isRightDragCandidate = true;
+            _isRightDragSelecting = false;
+
             while (dep != null && dep is not DataGridRow)
             {
                 dep = VisualTreeHelper.GetParent(dep);
@@ -75,7 +119,6 @@ namespace RsyncZilla
 
             if (dep is DataGridRow row)
             {
-                var grid = sender as DataGrid;
                 if (row.IsSelected)
                 {
                     // Row is already selected as part of a multi-selection:
@@ -83,12 +126,146 @@ namespace RsyncZilla
                     row.Focus();
                     e.Handled = true;
                 }
-                else if (grid != null)
+                else
                 {
-                    // Clicked on an unselected row: select only this row
-                    grid.SelectedItems.Clear();
+                    // Clicked on an unselected row:
+                    if (!Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl))
+                    {
+                        grid.SelectedItems.Clear();
+                    }
                     row.IsSelected = true;
                     row.Focus();
+                }
+            }
+            else
+            {
+                // Clicked on empty area of the grid
+                if (!Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl))
+                {
+                    grid.SelectedItems.Clear();
+                }
+            }
+        }
+
+        private void DataGrid_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.RightButton != MouseButtonState.Pressed || !_isRightDragCandidate || _rightDragGrid == null)
+            {
+                return;
+            }
+
+            var currentPoint = e.GetPosition(_rightDragGrid);
+            var diff = currentPoint - _rightDragStartPoint;
+
+            if (!_isRightDragSelecting)
+            {
+                // Must move at least 4 pixels to initiate rubber-band drag
+                if (Math.Abs(diff.X) < 4 && Math.Abs(diff.Y) < 4)
+                {
+                    return;
+                }
+
+                _isRightDragSelecting = true;
+                _rightDragGrid.CaptureMouse();
+
+                var adornerLayer = AdornerLayer.GetAdornerLayer(_rightDragGrid) ?? AdornerLayer.GetAdornerLayer(this);
+                if (adornerLayer != null)
+                {
+                    _selectionAdorner = new SelectionAdorner(_rightDragGrid);
+                    adornerLayer.Add(_selectionAdorner);
+                }
+
+                if (!Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl))
+                {
+                    _rightDragInitialSelectedItems.Clear();
+                }
+                else
+                {
+                    _rightDragInitialSelectedItems.Clear();
+                    foreach (var sel in _rightDragGrid.SelectedItems.Cast<FileItem>())
+                    {
+                        _rightDragInitialSelectedItems.Add(sel);
+                    }
+                }
+            }
+
+            _selectionAdorner?.UpdateRect(_rightDragStartPoint, currentPoint);
+
+            var selectionRect = new Rect(
+                Math.Min(_rightDragStartPoint.X, currentPoint.X),
+                Math.Min(_rightDragStartPoint.Y, currentPoint.Y),
+                Math.Max(1, Math.Abs(_rightDragStartPoint.X - currentPoint.X)),
+                Math.Max(1, Math.Abs(_rightDragStartPoint.Y - currentPoint.Y))
+            );
+
+            UpdateSelectionFromRect(_rightDragGrid, selectionRect);
+        }
+
+        private void DataGrid_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_isRightDragSelecting)
+            {
+                if (_selectionAdorner != null && _rightDragGrid != null)
+                {
+                    var adornerLayer = AdornerLayer.GetAdornerLayer(_rightDragGrid) ?? AdornerLayer.GetAdornerLayer(this);
+                    adornerLayer?.Remove(_selectionAdorner);
+                    _selectionAdorner = null;
+                }
+
+                _rightDragGrid?.ReleaseMouseCapture();
+                _isRightDragSelecting = false;
+                _isRightDragCandidate = false;
+                _rightDragGrid = null;
+
+                // Crucial: Suppress context menu after rubber-band dragging!
+                e.Handled = true;
+                return;
+            }
+
+            _isRightDragCandidate = false;
+            _rightDragGrid = null;
+        }
+
+        private void UpdateSelectionFromRect(DataGrid grid, Rect selectionRect)
+        {
+            bool ctrlPressed = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+
+            foreach (var item in grid.Items)
+            {
+                if (item is not FileItem fileItem || fileItem.IsParent)
+                    continue;
+
+                if (grid.ItemContainerGenerator.ContainerFromItem(item) is DataGridRow row)
+                {
+                    try
+                    {
+                        GeneralTransform transform = row.TransformToAncestor(grid);
+                        Point rowTopLeft = transform.Transform(new Point(0, 0));
+                        Rect rowRect = new Rect(rowTopLeft.X, rowTopLeft.Y, row.ActualWidth, row.ActualHeight);
+
+                        bool intersects = selectionRect.IntersectsWith(rowRect);
+
+                        if (intersects)
+                        {
+                            if (!row.IsSelected)
+                            {
+                                row.IsSelected = true;
+                            }
+                        }
+                        else
+                        {
+                            if (!ctrlPressed && !_rightDragInitialSelectedItems.Contains(fileItem))
+                            {
+                                if (row.IsSelected)
+                                {
+                                    row.IsSelected = false;
+                                }
+                            }
+                        }
+                    }
+                    catch
+                    {
+                    }
                 }
             }
         }
@@ -455,6 +632,35 @@ namespace RsyncZilla
                     await DeleteLocalSelectedItemsAsync();
                 }
             }
+            else if (e.Key == Key.F2)
+            {
+                // Do not intercept F2 when editing text in a TextBox or PasswordBox
+                if (Keyboard.FocusedElement is TextBox or PasswordBox)
+                {
+                    return;
+                }
+
+                if (RemoteDataGrid.IsKeyboardFocusWithin)
+                {
+                    e.Handled = true;
+                    await RenameRemoteSelectedItemAsync();
+                }
+                else if (LocalDataGrid.IsKeyboardFocusWithin)
+                {
+                    e.Handled = true;
+                    await RenameLocalSelectedItemAsync();
+                }
+                else if (RemoteDataGrid.SelectedItems.Count > 0 && LocalDataGrid.SelectedItems.Count == 0)
+                {
+                    e.Handled = true;
+                    await RenameRemoteSelectedItemAsync();
+                }
+                else if (LocalDataGrid.SelectedItems.Count > 0 && RemoteDataGrid.SelectedItems.Count == 0)
+                {
+                    e.Handled = true;
+                    await RenameLocalSelectedItemAsync();
+                }
+            }
             else if (e.Key == Key.F5)
             {
                 if (RemoteDataGrid.IsKeyboardFocusWithin || RemotePathTextBox.IsKeyboardFocusWithin)
@@ -478,6 +684,60 @@ namespace RsyncZilla
                     {
                         await _viewModel.RemoteBrowser.RefreshAsync();
                     }
+                }
+            }
+        }
+
+        private async void RenameLocalItem_Click(object sender, RoutedEventArgs e)
+        {
+            await RenameLocalSelectedItemAsync();
+        }
+
+        private async Task RenameLocalSelectedItemAsync()
+        {
+            var item = LocalDataGrid.SelectedItem as FileItem;
+            if (item == null || item.IsParent || item.IsDrive)
+            {
+                return;
+            }
+
+            var dlg = new Views.InputDialog("Rename Local Item", "Enter new name:", item.Name)
+            {
+                Owner = this
+            };
+            if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.ResponseText))
+            {
+                var newName = dlg.ResponseText.Trim();
+                if (!string.Equals(newName, item.Name, StringComparison.Ordinal))
+                {
+                    await _viewModel.LocalBrowser.RenameItemAsync(item, newName);
+                }
+            }
+        }
+
+        private async void RenameRemoteItem_Click(object sender, RoutedEventArgs e)
+        {
+            await RenameRemoteSelectedItemAsync();
+        }
+
+        private async Task RenameRemoteSelectedItemAsync()
+        {
+            var item = RemoteDataGrid.SelectedItem as FileItem;
+            if (item == null || item.IsParent)
+            {
+                return;
+            }
+
+            var dlg = new Views.InputDialog("Rename Remote Item", "Enter new name:", item.Name)
+            {
+                Owner = this
+            };
+            if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.ResponseText))
+            {
+                var newName = dlg.ResponseText.Trim();
+                if (!string.Equals(newName, item.Name, StringComparison.Ordinal))
+                {
+                    await _viewModel.RemoteBrowser.RenameItemAsync(item, newName);
                 }
             }
         }
@@ -525,6 +785,53 @@ namespace RsyncZilla
             if (confirm == MessageBoxResult.Yes)
             {
                 await _viewModel.RemoteBrowser.DeleteItemsAsync(selected);
+            }
+        }
+    }
+
+    // ==========================================
+    // SELECTION MARQUEE ADORNER
+    // ==========================================
+
+    public class SelectionAdorner : Adorner
+    {
+        private Rect _rect;
+        private readonly Pen _pen;
+        private readonly Brush _brush;
+
+        public SelectionAdorner(UIElement adornedElement) : base(adornedElement)
+        {
+            IsHitTestVisible = false;
+            var strokeBrush = new SolidColorBrush(Color.FromRgb(0, 120, 215));
+            strokeBrush.Freeze();
+            _pen = new Pen(strokeBrush, 1.5)
+            {
+                DashStyle = DashStyles.Dash
+            };
+            _pen.Freeze();
+            _brush = new SolidColorBrush(Color.FromArgb(50, 0, 120, 215));
+            _brush.Freeze();
+        }
+
+        public void UpdateRect(Point p1, Point p2)
+        {
+            _rect = new Rect(
+                Math.Min(p1.X, p2.X),
+                Math.Min(p1.Y, p2.Y),
+                Math.Max(1, Math.Abs(p1.X - p2.X)),
+                Math.Max(1, Math.Abs(p1.Y - p2.Y))
+            );
+            InvalidateVisual();
+        }
+
+        public Rect SelectionRect => _rect;
+
+        protected override void OnRender(DrawingContext dc)
+        {
+            base.OnRender(dc);
+            if (_rect.Width > 0 && _rect.Height > 0)
+            {
+                dc.DrawRectangle(_brush, _pen, _rect);
             }
         }
     }

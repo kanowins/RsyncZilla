@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using RsyncZilla;
 using Xunit;
@@ -86,6 +88,46 @@ namespace RsyncZilla.Tests
             Assert.NotNull(parent);
             Assert.Equal("..", parent.Name);
             Assert.Equal("This PC", parent.FullPath);
+        }
+        [Fact]
+        public void LocalFileService_RenameItem_ShouldRenameFileAndDirectorySuccessfully()
+        {
+            var service = new RsyncZilla.Services.LocalFileService();
+            var tempDir = Path.Combine(Path.GetTempPath(), "RsyncZillaTest_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+
+            try
+            {
+                // Test file rename
+                var file1 = Path.Combine(tempDir, "old_file.txt");
+                File.WriteAllText(file1, "Hello World");
+                service.RenameItem(file1, "new_file.txt", false);
+                var renamedFile = Path.Combine(tempDir, "new_file.txt");
+                Assert.False(File.Exists(file1));
+                Assert.True(File.Exists(renamedFile));
+                Assert.Equal("Hello World", File.ReadAllText(renamedFile));
+
+                // Test folder rename
+                var folder1 = Path.Combine(tempDir, "old_folder");
+                Directory.CreateDirectory(folder1);
+                File.WriteAllText(Path.Combine(folder1, "inner.txt"), "Inner");
+                service.RenameItem(folder1, "new_folder", true);
+                var renamedFolder = Path.Combine(tempDir, "new_folder");
+                Assert.False(Directory.Exists(folder1));
+                Assert.True(Directory.Exists(renamedFolder));
+                Assert.True(File.Exists(Path.Combine(renamedFolder, "inner.txt")));
+
+                // Test robust delete
+                service.DeleteItem(renamedFolder, true);
+                Assert.False(Directory.Exists(renamedFolder));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    try { Directory.Delete(tempDir, true); } catch { }
+                }
+            }
         }
     }
 }
