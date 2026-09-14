@@ -784,6 +784,14 @@ namespace RsyncZilla
                     }
                 }
             }
+            else if (e.Key == Key.T && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                if (_viewModel.OpenRemoteTerminalCommand.CanExecute(null))
+                {
+                    e.Handled = true;
+                    _viewModel.OpenRemoteTerminalCommand.Execute(null);
+                }
+            }
         }
 
         private async void RenameLocalItem_Click(object sender, RoutedEventArgs e)

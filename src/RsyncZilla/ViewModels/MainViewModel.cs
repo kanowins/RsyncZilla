@@ -18,6 +18,7 @@ namespace RsyncZilla.ViewModels
         private readonly LocalFileService _localService;
         private readonly RsyncService _rsyncService;
         private readonly ConnectionManagerService _connectionManagerService;
+        private readonly TerminalService _terminalService;
 
         public ObservableCollection<RemoteSessionViewModel> RemoteSessions { get; } = new();
 
@@ -129,16 +130,22 @@ namespace RsyncZilla.ViewModels
         public ICommand RetryAllFailedCommand { get; }
         public ICommand ClearLogsCommand { get; }
         public ICommand OpenSiteManagerCommand { get; }
+        public ICommand OpenRemoteTerminalCommand { get; }
 
         public Func<IEnumerable<FileItem>>? GetLocalSelectedItemsFunc { get; set; }
         public Func<IEnumerable<FileItem>>? GetRemoteSelectedItemsFunc { get; set; }
         public Action<SavedConnection, string>? ApplySavedConnectionAction { get; set; }
 
-        public MainViewModel()
+        public MainViewModel() : this(null, null, null, null)
         {
-            _localService = new LocalFileService();
-            _rsyncService = new RsyncService();
-            _connectionManagerService = new ConnectionManagerService();
+        }
+
+        public MainViewModel(LocalFileService? localService = null, RsyncService? rsyncService = null, ConnectionManagerService? connectionManagerService = null, TerminalService? terminalService = null)
+        {
+            _localService = localService ?? new LocalFileService();
+            _rsyncService = rsyncService ?? new RsyncService();
+            _connectionManagerService = connectionManagerService ?? new ConnectionManagerService();
+            _terminalService = terminalService ?? new TerminalService(_rsyncService);
 
             _fallbackLocalBrowser = new FileBrowserViewModel(_localService);
             _fallbackSftpService = new SftpService();
@@ -165,6 +172,7 @@ namespace RsyncZilla.ViewModels
             RetryAllFailedCommand = new RelayCommand(RetryAllFailed, () => FailedTransfers.Any());
             ClearLogsCommand = new RelayCommand(() => LogEntries.Clear());
             OpenSiteManagerCommand = new RelayCommand(OpenSiteManager);
+            OpenRemoteTerminalCommand = new RelayCommand((param) => OpenRemoteTerminal(param), _ => IsConnected);
 
             // Update tab headers when collection counts change
             ActiveTransfers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(ActiveTabHeader));
@@ -524,6 +532,58 @@ namespace RsyncZilla.ViewModels
 
             EnqueueTransfers(tasks);
             return Task.CompletedTask;
+        }
+
+        public void OpenRemoteTerminal(object? param = null)
+        {
+            if (ActiveSession == null || !IsConnected)
+            {
+                AddLog("[Terminal] Cannot open terminal: session is not connected.", true);
+                return;
+            }
+
+            string? targetPath = null;
+            if (param is FileItem item)
+            {
+                if (item.IsDirectory && !item.IsParent)
+                {
+                    targetPath = item.FullPath;
+                }
+                else
+                {
+                    targetPath = ActiveSession.RemoteBrowser.CurrentPath;
+                }
+            }
+            else if (param is string s && !string.IsNullOrWhiteSpace(s))
+            {
+                targetPath = s;
+            }
+            else
+            {
+                var sel = ActiveSession.RemoteBrowser.SelectedItem;
+                if (sel != null && sel.IsDirectory && !sel.IsParent)
+                {
+                    targetPath = sel.FullPath;
+                }
+                else
+                {
+                    targetPath = ActiveSession.RemoteBrowser.CurrentPath;
+                }
+            }
+
+            var host = ActiveSession.Host;
+            var port = ActiveSession.Port;
+            var username = ActiveSession.Username;
+            var password = !string.IsNullOrEmpty(ActiveSession.Password) ? ActiveSession.Password : _cachedPassword;
+
+            AddLog($"[Terminal] Opening remote terminal at {username}@{host}:{targetPath}...", false);
+
+            var ok = _terminalService.OpenTerminal(host, port, username, password, targetPath, out var error);
+            if (!ok)
+            {
+                AddLog($"[Terminal] Failed to open terminal: {error}", true);
+                MessageBox.Show($"Could not open remote terminal:\n{error}", "Terminal Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         public Task DownloadItemsAsync(IEnumerable<FileItem> items, string? targetLocalPath = null)

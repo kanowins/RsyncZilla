@@ -49,6 +49,19 @@
             </Viewbox>
         </DataTemplate>
 
+        <!-- Vector Icon: Terminal console (>_) -->
+        <DataTemplate x:Key="TerminalIconTemplate">
+            <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Canvas Width="24" Height="24">
+                    <Path Fill="#22252A" Stroke="#0078D7" StrokeThickness="1.2"
+                          Data="M 2,4 C 2,2.9 2.9,2 4,2 L 20,2 C 21.1,2 22,2.9 22,4 L 22,20 C 22,21.1 21.1,22 20,22 L 4,22 C 2.9,22 2,21.1 2,20 Z"/>
+                    <Path Stroke="#00D778" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                          Data="M 6,8 L 11,12 L 6,16"/>
+                    <Line X1="13" Y1="16" X2="18" Y2="16" Stroke="#FFFFFF" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                </Canvas>
+            </Viewbox>
+        </DataTemplate>
+
         <!-- Common Control Styles for Windows Light Theme -->
         <Style TargetType="TextBox">
             <Setter Property="Background" Value="#FFFFFF"/>
@@ -633,6 +646,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
@@ -656,8 +670,15 @@
                             <Button Grid.Column="3" ToolTip="Refresh remote directory"
                                     Command="{Binding RemoteBrowser.RefreshCommand}"
                                     IsEnabled="{Binding IsConnected}"
-                                    Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0">
+                                    Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0" Margin="0,0,4,0">
                                 <ContentControl ContentTemplate="{StaticResource RefreshIconTemplate}" Focusable="False"/>
+                            </Button>
+
+                            <Button Grid.Column="4" ToolTip="Open remote terminal at this directory (Ctrl+T)"
+                                    Command="{Binding OpenRemoteTerminalCommand}"
+                                    IsEnabled="{Binding IsConnected}"
+                                    Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0">
+                                <ContentControl ContentTemplate="{StaticResource TerminalIconTemplate}" Focusable="False"/>
                             </Button>
                         </Grid>
 
@@ -679,6 +700,8 @@
                             <DataGrid.ContextMenu>
                                 <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
                                     <MenuItem Header="🚀 Download to local with rsync" Command="{Binding DownloadSelectedCommand}"/>
+                                    <Separator Background="#E0E0E0"/>
+                                    <MenuItem Header="💻 Open terminal here (Ctrl+T)" Command="{Binding OpenRemoteTerminalCommand}" CommandParameter="{Binding RemoteBrowser.SelectedItem}"/>
                                     <Separator Background="#E0E0E0"/>
                                     <MenuItem Header="📁 New remote folder..." Click="NewRemoteFolder_Click"/>
                                     <MenuItem Header="✏️ Rename..." Click="RenameRemoteItem_Click"/>
