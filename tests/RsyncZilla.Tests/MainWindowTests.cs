@@ -25,7 +25,7 @@ namespace RsyncZilla.Tests
                     Assert.NotNull(window);
                     var vm = window.DataContext as ViewModels.MainViewModel;
                     Assert.NotNull(vm);
-                    Assert.Contains("v1.0.0", vm.FooterInfo);
+                    Assert.Contains(vm.AppVersion, vm.FooterInfo);
                     Assert.Contains("rsync 3.3.0", vm.FooterInfo);
                     Assert.Contains("SSH.NET", vm.FooterInfo);
                     window.Close();

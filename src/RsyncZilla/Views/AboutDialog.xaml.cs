@@ -10,9 +10,12 @@ namespace RsyncZilla.Views
 {
     public partial class AboutDialog : Window
     {
+        public string AppVersion => typeof(AboutDialog).Assembly.GetName().Version?.ToString(3) ?? "1.0.1";
+
         public AboutDialog()
         {
             InitializeComponent();
+            TxtAppTitle.Text = $"RsyncZilla {AppVersion}";
             PopulateSystemDetails();
         }
 
@@ -50,7 +53,7 @@ namespace RsyncZilla.Views
             try
             {
                 var sb = new StringBuilder();
-                sb.AppendLine("RsyncZilla 1.0.0");
+                sb.AppendLine($"RsyncZilla {AppVersion}");
                 sb.AppendLine("Copyright (C) 2026 Sumalab");
                 sb.AppendLine("Homepage: https://github.com/kanowins/filezilla");
                 sb.AppendLine();

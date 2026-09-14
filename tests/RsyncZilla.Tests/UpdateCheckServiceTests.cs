@@ -27,13 +27,17 @@ namespace RsyncZilla.Tests
         {
             var service = new UpdateCheckService();
             Assert.False(service.IsUpdateAvailable);
-            Assert.Equal("1.0.0", service.CurrentVersion);
+            Assert.Equal("1.0.1", service.CurrentVersion);
         }
 
         [Fact]
         public async Task CheckForUpdatesAsync_DetectsUpdateWhenManifestIsNewer()
         {
             var service = new UpdateCheckService();
+            service.CurrentVersion = "1.0.0"; // Simulate older installed version
+            string? logged = null;
+            service.LogMessageReceived += (msg, err) => logged = msg;
+
             var result = await service.CheckForUpdatesAsync();
 
             Assert.True(result.hasUpdate);

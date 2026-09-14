@@ -29,7 +29,7 @@
                    Width="60" Height="60" Margin="0,0,16,0" VerticalAlignment="Top"/>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                <TextBlock Text="RsyncZilla 1.0.0" FontSize="19" FontWeight="Bold" Foreground="#005A9E"/>
+                <TextBlock x:Name="TxtAppTitle" Text="RsyncZilla 1.0.1" FontSize="19" FontWeight="Bold" Foreground="#005A9E"/>
                 <TextBlock Text="Copyright (C) 2026 Sumalab" Margin="0,3,0,0" Foreground="#444444"/>
                 <TextBlock Margin="0,3,0,0">
                     <Run Text="Homepage: " Foreground="#555555"/>

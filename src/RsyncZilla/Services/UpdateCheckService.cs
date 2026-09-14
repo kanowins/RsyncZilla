@@ -20,7 +20,7 @@ namespace RsyncZilla.Services
             HttpClient.DefaultRequestHeaders.Add("User-Agent", "RsyncZilla-App");
         }
 
-        public string CurrentVersion { get; } = "1.0.0";
+        public string CurrentVersion { get; set; } = typeof(UpdateCheckService).Assembly.GetName().Version?.ToString(3) ?? "1.0.1";
 
         private bool _isUpdateAvailable;
         public bool IsUpdateAvailable
