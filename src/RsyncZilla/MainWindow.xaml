@@ -493,7 +493,7 @@
         <!-- 4. BOTTOM TABS: TRANSFERS, FAILED, COMPLETED & LOGS -->
         <TabControl Grid.Row="3" Margin="8,4,8,4">
             <!-- TAB 1: ACTIVE & PENDING TRANSFERS QUEUE -->
-            <TabItem Header="🚀 Cola de Transferencias">
+            <TabItem Header="{Binding ActiveTabHeader}">
                 <Grid Background="#FFFFFF">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -531,7 +531,7 @@
             </TabItem>
 
             <!-- TAB 2: FAILED TRANSFERS WITH RETRY -->
-            <TabItem Header="❌ Transferencias Fallidas">
+            <TabItem Header="{Binding FailedTabHeader}">
                 <Grid Background="#FFFFFF">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -562,7 +562,7 @@
             </TabItem>
 
             <!-- TAB 3: COMPLETED TRANSFERS -->
-            <TabItem Header="✅ Historial de Éxitos">
+            <TabItem Header="{Binding CompletedTabHeader}">
                 <Grid Background="#FFFFFF">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>

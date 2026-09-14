@@ -74,6 +74,10 @@ namespace RsyncZilla.ViewModels
         public string ConnectionButtonText => IsConnected ? "Desconectar" : "Conexión rápida";
         public string ConnectionStatusIndicator => IsConnected ? "🟢 Conectado" : "⚪ Desconectado";
 
+        public string ActiveTabHeader => $"🚀 Cola ({ActiveTransfers.Count})";
+        public string FailedTabHeader => $"❌ Fallidas ({FailedTransfers.Count})";
+        public string CompletedTabHeader => $"✅ Éxitos ({CompletedTransfers.Count})";
+
         public FileBrowserViewModel LocalBrowser { get; }
         public FileBrowserViewModel RemoteBrowser { get; }
 
@@ -132,6 +136,11 @@ namespace RsyncZilla.ViewModels
             RetryAllFailedCommand = new RelayCommand(RetryAllFailed, () => FailedTransfers.Any());
             ClearLogsCommand = new RelayCommand(() => LogEntries.Clear());
             OpenSiteManagerCommand = new RelayCommand(OpenSiteManager);
+
+            // Update tab headers when collection counts change
+            ActiveTransfers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(ActiveTabHeader));
+            FailedTransfers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(FailedTabHeader));
+            CompletedTransfers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(CompletedTabHeader));
 
             AddLog("RsyncZilla inicializado. Listo para conectar.", false);
             var rsyncPath = _rsyncService.FindRsyncBinary();

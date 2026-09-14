@@ -71,5 +71,19 @@ namespace RsyncZilla.Tests
             Assert.False(task.IsRunning);
             Assert.Contains("Completado", task.StatusBadge);
         }
+
+        [Theory]
+        [InlineData(23, "rsync: [receiver] mkstemp: Permission denied (13)", RsyncFailureReason.PermissionDenied)]
+        [InlineData(1, "Operation not permitted on destination", RsyncFailureReason.PermissionDenied)]
+        [InlineData(255, "Permission denied (publickey,password)", RsyncFailureReason.PermissionDenied)]
+        [InlineData(255, "ssh: connect to host 127.0.0.1 port 22: Connection refused", RsyncFailureReason.ConnectionError)]
+        [InlineData(12, "rsync: error in rsync protocol data stream (code 12)", RsyncFailureReason.ConnectionError)]
+        [InlineData(30, "Timeout in data send/receive (code 30)", RsyncFailureReason.ConnectionError)]
+        [InlineData(255, "Connection reset by peer", RsyncFailureReason.ConnectionError)]
+        public void ClassifyError_ShouldDistinguishPermissionsAndConnectionErrors(int exitCode, string output, RsyncFailureReason expected)
+        {
+            var result = RsyncService.ClassifyError(exitCode, output);
+            Assert.Equal(expected, result);
+        }
     }
 }
