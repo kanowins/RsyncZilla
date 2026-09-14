@@ -139,9 +139,24 @@ namespace RsyncZilla.ViewModels
         public ICommand OpenLocalFileCommand { get; }
         public Action<string>? FileOpener { get; set; }
 
+        public UpdateCheckService UpdateService { get; } = new();
+        public ICommand DisconnectCommand { get; }
+        public ICommand ReconnectCommand { get; }
+        public ICommand RefreshAllCommand { get; }
+        public ICommand CheckForUpdatesCommand { get; }
+        public ICommand ShowAboutCommand { get; }
+        public ICommand ShowUpdateCommand { get; }
+        public ICommand ExitCommand { get; }
+        public ICommand OpenUrlCommand { get; }
+
+        public Action? ShowAboutAction { get; set; }
+        public Action? ShowUpdateAction { get; set; }
+        public Action? ExitAction { get; set; }
+
         public Func<IEnumerable<FileItem>>? GetLocalSelectedItemsFunc { get; set; }
         public Func<IEnumerable<FileItem>>? GetRemoteSelectedItemsFunc { get; set; }
         public Action<SavedConnection, string>? ApplySavedConnectionAction { get; set; }
+
 
         public MainViewModel() : this(null, null, null, null, null)
         {
@@ -188,6 +203,38 @@ namespace RsyncZilla.ViewModels
             ShowInExplorerCommand = new RelayCommand((param) => ShowInExplorer(param));
             OpenLocalFileCommand = new RelayCommand((param) => OpenLocalFile(param));
 
+            DisconnectCommand = new RelayCommand(async () => { if (IsConnected) await ToggleConnectionAsync(null); }, () => IsConnected);
+            ReconnectCommand = new RelayCommand(async () => { if (IsConnected) await ToggleConnectionAsync(null); await ToggleConnectionAsync(null); }, () => !string.IsNullOrWhiteSpace(Host));
+            RefreshAllCommand = new RelayCommand(async () => await RefreshAllPanelsAsync());
+            ExitCommand = new RelayCommand(() => ExitAction?.Invoke());
+            ShowAboutCommand = new RelayCommand(() => ShowAboutAction?.Invoke());
+            ShowUpdateCommand = new RelayCommand(() => ShowUpdateAction?.Invoke());
+            CheckForUpdatesCommand = new RelayCommand(async () =>
+            {
+                AddLog("Checking for updates on GitHub...", false);
+                var res = await UpdateService.CheckForUpdatesAsync();
+                if (res.hasUpdate)
+                {
+                    ShowUpdateAction?.Invoke();
+                }
+                else
+                {
+                    MessageBox.Show($"You are running the latest version of RsyncZilla (v{UpdateService.CurrentVersion}).", "Check for Updates", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            });
+
+            OpenUrlCommand = new RelayCommand((param) =>
+            {
+                if (param is string url && !string.IsNullOrWhiteSpace(url))
+                {
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+                    }
+                    catch { }
+                }
+            });
+
             // Update tab headers when collection counts change
             ActiveTransfers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(ActiveTabHeader));
             FailedTransfers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(FailedTabHeader));
@@ -196,6 +243,20 @@ namespace RsyncZilla.ViewModels
             AddLog($"RsyncZilla v{AppVersion} initialized. Ready to connect.", false);
             var rsyncPath = _rsyncService.FindRsyncBinary();
             AddLog($"rsync engine detected at: {rsyncPath}", false);
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                await UpdateService.CheckForUpdatesAsync();
+            });
+        }
+
+        public async Task RefreshAllPanelsAsync()
+        {
+            var tasks = new List<Task>();
+            if (LocalBrowser != null) tasks.Add(LocalBrowser.RefreshAsync());
+            if (RemoteBrowser != null && IsConnected) tasks.Add(RemoteBrowser.RefreshAsync());
+            await Task.WhenAll(tasks);
         }
 
         private RemoteSessionViewModel CreateNewSession(string? host = null, string? username = null, int port = 22, string? siteName = null, string? password = null, string? initialLocalPath = null)

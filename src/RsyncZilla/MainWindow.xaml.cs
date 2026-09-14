@@ -13,6 +13,7 @@ using System.Windows.Media;
 using RsyncZilla.Models;
 using RsyncZilla.Services;
 using RsyncZilla.ViewModels;
+using RsyncZilla.Views;
 
 namespace RsyncZilla
 {
@@ -48,6 +49,28 @@ namespace RsyncZilla
             // Link multiple selection extractors
             _viewModel.GetLocalSelectedItemsFunc = () => LocalDataGrid.SelectedItems.Cast<FileItem>().ToList();
             _viewModel.GetRemoteSelectedItemsFunc = () => RemoteDataGrid.SelectedItems.Cast<FileItem>().ToList();
+
+            // Dialog actions
+            _viewModel.ShowAboutAction = () =>
+            {
+                var dlg = new AboutDialog { Owner = this };
+                dlg.ShowDialog();
+            };
+
+            _viewModel.ShowUpdateAction = () =>
+            {
+                var dlg = new UpdateDialog(
+                    _viewModel.UpdateService.CurrentVersion,
+                    _viewModel.UpdateService.LatestVersion,
+                    _viewModel.UpdateService.ReleaseNotes,
+                    _viewModel.UpdateService.ReleaseUrl)
+                {
+                    Owner = this
+                };
+                dlg.ShowDialog();
+            };
+
+            _viewModel.ExitAction = () => Close();
 
             // Update password field when a site is loaded from manager
             _viewModel.ApplySavedConnectionAction = (conn, pwd) =>

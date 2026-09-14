@@ -1,0 +1,48 @@
+<Window x:Class="RsyncZilla.Views.UpdateDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Software Update - RsyncZilla"
+        Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
+        Height="420" Width="550"
+        WindowStartupLocation="CenterOwner"
+        Background="#F0F2F5" Foreground="#111111"
+        FontFamily="Segoe UI, Arial"
+        MinHeight="300" MinWidth="400">
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="*"/>    <!-- Release notes box -->
+            <RowDefinition Height="Auto"/> <!-- Actions -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="🚀" FontSize="24" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="TxtTitle" Text="A new version of RsyncZilla is available!" FontSize="16" FontWeight="Bold" Foreground="#005A9E"/>
+                    <TextBlock x:Name="TxtVersions" Text="Installed: 1.0.0  |  Latest: 1.1.0" Foreground="#555555" Margin="0,2,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- 2. Notes -->
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="3" Margin="0,0,0,14" Padding="10">
+            <TextBox x:Name="TxtNotes" IsReadOnly="True" BorderThickness="0" Background="Transparent"
+                     TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" AcceptsReturn="True"
+                     FontFamily="Consolas, Segoe UI" FontSize="12" Foreground="#222222"/>
+        </Border>
+
+        <!-- 3. Buttons -->
+        <Grid Grid.Row="2">
+            <Button Content="View &amp; Download on GitHub" HorizontalAlignment="Left" Padding="14,6"
+                    Background="#2EA44F" Foreground="#FFFFFF" BorderBrush="#22863A"
+                    FontWeight="SemiBold" Cursor="Hand" Click="DownloadButton_Click"/>
+
+            <Button Content="Close" HorizontalAlignment="Right" Padding="18,6"
+                    Background="#F5F5F5" BorderBrush="#CCCCCC" Cursor="Hand" IsCancel="True"
+                    Click="CloseButton_Click"/>
+        </Grid>
+    </Grid>
+</Window>

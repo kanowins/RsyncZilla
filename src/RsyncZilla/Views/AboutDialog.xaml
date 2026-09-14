@@ -1,0 +1,141 @@
+<Window x:Class="RsyncZilla.Views.AboutDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About RsyncZilla"
+        Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
+        Height="560" Width="490"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#F0F2F5" Foreground="#111111"
+        FontFamily="Segoe UI, Arial">
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header with App Icon, Title, Author -->
+            <RowDefinition Height="*"/>    <!-- Info Groups -->
+            <RowDefinition Height="Auto"/> <!-- Bottom Buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. Header -->
+        <Grid Grid.Row="0" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Image Grid.Column="0" Source="pack://application:,,,/RsyncZilla;component/app_icon.png" 
+                   Width="60" Height="60" Margin="0,0,16,0" VerticalAlignment="Top"/>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="RsyncZilla 1.0.0" FontSize="19" FontWeight="Bold" Foreground="#005A9E"/>
+                <TextBlock Text="Copyright (C) 2026 Sumalab" Margin="0,3,0,0" Foreground="#444444"/>
+                <TextBlock Margin="0,3,0,0">
+                    <Run Text="Homepage: " Foreground="#555555"/>
+                    <Hyperlink NavigateUri="https://github.com/kanowins/filezilla" RequestNavigate="Hyperlink_RequestNavigate">
+                        https://github.com/kanowins/filezilla
+                    </Hyperlink>
+                </TextBlock>
+            </StackPanel>
+        </Grid>
+
+        <!-- 2. Detail Groups -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14">
+            <StackPanel>
+                <!-- Build information Group -->
+                <GroupBox Header="Build information" Margin="0,0,0,10" Padding="10,8" 
+                          Background="#FFFFFF" BorderBrush="#D0D0D0" FontWeight="SemiBold">
+                    <StackPanel TextElement.FontWeight="Normal" TextElement.FontSize="12">
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="140"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="Compiled for:" Foreground="#555555"/>
+                            <TextBlock Grid.Column="1" x:Name="TxtCompiledFor" Text="win-x64 (.NET 8.0)"/>
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="140"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="Sync Engine:" Foreground="#555555"/>
+                            <TextBlock Grid.Column="1" Text="rsync 3.x (SSH delta-transfer)"/>
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="140"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="SSH &amp; SFTP Library:" Foreground="#555555"/>
+                            <TextBlock Grid.Column="1" Text="SSH.NET 2026 / OpenSSH"/>
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="140"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="Terminal:" Foreground="#555555"/>
+                            <TextBlock Grid.Column="1" Text="KiTTY / PuTTY integrated"/>
+                        </Grid>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- System details Group -->
+                <GroupBox Header="System details" Margin="0,0,0,10" Padding="10,8" 
+                          Background="#FFFFFF" BorderBrush="#D0D0D0" FontWeight="SemiBold">
+                    <StackPanel TextElement.FontWeight="Normal" TextElement.FontSize="12">
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="140"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="Operating System:" Foreground="#555555"/>
+                            <TextBlock Grid.Column="1" x:Name="TxtOsVersion" TextWrapping="Wrap"/>
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="140"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="Platform:" Foreground="#555555"/>
+                            <TextBlock Grid.Column="1" x:Name="TxtPlatform" Text="64-bit operating system"/>
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="140"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="CPU Cores:" Foreground="#555555"/>
+                            <TextBlock Grid.Column="1" x:Name="TxtCpuFeatures"/>
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="140"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="Install Directory:" Foreground="#555555"/>
+                            <TextBlock Grid.Column="1" x:Name="TxtAppDir" TextWrapping="Wrap"/>
+                        </Grid>
+                    </StackPanel>
+                </GroupBox>
+
+                <!-- Sumalab Games Group -->
+                <GroupBox Header="Created by Sumalab 🎮" Padding="10,8" 
+                          Background="#FFFFFF" BorderBrush="#D0D0D0" FontWeight="SemiBold">
+                    <StackPanel TextElement.FontWeight="Normal" TextElement.FontSize="12">
+                        <TextBlock Text="Support the development of RsyncZilla by checking out our games:" 
+                                   TextWrapping="Wrap" Margin="0,0,0,6" Foreground="#444444"/>
+                        <TextBlock Margin="0,2">
+                            <Run Text="• " FontWeight="Bold" Foreground="#0078D7"/>
+                            <Hyperlink NavigateUri="https://store.steampowered.com/app/3675690/HeadHunters/" RequestNavigate="Hyperlink_RequestNavigate">
+                                HeadHunters on Steam
+                            </Hyperlink>
+                            <Run Text=" — Chaotic multiplayer head-party game." Foreground="#666666"/>
+                        </TextBlock>
+                        <TextBlock Margin="0,2">
+                            <Run Text="• " FontWeight="Bold" Foreground="#0078D7"/>
+                            <Hyperlink NavigateUri="https://store.steampowered.com/app/1483380/Vertigo_Rush/" RequestNavigate="Hyperlink_RequestNavigate">
+                                Vertigo Rush on Steam
+                            </Hyperlink>
+                            <Run Text=" — VR racing &amp; parkour." Foreground="#666666"/>
+                        </TextBlock>
+                        <TextBlock Margin="0,4,0,0">
+                            <Run Text="More at: " Foreground="#555555"/>
+                            <Hyperlink NavigateUri="https://sumalab.com" RequestNavigate="Hyperlink_RequestNavigate">
+                                sumalab.com
+                            </Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
+                </GroupBox>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 3. Bottom Buttons -->
+        <Grid Grid.Row="2">
+            <Button Content="Copy to clipboard" HorizontalAlignment="Left" Padding="12,5"
+                    Background="#F5F5F5" BorderBrush="#CCCCCC" Cursor="Hand"
+                    Click="CopyButton_Click"/>
+
+            <Button Content="OK" HorizontalAlignment="Right" Padding="20,5"
+                    Background="#0078D7" Foreground="#FFFFFF" BorderBrush="#005A9E" 
+                    FontWeight="SemiBold" Cursor="Hand" IsDefault="True"
+                    Click="OkButton_Click"/>
+        </Grid>
+    </Grid>
+</Window>
