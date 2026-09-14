@@ -31,13 +31,16 @@ namespace RsyncZilla.Tests
         }
 
         [Fact]
-        public void UpdateBannerText_ReflectsLatestVersion()
+        public async Task CheckForUpdatesAsync_DetectsUpdateWhenManifestIsNewer()
         {
             var service = new UpdateCheckService();
-            Assert.Equal("🚀 Update Available!", service.UpdateBannerText);
+            var result = await service.CheckForUpdatesAsync();
 
-            service.LatestVersion = "v1.2.0";
-            Assert.Equal("🚀 Update Available (v1.2.0)", service.UpdateBannerText);
+            Assert.True(result.hasUpdate);
+            Assert.Contains("1.0.1", result.version);
+            Assert.True(service.IsUpdateAvailable);
+            Assert.Contains("1.0.1", service.UpdateBannerText);
+            Assert.NotEmpty(service.ReleaseNotes);
         }
     }
 }

@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -131,6 +133,49 @@ namespace RsyncZilla.Services
                     // Repo raw file unavailable (e.g. offline)
                 }
 
+                // 3. Fallback: Local dist/version.json (allows local verification before pushing to GitHub)
+                try
+                {
+                    string? localManifest = FindLocalManifest();
+                    if (localManifest != null)
+                    {
+                        var rawJson = File.ReadAllText(localManifest);
+                        using var doc = JsonDocument.Parse(rawJson);
+                        var root = doc.RootElement;
+                        if (root.TryGetProperty("version", out var verElem))
+                        {
+                            var candidate = verElem.GetString() ?? "";
+                            var notesUrl = root.TryGetProperty("release_notes_url", out var nUrl) ? nUrl.GetString() : ReleaseUrl;
+                            var relUrl = root.TryGetProperty("github_release_url", out var rUrl) ? rUrl.GetString() : ReleaseUrl;
+
+                            if (IsNewerVersion(CurrentVersion, candidate))
+                            {
+                                LatestVersion = candidate.StartsWith("v", StringComparison.OrdinalIgnoreCase) ? candidate : $"v{candidate}";
+
+                                var dir = Path.GetDirectoryName(localManifest);
+                                var notesFile = dir != null ? Path.Combine(dir, "RELEASE_NOTES.md") : null;
+                                if (notesFile != null && File.Exists(notesFile))
+                                {
+                                    ReleaseNotes = File.ReadAllText(notesFile);
+                                }
+                                else
+                                {
+                                    ReleaseNotes = $"A new version ({LatestVersion}) is available.";
+                                }
+
+                                ReleaseUrl = relUrl ?? notesUrl ?? ReleaseUrl;
+                                IsUpdateAvailable = true;
+
+                                LogMessageReceived?.Invoke($"[Update] New version available: {LatestVersion}!", false);
+                                return (true, LatestVersion, ReleaseNotes, ReleaseUrl);
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                }
+
                 IsUpdateAvailable = false;
                 return (false, null, null, null);
             }
@@ -154,6 +199,28 @@ namespace RsyncZilla.Services
             }
 
             return string.Compare(cleanCandidate, cleanCurrent, StringComparison.OrdinalIgnoreCase) > 0;
+        }
+
+        private static string? FindLocalManifest()
+        {
+            try
+            {
+                var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+                for (int i = 0; i < 7 && dir != null; i++)
+                {
+                    var p1 = Path.Combine(dir.FullName, "version.json");
+                    if (File.Exists(p1)) return p1;
+                    var p2 = Path.Combine(dir.FullName, "dist", "version.json");
+                    if (File.Exists(p2)) return p2;
+                    dir = dir.Parent;
+                }
+
+                var cwd = Directory.GetCurrentDirectory();
+                var cwdManifest = Path.Combine(cwd, "dist", "version.json");
+                if (File.Exists(cwdManifest)) return cwdManifest;
+            }
+            catch { }
+            return null;
         }
     }
 }

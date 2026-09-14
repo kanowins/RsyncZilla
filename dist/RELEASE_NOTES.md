@@ -1,5 +1,23 @@
 # RsyncZilla Release Notes
 
+## Version 1.0.1 (2026-09-14)
+
+### ✨ New Features & Improvements
+- **Standard Windows Multi-Selection (Ctrl + Shift)**:
+  - `Ctrl + Click`: Toggles individual file selection without unselecting previously chosen items (full Windows Explorer parity).
+  - `Shift + Click`: Range selection between the anchor item and the clicked file.
+- **Top Application Menu**:
+  - `File`: Disconnect, Reconnect, New Tab / Connection, Site Manager, Exit.
+  - `Actions`: Upload / Download Selected, New Directory, Refresh All (`F5`), KiTTY Terminal.
+  - `View`: Clear completed, clear failed, retry all, clear logs.
+  - `Help`: Check for updates, About RsyncZilla, GitHub repository link, Developed by Sumalab link.
+- **Auto Update Detection**:
+  - Dynamic notification banner in the top menu whenever a newer version is detected.
+- **About Dialog**:
+  - Detailed build and system environment info with one-click clipboard copying.
+
+---
+
 ## Version 1.0.0 (2026-09-14)
 
 Initial public release of **RsyncZilla**, the modern Windows SFTP client with delta-transfer synchronization powered by `rsync`.

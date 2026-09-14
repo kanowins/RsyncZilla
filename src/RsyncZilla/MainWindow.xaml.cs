@@ -203,8 +203,9 @@ namespace RsyncZilla
                 curr = VisualTreeHelper.GetParent(curr);
             }
 
-            bool isCtrlOrShift = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl) ||
-                                 Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+            bool isCtrl = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+            bool isShift = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+            bool isCtrlOrShift = isCtrl || isShift;
 
             if (row == null)
             {
@@ -225,30 +226,69 @@ namespace RsyncZilla
                 _isLeftDragCandidate = false;
                 _draggedRow = row;
 
-                if (row.IsSelected)
+                if (isCtrl)
                 {
-                    if (!isCtrlOrShift)
+                    // Standard Windows Explorer Ctrl+Click: toggle selection of the clicked row without unselecting others
+                    _isDragDropCandidate = true;
+                    row.IsSelected = !row.IsSelected;
+                    grid.CurrentItem = row.Item;
+                    row.Focus();
+                    e.Handled = true;
+                }
+                else if (isShift)
+                {
+                    // Standard Windows Explorer Shift+Click: range selection between anchor and clicked item
+                    _isDragDropCandidate = true;
+                    var anchor = grid.CurrentItem as FileItem ?? grid.SelectedItems.Cast<FileItem>().FirstOrDefault();
+                    var target = row.Item as FileItem;
+
+                    if (anchor != null && target != null)
                     {
-                        // Row is already selected: mark candidate for Drag & Drop
-                        _isDragDropCandidate = true;
-                        row.Focus();
-                        e.Handled = true; // Wait for mouse move to drag, or mouse up to isolate single row
+                        var itemsList = grid.Items.Cast<FileItem>().ToList();
+                        int idx1 = itemsList.IndexOf(anchor);
+                        int idx2 = itemsList.IndexOf(target);
+                        if (idx1 >= 0 && idx2 >= 0)
+                        {
+                            int start = Math.Min(idx1, idx2);
+                            int end = Math.Max(idx1, idx2);
+
+                            grid.SelectedItems.Clear();
+                            for (int i = start; i <= end; i++)
+                            {
+                                grid.SelectedItems.Add(itemsList[i]);
+                            }
+                        }
                     }
                     else
                     {
-                        _isDragDropCandidate = false;
+                        row.IsSelected = true;
                     }
+
+                    row.Focus();
+                    e.Handled = true;
                 }
                 else
                 {
-                    // Row is not currently selected
-                    if (!isCtrlOrShift)
+                    // Normal Click (no Ctrl, no Shift)
+                    if (row.IsSelected)
                     {
-                        grid.SelectedItems.Clear();
+                        // Row is already selected: mark candidate for Drag & Drop
+                        // Do NOT clear selection yet (wait for mouse move to drag, or mouse up to isolate single row)
+                        _isDragDropCandidate = true;
+                        grid.CurrentItem = row.Item;
+                        row.Focus();
+                        e.Handled = true;
                     }
-                    row.IsSelected = true;
-                    row.Focus();
-                    _isDragDropCandidate = true;
+                    else
+                    {
+                        // Row is not currently selected: clear other selections and select this row
+                        grid.SelectedItems.Clear();
+                        row.IsSelected = true;
+                        grid.CurrentItem = row.Item;
+                        row.Focus();
+                        _isDragDropCandidate = true;
+                        e.Handled = true;
+                    }
                 }
             }
         }
@@ -749,48 +789,11 @@ namespace RsyncZilla
             }
 
             // Case 2: Dropped from external sources (Visual Studio Code, Windows Explorer, Chromium, etc.)
-            var formats = e.Data.GetFormats() ?? Array.Empty<string>();
-            _viewModel.AddLog($"[Drop] Received external drop into '{targetPath}'. Formats ({formats.Length}): {string.Join(", ", formats)}", false);
-
-            foreach (var fmt in formats)
-            {
-                try
-                {
-                    var data = e.Data.GetData(fmt);
-                    if (data is string str)
-                    {
-                        var preview = str.Length > 150 ? str.Substring(0, 150) + "..." : str;
-                        _viewModel.AddLog($"[Drop] Format '{fmt}' (text): {preview.Replace("\r", " ").Replace("\n", " ")}", false);
-                    }
-                    else if (data is string[] arr)
-                    {
-                        _viewModel.AddLog($"[Drop] Format '{fmt}' (files): {string.Join("; ", arr)}", false);
-                    }
-                    else if (data is Stream stream)
-                    {
-                        _viewModel.AddLog($"[Drop] Format '{fmt}' (stream): {stream.Length} bytes", false);
-                    }
-                    else if (data != null)
-                    {
-                        _viewModel.AddLog($"[Drop] Format '{fmt}' ({data.GetType().Name})", false);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _viewModel.AddLog($"[Drop] Note reading '{fmt}': {ex.Message}", false);
-                }
-            }
-
             var externalPaths = DropDataHelper.ExtractLocalPaths(e.Data);
             if (externalPaths.Count > 0)
             {
-                _viewModel.AddLog($"[Drop] Successfully resolved {externalPaths.Count} local item(s) to upload: {string.Join(", ", externalPaths.Select(Path.GetFileName))}", false);
                 _ = _viewModel.UploadPathsAsync(externalPaths, targetPath);
                 e.Handled = true;
-            }
-            else
-            {
-                _viewModel.AddLog("[Drop] ⚠️ No valid local file/folder paths matching existing files could be extracted from this drop payload.", true);
             }
         }
 
