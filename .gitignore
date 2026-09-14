@@ -1,7 +1,6 @@
 ## Build outputs and distributions
 [Bb]in/
 [Oo]bj/
-dist/
 TestResults/
 
 ## Visual Studio & IDE files
