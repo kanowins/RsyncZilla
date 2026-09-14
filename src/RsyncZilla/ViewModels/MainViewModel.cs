@@ -110,7 +110,7 @@ namespace RsyncZilla.ViewModels
 
         public Func<IEnumerable<FileItem>>? GetLocalSelectedItemsFunc { get; set; }
         public Func<IEnumerable<FileItem>>? GetRemoteSelectedItemsFunc { get; set; }
-        public Action<SavedConnection>? ApplySavedConnectionAction { get; set; }
+        public Action<SavedConnection, string>? ApplySavedConnectionAction { get; set; }
 
         public MainViewModel()
         {
@@ -256,7 +256,7 @@ namespace RsyncZilla.ViewModels
             {
                 var conn = dialog.SelectedConnection;
                 Host = conn.Host;
-                Username = conn.Username;
+                Username = !string.IsNullOrWhiteSpace(dialog.ConnectionUsername) ? dialog.ConnectionUsername : conn.Username;
                 Port = conn.Port;
 
                 if (!string.IsNullOrWhiteSpace(conn.LastLocalPath) && Directory.Exists(conn.LastLocalPath))
@@ -264,7 +264,16 @@ namespace RsyncZilla.ViewModels
                     _ = LocalBrowser.NavigateToAsync(conn.LastLocalPath);
                 }
 
-                ApplySavedConnectionAction?.Invoke(conn);
+                if (dialog.ConnectionPassword != null)
+                {
+                    _cachedPassword = dialog.ConnectionPassword;
+                    ApplySavedConnectionAction?.Invoke(conn, dialog.ConnectionPassword);
+                    _ = ToggleConnectionAsync(null);
+                }
+                else
+                {
+                    ApplySavedConnectionAction?.Invoke(conn, string.Empty);
+                }
             }
         }
 

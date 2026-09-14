@@ -36,7 +36,7 @@ namespace RsyncZilla.Models
         {
             get
             {
-                if (IsParent) return "📁 ⬆️";
+                if (IsParent) return "📁 ⬆";
                 if (IsDirectory) return "📁";
                 var ext = System.IO.Path.GetExtension(Name).ToLowerInvariant();
                 return ext switch

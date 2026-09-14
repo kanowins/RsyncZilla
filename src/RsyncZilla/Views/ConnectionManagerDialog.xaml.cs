@@ -34,12 +34,25 @@ namespace RsyncZilla.Views
             }
         }
 
+        public string? ConnectionPassword { get; private set; }
+        public string? ConnectionUsername { get; private set; }
+
         private void ConnectButton_Click(object sender, RoutedEventArgs e)
         {
             if (ConnectionsGrid.SelectedItem is SavedConnection conn)
             {
-                SelectedConnection = conn;
-                DialogResult = true;
+                var credDialog = new ConnectCredentialsDialog(conn.Host, conn.Username, conn.Port, conn.Name)
+                {
+                    Owner = this
+                };
+
+                if (credDialog.ShowDialog() == true)
+                {
+                    SelectedConnection = conn;
+                    ConnectionUsername = credDialog.Username;
+                    ConnectionPassword = credDialog.Password;
+                    DialogResult = true;
+                }
             }
             else
             {

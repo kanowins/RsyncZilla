@@ -68,5 +68,35 @@ namespace RsyncZilla.Tests
                 throw new Exception($"Fallo al instanciar ConnectionManagerDialog: {thrown.GetType().Name}: {thrown.Message}\n{thrown.StackTrace}", thrown);
             }
         }
+
+        [Fact]
+        public void ConnectCredentialsDialog_ShouldInstantiateWithoutExceptions()
+        {
+            Exception? thrown = null;
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    var app = System.Windows.Application.Current ?? new System.Windows.Application();
+                    var dialog = new RsyncZilla.Views.ConnectCredentialsDialog("example.com", "testuser", 22, "My Test Site");
+                    Assert.Equal("example.com", dialog.Host);
+                    Assert.Equal(22, dialog.Port);
+                    Assert.Equal("testuser", dialog.Username);
+                }
+                catch (Exception ex)
+                {
+                    thrown = ex;
+                }
+            });
+
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            thread.Join(5000);
+
+            if (thrown != null)
+            {
+                throw new Exception($"Fallo al instanciar ConnectCredentialsDialog: {thrown.GetType().Name}: {thrown.Message}\n{thrown.StackTrace}", thrown);
+            }
+        }
     }
 }
