@@ -711,7 +711,7 @@
                 <TextBlock Grid.Column="0" Text="{Binding StatusText}" Foreground="#495057" FontSize="12" VerticalAlignment="Center"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Engine: rsync 3.3.0 portable (Cygwin64) + SSH.NET" Foreground="#6C757D" FontSize="11"/>
+                    <TextBlock Text="{Binding FooterInfo}" Foreground="#6C757D" FontSize="11"/>
                 </StackPanel>
             </Grid>
         </Border>

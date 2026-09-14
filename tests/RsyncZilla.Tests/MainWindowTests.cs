@@ -126,5 +126,40 @@ namespace RsyncZilla.Tests
                 throw new Exception($"Fallo al instanciar SiteEditDialog: {thrown.GetType().Name}: {thrown.Message}\n{thrown.StackTrace}", thrown);
             }
         }
+
+        [Fact]
+        public void LocalFileService_ThisPC_ShouldReturnAvailableDrives()
+        {
+            var service = new RsyncZilla.Services.LocalFileService();
+            var (items, error) = service.GetDirectoryContents("This PC");
+
+            Assert.Null(error);
+            Assert.NotEmpty(items);
+            Assert.All(items, item => Assert.True(item.IsDrive));
+            Assert.Contains(items, item => item.FullPath.StartsWith("C:", StringComparison.OrdinalIgnoreCase));
+        }
+
+        [Fact]
+        public void LocalFileService_DriveRoot_ShouldHaveThisPCParent()
+        {
+            var service = new RsyncZilla.Services.LocalFileService();
+            var (items, error) = service.GetDirectoryContents(@"C:\");
+
+            Assert.Null(error);
+            Assert.NotEmpty(items);
+            var parent = items.FirstOrDefault(i => i.IsParent);
+            Assert.NotNull(parent);
+            Assert.Equal("..", parent.Name);
+            Assert.Equal("This PC", parent.FullPath);
+        }
+
+        [Fact]
+        public void MainViewModel_FooterInfo_ShouldContainVersionAndRsync()
+        {
+            var vm = new RsyncZilla.ViewModels.MainViewModel();
+            Assert.Contains("v1.0.0", vm.FooterInfo);
+            Assert.Contains("rsync 3.3.0", vm.FooterInfo);
+            Assert.Contains("SSH.NET", vm.FooterInfo);
+        }
     }
 }

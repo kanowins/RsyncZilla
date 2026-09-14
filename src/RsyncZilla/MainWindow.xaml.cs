@@ -396,6 +396,12 @@ namespace RsyncZilla
 
         private async void NewLocalFolder_Click(object sender, RoutedEventArgs e)
         {
+            if (string.Equals(_viewModel.LocalBrowser.CurrentPath.Trim(), "This PC", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show("Cannot create a folder in 'This PC'. Please select a drive first.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             var dlg = new Views.InputDialog("New Local Folder", "Enter name for the new local folder:", "New Folder")
             {
                 Owner = this
@@ -421,7 +427,7 @@ namespace RsyncZilla
         private async void DeleteLocalItem_Click(object sender, RoutedEventArgs e)
         {
             var selected = LocalDataGrid.SelectedItems.Cast<FileItem>()
-                .Where(i => i != null && !i.IsParent).ToList();
+                .Where(i => i != null && !i.IsParent && !i.IsDrive).ToList();
 
             if (!selected.Any()) return;
 

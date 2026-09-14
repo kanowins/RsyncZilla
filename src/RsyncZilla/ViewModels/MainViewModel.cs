@@ -74,6 +74,9 @@ namespace RsyncZilla.ViewModels
         public string ConnectionButtonText => IsConnected ? "Disconnect" : "Quick Connect";
         public string ConnectionStatusIndicator => IsConnected ? "🟢 Connected" : "⚪ Disconnected";
 
+        public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
+        public string FooterInfo => $"RsyncZilla v{AppVersion} | Engine: rsync 3.3.0 portable (Cygwin64) + SSH.NET";
+
         public string ActiveTabHeader => $"🚀 Queue ({ActiveTransfers.Count})";
         public string FailedTabHeader => $"❌ Failed ({FailedTransfers.Count})";
         public string CompletedTabHeader => $"✅ Completed ({CompletedTransfers.Count})";
@@ -159,7 +162,7 @@ namespace RsyncZilla.ViewModels
                 }
             };
 
-            AddLog("RsyncZilla initialized. Ready to connect.", false);
+            AddLog($"RsyncZilla v{AppVersion} initialized. Ready to connect.", false);
             var rsyncPath = _rsyncService.FindRsyncBinary();
             AddLog($"rsync engine detected at: {rsyncPath}", false);
         }
@@ -209,7 +212,8 @@ namespace RsyncZilla.ViewModels
                     // Look up if this connection has previously saved paths
                     var saved = _connectionManagerService.FindConnection(Host.Trim(), Username.Trim(), Port);
 
-                    if (saved != null && !string.IsNullOrWhiteSpace(saved.LastLocalPath) && Directory.Exists(saved.LastLocalPath))
+                    if (saved != null && !string.IsNullOrWhiteSpace(saved.LastLocalPath) && 
+                        (Directory.Exists(saved.LastLocalPath) || saved.LastLocalPath.Equals("This PC", StringComparison.OrdinalIgnoreCase)))
                     {
                         await LocalBrowser.NavigateToAsync(saved.LastLocalPath);
                     }
@@ -259,7 +263,8 @@ namespace RsyncZilla.ViewModels
                 Username = !string.IsNullOrWhiteSpace(dialog.ConnectionUsername) ? dialog.ConnectionUsername : conn.Username;
                 Port = conn.Port;
 
-                if (!string.IsNullOrWhiteSpace(conn.LastLocalPath) && Directory.Exists(conn.LastLocalPath))
+                if (!string.IsNullOrWhiteSpace(conn.LastLocalPath) && 
+                    (Directory.Exists(conn.LastLocalPath) || conn.LastLocalPath.Equals("This PC", StringComparison.OrdinalIgnoreCase)))
                 {
                     _ = LocalBrowser.NavigateToAsync(conn.LastLocalPath);
                 }

@@ -23,11 +23,63 @@ namespace RsyncZilla.Services
             }
         }
 
+        public List<FileItem> GetDrivesItems()
+        {
+            var results = new List<FileItem>();
+            try
+            {
+                foreach (var drive in DriveInfo.GetDrives())
+                {
+                    try
+                    {
+                        string label = "";
+                        long totalSize = 0;
+                        if (drive.IsReady)
+                        {
+                            label = !string.IsNullOrWhiteSpace(drive.VolumeLabel) ? $" ({drive.VolumeLabel})" : "";
+                            totalSize = drive.TotalSize;
+                        }
+
+                        string driveType = drive.DriveType switch
+                        {
+                            DriveType.Fixed => "Local Disk",
+                            DriveType.Removable => "Removable Disk",
+                            DriveType.Network => "Network Drive",
+                            DriveType.CDRom => "CD/DVD Drive",
+                            _ => "Drive"
+                        };
+
+                        results.Add(new FileItem
+                        {
+                            Name = $"{drive.Name.TrimEnd('\\')}{label}",
+                            FullPath = drive.RootDirectory.FullName,
+                            IsDirectory = true,
+                            IsDrive = true,
+                            Length = totalSize,
+                            LastWriteTime = DateTime.Now,
+                            Permissions = driveType
+                        });
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+
+            return results;
+        }
+
         public (List<FileItem> items, string? error) GetDirectoryContents(string path)
         {
             var results = new List<FileItem>();
             try
             {
+                if (string.Equals(path?.Trim(), "This PC", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(path?.Trim(), "My PC", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(path?.Trim(), "Drives", StringComparison.OrdinalIgnoreCase))
+                {
+                    return (GetDrivesItems(), null);
+                }
+
                 if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
                 {
                     path = Environment.CurrentDirectory;
@@ -39,7 +91,7 @@ namespace RsyncZilla.Services
 
                 var dirInfo = new DirectoryInfo(path);
 
-                // Parent directory navigation '..' if not root drive
+                // Parent directory navigation '..'
                 try
                 {
                     if (dirInfo.Parent != null)
@@ -51,6 +103,18 @@ namespace RsyncZilla.Services
                             IsDirectory = true,
                             IsParent = true,
                             LastWriteTime = dirInfo.Parent.LastWriteTime
+                        });
+                    }
+                    else
+                    {
+                        // Root drive (e.g. C:\) -> Parent is "This PC" (Drives list)
+                        results.Add(new FileItem
+                        {
+                            Name = "..",
+                            FullPath = "This PC",
+                            IsDirectory = true,
+                            IsParent = true,
+                            LastWriteTime = DateTime.Now
                         });
                     }
                 }

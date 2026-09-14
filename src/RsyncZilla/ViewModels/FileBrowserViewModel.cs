@@ -102,15 +102,7 @@ namespace RsyncZilla.ViewModels
             }
             else
             {
-                try
-                {
-                    var dir = new DirectoryInfo(CurrentPath);
-                    return dir.Parent != null;
-                }
-                catch
-                {
-                    return false;
-                }
+                return !string.Equals(CurrentPath.Trim(), "This PC", StringComparison.OrdinalIgnoreCase);
             }
         }
 
@@ -125,6 +117,11 @@ namespace RsyncZilla.ViewModels
             }
             else
             {
+                if (string.Equals(CurrentPath.Trim(), "This PC", StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
                 try
                 {
                     var dir = new DirectoryInfo(CurrentPath);
@@ -132,8 +129,16 @@ namespace RsyncZilla.ViewModels
                     {
                         _ = NavigateToAsync(dir.Parent.FullName);
                     }
+                    else
+                    {
+                        // At root drive (e.g. C:\) -> go up to This PC (Drives view)
+                        _ = NavigateToAsync("This PC");
+                    }
                 }
-                catch { }
+                catch
+                {
+                    _ = NavigateToAsync("This PC");
+                }
             }
         }
 
@@ -160,7 +165,7 @@ namespace RsyncZilla.ViewModels
                     if (_sftpService == null || !_sftpService.IsConnected)
                     {
                         RunOnUi(() => Items.Clear());
-                        ErrorMessage = "No conectado.";
+                        ErrorMessage = "Not connected.";
                         return;
                     }
 
@@ -176,7 +181,14 @@ namespace RsyncZilla.ViewModels
                     (result, err) = await Task.Run(() => _localService.GetDirectoryContents(path));
                     if (err == null)
                     {
-                        CurrentPath = Path.GetFullPath(path);
+                        if (string.Equals(path?.Trim(), "This PC", StringComparison.OrdinalIgnoreCase))
+                        {
+                            CurrentPath = "This PC";
+                        }
+                        else
+                        {
+                            CurrentPath = Path.GetFullPath(path ?? Environment.CurrentDirectory);
+                        }
                     }
                 }
 
@@ -225,6 +237,7 @@ namespace RsyncZilla.ViewModels
             else
             {
                 if (_localService == null) return;
+                if (string.Equals(CurrentPath.Trim(), "This PC", StringComparison.OrdinalIgnoreCase)) return;
                 var newPath = Path.Combine(CurrentPath, folderName.Trim());
                 _localService.CreateDirectory(newPath);
                 await RefreshAsync();
@@ -233,7 +246,7 @@ namespace RsyncZilla.ViewModels
 
         public async Task DeleteItemAsync(FileItem item)
         {
-            if (item.IsParent) return;
+            if (item.IsParent || item.IsDrive) return;
 
             if (IsRemote)
             {

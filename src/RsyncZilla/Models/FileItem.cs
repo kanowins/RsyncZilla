@@ -7,6 +7,7 @@ namespace RsyncZilla.Models
         public string Name { get; set; } = string.Empty;
         public string FullPath { get; set; } = string.Empty;
         public bool IsDirectory { get; set; }
+        public bool IsDrive { get; set; }
         public long Length { get; set; }
         public DateTime LastWriteTime { get; set; }
         public string Permissions { get; set; } = string.Empty;
@@ -16,6 +17,7 @@ namespace RsyncZilla.Models
         {
             get
             {
+                if (IsDrive) return FormatBytes(Length);
                 if (IsDirectory) return "<DIR>";
                 return FormatBytes(Length);
             }
@@ -26,6 +28,7 @@ namespace RsyncZilla.Models
             get
             {
                 if (IsParent) return "Up one level";
+                if (IsDrive) return "Drive";
                 if (IsDirectory) return "File folder";
                 var ext = System.IO.Path.GetExtension(Name).ToLowerInvariant();
                 return string.IsNullOrEmpty(ext) ? "File" : $"{ext.TrimStart('.').ToUpper()} File";
@@ -37,6 +40,7 @@ namespace RsyncZilla.Models
             get
             {
                 if (IsParent) return "📁 ⬆";
+                if (IsDrive) return "💾";
                 if (IsDirectory) return "📁";
                 var ext = System.IO.Path.GetExtension(Name).ToLowerInvariant();
                 return ext switch
