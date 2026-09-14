@@ -273,15 +273,23 @@ namespace RsyncZilla.ViewModels
 
         private static void RunOnUi(Action action)
         {
-            if (Application.Current != null && Application.Current.Dispatcher != null)
+            var app = Application.Current;
+            if (app?.Dispatcher != null && !app.Dispatcher.HasShutdownStarted && app.Dispatcher.Thread.IsAlive)
             {
-                if (Application.Current.Dispatcher.CheckAccess())
+                if (app.Dispatcher.CheckAccess())
                 {
                     action();
                 }
                 else
                 {
-                    Application.Current.Dispatcher.Invoke(action);
+                    try
+                    {
+                        app.Dispatcher.Invoke(action, TimeSpan.FromMilliseconds(500));
+                    }
+                    catch
+                    {
+                        action();
+                    }
                 }
             }
             else

@@ -17,7 +17,7 @@ namespace RsyncZilla.Services
 
         public event Action<string, bool>? LogMessageReceived; // (message, isError)
 
-        public async Task<bool> ConnectAsync(string host, int port, string username, string password)
+        public async Task<(bool success, string? error)> ConnectAsync(string host, int port, string username, string password)
         {
             Disconnect();
 
@@ -41,13 +41,16 @@ namespace RsyncZilla.Services
 
                     CurrentPath = _client.WorkingDirectory;
                     LogMessageReceived?.Invoke($"Connected successfully. Initial directory: {CurrentPath}", false);
-                    return true;
+                    return (true, (string?)null);
                 }
                 catch (Exception ex)
                 {
-                    LogMessageReceived?.Invoke($"SFTP connection error: {ex.Message}", true);
+                    var errorMsg = ex.InnerException != null 
+                        ? $"{ex.Message} ({ex.InnerException.Message})" 
+                        : ex.Message;
+                    LogMessageReceived?.Invoke($"SFTP connection error: {errorMsg}", true);
                     Disconnect();
-                    return false;
+                    return (false, (string?)errorMsg);
                 }
             });
         }

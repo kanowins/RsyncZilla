@@ -206,7 +206,7 @@ namespace RsyncZilla.ViewModels
 
             try
             {
-                var success = await _sftpService.ConnectAsync(Host.Trim(), Port, Username.Trim(), _cachedPassword);
+                var (success, error) = await _sftpService.ConnectAsync(Host.Trim(), Port, Username.Trim(), _cachedPassword);
                 if (success)
                 {
                     // Look up if this connection has previously saved paths
@@ -240,8 +240,18 @@ namespace RsyncZilla.ViewModels
                 {
                     IsConnected = false;
                     StatusText = "Connection error.";
-                    MessageBox.Show("Could not connect to SFTP server. Check logs below for details.", "Connection Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    var msg = !string.IsNullOrWhiteSpace(error)
+                        ? $"Could not connect to SFTP server:\n\n{error}"
+                        : "Could not connect to SFTP server. Check logs below for details.";
+                    MessageBox.Show(msg, "Connection Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+            }
+            catch (Exception ex)
+            {
+                IsConnected = false;
+                StatusText = "Connection error.";
+                var errorMsg = ex.InnerException != null ? $"{ex.Message} ({ex.InnerException.Message})" : ex.Message;
+                MessageBox.Show($"Connection error:\n\n{errorMsg}", "Connection Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
