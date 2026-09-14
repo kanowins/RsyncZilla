@@ -51,7 +51,7 @@ namespace RsyncZilla.Services
             set => SetProperty(ref _releaseNotes, value);
         }
 
-        private string _releaseUrl = "https://github.com/kanowins/filezilla/releases";
+        private string _releaseUrl = "https://github.com/kanowins/RsyncZilla/releases";
         public string ReleaseUrl
         {
             get => _releaseUrl;
@@ -77,7 +77,7 @@ namespace RsyncZilla.Services
                 // 1. Try GitHub Releases API
                 try
                 {
-                    var response = await HttpClient.GetStringAsync("https://api.github.com/repos/kanowins/filezilla/releases/latest");
+                    var response = await HttpClient.GetStringAsync("https://api.github.com/repos/kanowins/RsyncZilla/releases/latest");
                     using var doc = JsonDocument.Parse(response);
                     var root = doc.RootElement;
                     if (root.TryGetProperty("tag_name", out var tagElem))
@@ -107,7 +107,7 @@ namespace RsyncZilla.Services
                 // 2. Fallback: Raw manifest in repository
                 try
                 {
-                    var rawJson = await HttpClient.GetStringAsync("https://raw.githubusercontent.com/kanowins/filezilla/main/dist/version.json");
+                    var rawJson = await HttpClient.GetStringAsync("https://raw.githubusercontent.com/kanowins/RsyncZilla/main/dist/version.json");
                     using var doc = JsonDocument.Parse(rawJson);
                     var root = doc.RootElement;
                     if (root.TryGetProperty("version", out var verElem))

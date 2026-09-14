@@ -55,7 +55,7 @@ namespace RsyncZilla.Views
                 var sb = new StringBuilder();
                 sb.AppendLine($"RsyncZilla {AppVersion}");
                 sb.AppendLine("Copyright (C) 2026 Sumalab");
-                sb.AppendLine("Homepage: https://github.com/kanowins/filezilla");
+                sb.AppendLine("Homepage: https://github.com/kanowins/RsyncZilla");
                 sb.AppendLine();
                 sb.AppendLine("Build information:");
                 sb.AppendLine($"  Compiled for: win-x64 (.NET {Environment.Version})");

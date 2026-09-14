@@ -11,7 +11,7 @@ namespace RsyncZilla.Views
         public UpdateDialog(string currentVersion, string latestVersion, string releaseNotes, string releaseUrl)
         {
             InitializeComponent();
-            _releaseUrl = string.IsNullOrWhiteSpace(releaseUrl) ? "https://github.com/kanowins/filezilla/releases" : releaseUrl;
+            _releaseUrl = string.IsNullOrWhiteSpace(releaseUrl) ? "https://github.com/kanowins/RsyncZilla/releases" : releaseUrl;
 
             TxtTitle.Text = $"RsyncZilla {latestVersion} is available!";
             TxtVersions.Text = $"Installed version: {currentVersion}  |  Latest version: {latestVersion}";
