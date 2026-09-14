@@ -136,6 +136,8 @@ namespace RsyncZilla.ViewModels
         public ICommand EditRemoteFileCommand { get; }
         public ICommand ShowInExplorerCommand { get; }
         public Action<string, string>? ExplorerLauncher { get; set; }
+        public ICommand OpenLocalFileCommand { get; }
+        public Action<string>? FileOpener { get; set; }
 
         public Func<IEnumerable<FileItem>>? GetLocalSelectedItemsFunc { get; set; }
         public Func<IEnumerable<FileItem>>? GetRemoteSelectedItemsFunc { get; set; }
@@ -184,6 +186,7 @@ namespace RsyncZilla.ViewModels
             OpenRemoteTerminalCommand = new RelayCommand((param) => OpenRemoteTerminal(param), _ => IsConnected);
             EditRemoteFileCommand = new RelayCommand(async (param) => await EditRemoteFileAsync(param), _ => IsConnected);
             ShowInExplorerCommand = new RelayCommand((param) => ShowInExplorer(param));
+            OpenLocalFileCommand = new RelayCommand((param) => OpenLocalFile(param));
 
             // Update tab headers when collection counts change
             ActiveTransfers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(ActiveTabHeader));
@@ -702,6 +705,45 @@ namespace RsyncZilla.ViewModels
             catch (Exception ex)
             {
                 AddLog($"[Explorer] Error opening Windows Explorer: {ex.Message}", true);
+            }
+        }
+
+        public void OpenLocalFile(object? param = null)
+        {
+            try
+            {
+                var item = param as FileItem ?? LocalBrowser.SelectedItem;
+                if (item == null || item.IsDirectory || item.IsParent || item.IsDrive)
+                {
+                    return;
+                }
+
+                if (!File.Exists(item.FullPath))
+                {
+                    AddLog($"[Local] File does not exist: {item.FullPath}", true);
+                    return;
+                }
+
+                if (FileOpener != null)
+                {
+                    FileOpener(item.FullPath);
+                    return;
+                }
+
+                RemoteEditService.OpenInEditor(item.FullPath);
+                AddLog($"[Local] Opened '{item.Name}' in default editor.", false);
+            }
+            catch (Exception ex)
+            {
+                AddLog($"[Local] Failed to open file: {ex.Message}", true);
+                RunOnUi(() =>
+                {
+                    MessageBox.Show(
+                        $"Failed to open local file:\n\n{ex.Message}",
+                        "Open File Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                });
             }
         }
 

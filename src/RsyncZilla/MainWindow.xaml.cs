@@ -509,7 +509,14 @@ namespace RsyncZilla
         {
             if (LocalDataGrid.SelectedItem is FileItem item)
             {
-                await _viewModel.LocalBrowser.OpenItemAsync(item);
+                if (item.IsDirectory)
+                {
+                    await _viewModel.LocalBrowser.OpenItemAsync(item);
+                }
+                else if (!item.IsParent && !item.IsDrive)
+                {
+                    _viewModel.OpenLocalFile(item);
+                }
             }
         }
 
@@ -517,7 +524,17 @@ namespace RsyncZilla
         {
             if (RemoteDataGrid.SelectedItem is FileItem item)
             {
-                await _viewModel.RemoteBrowser.OpenItemAsync(item);
+                if (item.IsDirectory)
+                {
+                    await _viewModel.RemoteBrowser.OpenItemAsync(item);
+                }
+                else if (!item.IsParent)
+                {
+                    if (_viewModel.EditRemoteFileCommand.CanExecute(item))
+                    {
+                        _viewModel.EditRemoteFileCommand.Execute(item);
+                    }
+                }
             }
         }
 
@@ -794,13 +811,60 @@ namespace RsyncZilla
             }
             else if (e.Key == Key.F4)
             {
-                var item = RemoteDataGrid.SelectedItem as FileItem;
-                if (item != null && !item.IsDirectory && !item.IsParent)
+                if (LocalDataGrid.IsKeyboardFocusWithin || (LocalDataGrid.SelectedItems.Count > 0 && RemoteDataGrid.SelectedItems.Count == 0))
                 {
-                    if (_viewModel.EditRemoteFileCommand.CanExecute(item))
+                    var item = LocalDataGrid.SelectedItem as FileItem;
+                    if (item != null && !item.IsDirectory && !item.IsParent && !item.IsDrive)
                     {
                         e.Handled = true;
-                        _viewModel.EditRemoteFileCommand.Execute(item);
+                        _viewModel.OpenLocalFile(item);
+                    }
+                }
+                else
+                {
+                    var item = RemoteDataGrid.SelectedItem as FileItem;
+                    if (item != null && !item.IsDirectory && !item.IsParent)
+                    {
+                        if (_viewModel.EditRemoteFileCommand.CanExecute(item))
+                        {
+                            e.Handled = true;
+                            _viewModel.EditRemoteFileCommand.Execute(item);
+                        }
+                    }
+                }
+            }
+            else if (e.Key == Key.Enter)
+            {
+                if (Keyboard.FocusedElement is TextBox or PasswordBox)
+                {
+                    return;
+                }
+
+                if (LocalDataGrid.IsKeyboardFocusWithin && LocalDataGrid.SelectedItem is FileItem localItem)
+                {
+                    e.Handled = true;
+                    if (localItem.IsDirectory)
+                    {
+                        await _viewModel.LocalBrowser.OpenItemAsync(localItem);
+                    }
+                    else if (!localItem.IsParent && !localItem.IsDrive)
+                    {
+                        _viewModel.OpenLocalFile(localItem);
+                    }
+                }
+                else if (RemoteDataGrid.IsKeyboardFocusWithin && RemoteDataGrid.SelectedItem is FileItem remoteItem)
+                {
+                    e.Handled = true;
+                    if (remoteItem.IsDirectory)
+                    {
+                        await _viewModel.RemoteBrowser.OpenItemAsync(remoteItem);
+                    }
+                    else if (!remoteItem.IsParent)
+                    {
+                        if (_viewModel.EditRemoteFileCommand.CanExecute(remoteItem))
+                        {
+                            _viewModel.EditRemoteFileCommand.Execute(remoteItem);
+                        }
                     }
                 }
             }

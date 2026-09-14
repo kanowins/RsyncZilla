@@ -201,5 +201,51 @@ namespace RsyncZilla.Tests
                 if (Directory.Exists(tempDir)) Directory.Delete(tempDir);
             }
         }
+
+        [Fact]
+        public void OpenLocalFileCommand_WhenFileExists_ShouldInvokeFileOpener()
+        {
+            var vm = new MainViewModel();
+            var tempFile = Path.GetTempFileName();
+            try
+            {
+                string? openedPath = null;
+                vm.FileOpener = path => openedPath = path;
+
+                var item = new FileItem
+                {
+                    Name = Path.GetFileName(tempFile),
+                    FullPath = tempFile,
+                    IsDirectory = false
+                };
+
+                vm.OpenLocalFileCommand.Execute(item);
+
+                Assert.Equal(tempFile, openedPath);
+            }
+            finally
+            {
+                if (File.Exists(tempFile)) File.Delete(tempFile);
+            }
+        }
+
+        [Fact]
+        public void OpenLocalFileCommand_WhenItemIsDirectory_ShouldNotOpen()
+        {
+            var vm = new MainViewModel();
+            string? openedPath = null;
+            vm.FileOpener = path => openedPath = path;
+
+            var item = new FileItem
+            {
+                Name = "MyFolder",
+                FullPath = "C:\\MyFolder",
+                IsDirectory = true
+            };
+
+            vm.OpenLocalFileCommand.Execute(item);
+
+            Assert.Null(openedPath);
+        }
     }
 }

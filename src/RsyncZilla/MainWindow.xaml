@@ -586,6 +586,7 @@
                                 <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
                                     <MenuItem Header="🚀 Upload to server with rsync" Command="{Binding UploadSelectedCommand}"/>
                                     <Separator Background="#E0E0E0"/>
+                                    <MenuItem Header="📝 Open / Edit (F4)" Command="{Binding OpenLocalFileCommand}" CommandParameter="{Binding LocalBrowser.SelectedItem}"/>
                                     <MenuItem Header="📂 Show in Explorer" Command="{Binding ShowInExplorerCommand}" CommandParameter="{Binding LocalBrowser.SelectedItem}"/>
                                     <Separator Background="#E0E0E0"/>
                                     <MenuItem Header="📁 New local folder..." Click="NewLocalFolder_Click"/>
