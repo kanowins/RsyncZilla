@@ -150,5 +150,21 @@ namespace RsyncZilla.Tests
             Assert.Equal(2222, task.ConnectionProfile.Port);
             Assert.Equal(vm.ActiveSession.Id, task.SessionId);
         }
+
+        [Fact]
+        public void SessionTitle_ShouldAlwaysDisplayUserAtHost()
+        {
+            var session = new RemoteSessionViewModel();
+            Assert.Equal("New Connection", session.Title);
+
+            session.Host = "sumalab.com";
+            Assert.Equal("sumalab.com", session.Title);
+
+            session.Username = "debian";
+            Assert.Equal("debian@sumalab.com", session.Title);
+
+            session.SiteName = "sumalab.com";
+            Assert.Equal("debian@sumalab.com", session.Title);
+        }
     }
 }

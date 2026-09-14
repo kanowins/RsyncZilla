@@ -482,9 +482,9 @@
                         </ListBox.ItemsPanel>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" ToolTip="{Binding Title}">
                                     <TextBlock Text="{Binding StatusIndicator}" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
-                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" MaxWidth="220" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" MaxWidth="280" TextTrimming="CharacterEllipsis"/>
                                     <Button Command="{Binding CloseCommand}" ToolTip="Close connection" Margin="8,0,0,0" Style="{StaticResource TabCloseButtonStyle}">
                                         <TextBlock Text="✕" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                                     </Button>

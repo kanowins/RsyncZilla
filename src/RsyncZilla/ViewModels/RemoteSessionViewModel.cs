@@ -106,13 +106,15 @@ namespace RsyncZilla.ViewModels
         {
             get
             {
-                if (!string.IsNullOrWhiteSpace(SiteName))
-                    return SiteName;
+                var h = !string.IsNullOrWhiteSpace(Host) ? Host.Trim() : (SiteName?.Trim() ?? "");
 
-                if (!string.IsNullOrWhiteSpace(Host))
+                if (!string.IsNullOrWhiteSpace(h))
                 {
-                    var userPrefix = !string.IsNullOrWhiteSpace(Username) ? $"{Username}@" : "";
-                    return $"{userPrefix}{Host}";
+                    if (!string.IsNullOrWhiteSpace(Username))
+                    {
+                        return $"{Username.Trim()}@{h}";
+                    }
+                    return h;
                 }
 
                 return "New Connection";
