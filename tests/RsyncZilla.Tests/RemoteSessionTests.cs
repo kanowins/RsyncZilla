@@ -101,15 +101,18 @@ namespace RsyncZilla.Tests
             tab1.Host = "host1.com";
             tab1.Username = "user1";
 
-            // Set local browser to C:\
-            await vm.LocalBrowser.NavigateToAsync(@"C:\");
-            Assert.Equal(@"C:\", vm.LocalBrowser.CurrentPath);
+            var targetPath = Path.GetFullPath(Path.GetTempPath());
+
+            // Set local browser to temp path
+            await vm.LocalBrowser.NavigateToAsync(targetPath);
+            Assert.Equal(targetPath, vm.LocalBrowser.CurrentPath);
 
             // Create and switch to tab 2
             var tab2 = vm.AddNewTab("host2.com", "user2");
+            await vm.SwitchToSessionAsync(tab2);
 
-            // Verify tab 1 saved C:\
-            Assert.Equal(@"C:\", tab1.LastLocalPath);
+            // Verify tab 1 saved targetPath
+            Assert.Equal(targetPath, tab1.LastLocalPath);
 
             // In tab 2, navigate to "This PC"
             await vm.LocalBrowser.NavigateToAsync("This PC");
@@ -121,8 +124,8 @@ namespace RsyncZilla.Tests
             // Verify tab 2 saved "This PC"
             Assert.Equal("This PC", tab2.LastLocalPath);
 
-            // Verify local browser was restored to tab 1's saved path (C:\)
-            Assert.Equal(@"C:\", vm.LocalBrowser.CurrentPath);
+            // Verify local browser was restored to tab 1's saved path
+            Assert.Equal(targetPath, vm.LocalBrowser.CurrentPath);
             Assert.Equal("host1.com", vm.Host);
             Assert.Equal("user1", vm.Username);
         }

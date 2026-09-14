@@ -273,6 +273,51 @@ namespace RsyncZilla.Services
             });
         }
 
+        public async Task<(bool success, string? error)> DownloadFileAsync(string remotePath, string localPath)
+        {
+            if (_client == null || !_client.IsConnected) return (false, "Not connected to SFTP server.");
+            return await Task.Run<(bool success, string? error)>(() =>
+            {
+                try
+                {
+                    var localDir = Path.GetDirectoryName(localPath);
+                    if (!string.IsNullOrEmpty(localDir)) Directory.CreateDirectory(localDir);
+
+                    using var fs = File.Create(localPath);
+                    _client.DownloadFile(remotePath, fs);
+                    LogMessageReceived?.Invoke($"Downloaded '{remotePath}' to '{localPath}'", false);
+                    return (true, null);
+                }
+                catch (Exception ex)
+                {
+                    var msg = $"Error downloading '{remotePath}': {ex.Message}";
+                    LogMessageReceived?.Invoke(msg, true);
+                    return (false, msg);
+                }
+            });
+        }
+
+        public async Task<(bool success, string? error)> UploadFileAsync(string localPath, string remotePath)
+        {
+            if (_client == null || !_client.IsConnected) return (false, "Not connected to SFTP server.");
+            return await Task.Run<(bool success, string? error)>(() =>
+            {
+                try
+                {
+                    using var fs = File.OpenRead(localPath);
+                    _client.UploadFile(fs, remotePath, true);
+                    LogMessageReceived?.Invoke($"Uploaded '{localPath}' to '{remotePath}'", false);
+                    return (true, null);
+                }
+                catch (Exception ex)
+                {
+                    var msg = $"Error uploading '{localPath}' to '{remotePath}': {ex.Message}";
+                    LogMessageReceived?.Invoke(msg, true);
+                    return (false, msg);
+                }
+            });
+        }
+
         private static void DeleteDirectoryRecursive(SftpClient client, string path)
         {
             foreach (var item in client.ListDirectory(path))

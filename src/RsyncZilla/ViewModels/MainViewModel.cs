@@ -19,6 +19,7 @@ namespace RsyncZilla.ViewModels
         private readonly RsyncService _rsyncService;
         private readonly ConnectionManagerService _connectionManagerService;
         private readonly TerminalService _terminalService;
+        private readonly RemoteEditService _remoteEditService;
 
         public ObservableCollection<RemoteSessionViewModel> RemoteSessions { get; } = new();
 
@@ -131,21 +132,25 @@ namespace RsyncZilla.ViewModels
         public ICommand ClearLogsCommand { get; }
         public ICommand OpenSiteManagerCommand { get; }
         public ICommand OpenRemoteTerminalCommand { get; }
+        public ICommand EditRemoteFileCommand { get; }
 
         public Func<IEnumerable<FileItem>>? GetLocalSelectedItemsFunc { get; set; }
         public Func<IEnumerable<FileItem>>? GetRemoteSelectedItemsFunc { get; set; }
         public Action<SavedConnection, string>? ApplySavedConnectionAction { get; set; }
 
-        public MainViewModel() : this(null, null, null, null)
+        public MainViewModel() : this(null, null, null, null, null)
         {
         }
 
-        public MainViewModel(LocalFileService? localService = null, RsyncService? rsyncService = null, ConnectionManagerService? connectionManagerService = null, TerminalService? terminalService = null)
+        public MainViewModel(LocalFileService? localService = null, RsyncService? rsyncService = null, ConnectionManagerService? connectionManagerService = null, TerminalService? terminalService = null, RemoteEditService? remoteEditService = null)
         {
             _localService = localService ?? new LocalFileService();
             _rsyncService = rsyncService ?? new RsyncService();
             _connectionManagerService = connectionManagerService ?? new ConnectionManagerService();
             _terminalService = terminalService ?? new TerminalService(_rsyncService);
+            _remoteEditService = remoteEditService ?? new RemoteEditService();
+            _remoteEditService.LogMessageReceived += (msg, isErr) => AddLog(msg, isErr);
+            _remoteEditService.FileUploaded += (session, path, len, time) => OnRemoteFileUploaded(session, path, len, time);
 
             _fallbackLocalBrowser = new FileBrowserViewModel(_localService);
             _fallbackSftpService = new SftpService();
@@ -173,6 +178,7 @@ namespace RsyncZilla.ViewModels
             ClearLogsCommand = new RelayCommand(() => LogEntries.Clear());
             OpenSiteManagerCommand = new RelayCommand(OpenSiteManager);
             OpenRemoteTerminalCommand = new RelayCommand((param) => OpenRemoteTerminal(param), _ => IsConnected);
+            EditRemoteFileCommand = new RelayCommand(async (param) => await EditRemoteFileAsync(param), _ => IsConnected);
 
             // Update tab headers when collection counts change
             ActiveTransfers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(ActiveTabHeader));
@@ -257,6 +263,7 @@ namespace RsyncZilla.ViewModels
             if (session == null) return;
 
             session.Disconnect();
+            _remoteEditService.StopTrackingSession(session);
 
             if (RemoteSessions.Count <= 1)
             {
@@ -584,6 +591,32 @@ namespace RsyncZilla.ViewModels
                 AddLog($"[Terminal] Failed to open terminal: {error}", true);
                 MessageBox.Show($"Could not open remote terminal:\n{error}", "Terminal Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        public async Task EditRemoteFileAsync(object? param = null)
+        {
+            if (ActiveSession == null || !IsConnected) return;
+
+            var item = param as FileItem ?? ActiveSession.RemoteBrowser.SelectedItem;
+            if (item == null || item.IsDirectory || item.IsParent)
+            {
+                return;
+            }
+
+            await _remoteEditService.OpenFileForEditingAsync(ActiveSession, item);
+        }
+
+        private void OnRemoteFileUploaded(RemoteSessionViewModel session, string remotePath, long newLength, DateTime newWriteTime)
+        {
+            RunOnUi(() =>
+            {
+                var existing = session.RemoteBrowser.Items.FirstOrDefault(i => string.Equals(i.FullPath, remotePath, StringComparison.OrdinalIgnoreCase));
+                if (existing != null)
+                {
+                    existing.Length = newLength;
+                    existing.LastWriteTime = newWriteTime;
+                }
+            });
         }
 
         public Task DownloadItemsAsync(IEnumerable<FileItem> items, string? targetLocalPath = null)

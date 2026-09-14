@@ -792,6 +792,18 @@ namespace RsyncZilla
                     _viewModel.OpenRemoteTerminalCommand.Execute(null);
                 }
             }
+            else if (e.Key == Key.F4)
+            {
+                var item = RemoteDataGrid.SelectedItem as FileItem;
+                if (item != null && !item.IsDirectory && !item.IsParent)
+                {
+                    if (_viewModel.EditRemoteFileCommand.CanExecute(item))
+                    {
+                        e.Handled = true;
+                        _viewModel.EditRemoteFileCommand.Execute(item);
+                    }
+                }
+            }
         }
 
         private async void RenameLocalItem_Click(object sender, RoutedEventArgs e)

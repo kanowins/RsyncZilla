@@ -1,17 +1,71 @@
 using System;
+using RsyncZilla.ViewModels;
 
 namespace RsyncZilla.Models
 {
-    public class FileItem
+    public class FileItem : ViewModelBase
     {
-        public string Name { get; set; } = string.Empty;
-        public string FullPath { get; set; } = string.Empty;
-        public bool IsDirectory { get; set; }
-        public bool IsDrive { get; set; }
-        public long Length { get; set; }
-        public DateTime LastWriteTime { get; set; }
-        public string Permissions { get; set; } = string.Empty;
-        public bool IsParent { get; set; }
+        private string _name = string.Empty;
+        public string Name
+        {
+            get => _name;
+            set => SetProperty(ref _name, value);
+        }
+
+        private string _fullPath = string.Empty;
+        public string FullPath
+        {
+            get => _fullPath;
+            set => SetProperty(ref _fullPath, value);
+        }
+
+        private bool _isDirectory;
+        public bool IsDirectory
+        {
+            get => _isDirectory;
+            set => SetProperty(ref _isDirectory, value);
+        }
+
+        private bool _isDrive;
+        public bool IsDrive
+        {
+            get => _isDrive;
+            set => SetProperty(ref _isDrive, value);
+        }
+
+        private long _length;
+        public long Length
+        {
+            get => _length;
+            set
+            {
+                if (SetProperty(ref _length, value))
+                {
+                    OnPropertyChanged(nameof(DisplaySize));
+                }
+            }
+        }
+
+        private DateTime _lastWriteTime;
+        public DateTime LastWriteTime
+        {
+            get => _lastWriteTime;
+            set => SetProperty(ref _lastWriteTime, value);
+        }
+
+        private string _permissions = string.Empty;
+        public string Permissions
+        {
+            get => _permissions;
+            set => SetProperty(ref _permissions, value);
+        }
+
+        private bool _isParent;
+        public bool IsParent
+        {
+            get => _isParent;
+            set => SetProperty(ref _isParent, value);
+        }
 
         public string DisplaySize
         {

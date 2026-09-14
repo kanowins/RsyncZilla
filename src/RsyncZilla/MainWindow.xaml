@@ -701,6 +701,7 @@
                                 <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
                                     <MenuItem Header="🚀 Download to local with rsync" Command="{Binding DownloadSelectedCommand}"/>
                                     <Separator Background="#E0E0E0"/>
+                                    <MenuItem Header="📝 View / Edit (F4)" Command="{Binding EditRemoteFileCommand}" CommandParameter="{Binding RemoteBrowser.SelectedItem}"/>
                                     <MenuItem Header="💻 Open terminal here (Ctrl+T)" Command="{Binding OpenRemoteTerminalCommand}" CommandParameter="{Binding RemoteBrowser.SelectedItem}"/>
                                     <Separator Background="#E0E0E0"/>
                                     <MenuItem Header="📁 New remote folder..." Click="NewRemoteFolder_Click"/>
