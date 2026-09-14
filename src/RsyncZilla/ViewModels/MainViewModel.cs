@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -133,6 +134,8 @@ namespace RsyncZilla.ViewModels
         public ICommand OpenSiteManagerCommand { get; }
         public ICommand OpenRemoteTerminalCommand { get; }
         public ICommand EditRemoteFileCommand { get; }
+        public ICommand ShowInExplorerCommand { get; }
+        public Action<string, string>? ExplorerLauncher { get; set; }
 
         public Func<IEnumerable<FileItem>>? GetLocalSelectedItemsFunc { get; set; }
         public Func<IEnumerable<FileItem>>? GetRemoteSelectedItemsFunc { get; set; }
@@ -151,6 +154,7 @@ namespace RsyncZilla.ViewModels
             _remoteEditService = remoteEditService ?? new RemoteEditService();
             _remoteEditService.LogMessageReceived += (msg, isErr) => AddLog(msg, isErr);
             _remoteEditService.FileUploaded += (session, path, len, time) => OnRemoteFileUploaded(session, path, len, time);
+            _remoteEditService.FileUploadFailed += (session, path, file, err) => OnRemoteFileUploadFailed(session, path, file, err);
 
             _fallbackLocalBrowser = new FileBrowserViewModel(_localService);
             _fallbackSftpService = new SftpService();
@@ -179,6 +183,7 @@ namespace RsyncZilla.ViewModels
             OpenSiteManagerCommand = new RelayCommand(OpenSiteManager);
             OpenRemoteTerminalCommand = new RelayCommand((param) => OpenRemoteTerminal(param), _ => IsConnected);
             EditRemoteFileCommand = new RelayCommand(async (param) => await EditRemoteFileAsync(param), _ => IsConnected);
+            ShowInExplorerCommand = new RelayCommand((param) => ShowInExplorer(param));
 
             // Update tab headers when collection counts change
             ActiveTransfers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(ActiveTabHeader));
@@ -603,7 +608,18 @@ namespace RsyncZilla.ViewModels
                 return;
             }
 
-            await _remoteEditService.OpenFileForEditingAsync(ActiveSession, item);
+            var (ok, _, error) = await _remoteEditService.OpenFileForEditingAsync(ActiveSession, item);
+            if (!ok && !string.IsNullOrWhiteSpace(error))
+            {
+                RunOnUi(() =>
+                {
+                    MessageBox.Show(
+                        $"Failed to open remote file '{item.Name}' for editing:\n\n{error}",
+                        "Edit Remote File Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                });
+            }
         }
 
         private void OnRemoteFileUploaded(RemoteSessionViewModel session, string remotePath, long newLength, DateTime newWriteTime)
@@ -617,6 +633,76 @@ namespace RsyncZilla.ViewModels
                     existing.LastWriteTime = newWriteTime;
                 }
             });
+        }
+
+        private void OnRemoteFileUploadFailed(RemoteSessionViewModel? session, string remotePath, string fileName, string error)
+        {
+            RunOnUi(() =>
+            {
+                MessageBox.Show(
+                    $"Failed to upload saved changes for '{fileName}' to the remote server.\n\nRemote path:\n{remotePath}\n\nError:\n{error}\n\nPlease verify your connection and server permissions, then save again in your editor.",
+                    "Remote Save Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            });
+        }
+
+        public void ShowInExplorer(object? param = null)
+        {
+            void Launch(string fileName, string args)
+            {
+                if (ExplorerLauncher != null)
+                {
+                    ExplorerLauncher(fileName, args);
+                    return;
+                }
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = fileName,
+                    Arguments = args,
+                    UseShellExecute = true
+                });
+            }
+
+            try
+            {
+                var item = param as FileItem ?? LocalBrowser.SelectedItem;
+                if (item != null && !item.IsParent)
+                {
+                    if (item.IsDrive && Directory.Exists(item.FullPath))
+                    {
+                        Launch("explorer.exe", $"\"{item.FullPath}\"");
+                        return;
+                    }
+
+                    if (File.Exists(item.FullPath))
+                    {
+                        Launch("explorer.exe", $"/select,\"{item.FullPath}\"");
+                        return;
+                    }
+
+                    if (Directory.Exists(item.FullPath))
+                    {
+                        Launch("explorer.exe", $"\"{item.FullPath}\"");
+                        return;
+                    }
+                }
+
+                var current = LocalBrowser.CurrentPath;
+                if (!string.IsNullOrWhiteSpace(current) && !string.Equals(current.Trim(), "This PC", StringComparison.OrdinalIgnoreCase) && Directory.Exists(current))
+                {
+                    Launch("explorer.exe", $"\"{current}\"");
+                }
+                else
+                {
+                    Launch("explorer.exe", "");
+                }
+            }
+            catch (Exception ex)
+            {
+                AddLog($"[Explorer] Error opening Windows Explorer: {ex.Message}", true);
+            }
         }
 
         public Task DownloadItemsAsync(IEnumerable<FileItem> items, string? targetLocalPath = null)

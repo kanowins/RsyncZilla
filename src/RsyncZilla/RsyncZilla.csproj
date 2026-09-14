@@ -30,4 +30,8 @@
     <ProjectReference Include="..\RsyncAskPass\RsyncAskPass.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="RsyncZilla.Tests" />
+  </ItemGroup>
+
 </Project>

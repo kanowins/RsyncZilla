@@ -42,6 +42,7 @@ namespace RsyncZilla.Services
 
         public event Action<string, bool>? LogMessageReceived;
         public event Action<RemoteSessionViewModel, string, long, DateTime>? FileUploaded;
+        public event Action<RemoteSessionViewModel, string, string, string>? FileUploadFailed; // (session, remotePath, fileName, error)
 
         public string GetLocalTempPath(string host, int port, string username, string remoteFullPath)
         {
@@ -162,26 +163,38 @@ namespace RsyncZilla.Services
                     return;
                 }
 
-                tracker.LastHash = currentHash;
-
                 var fileName = Path.GetFileName(tracker.LocalPath);
+
+                if (tracker.Session == null || !tracker.Session.IsConnected)
+                {
+                    var errMsg = "SFTP session is not connected. Reconnect to the server and save again.";
+                    LogMessageReceived?.Invoke($"[Remote Edit] Error uploading '{fileName}': {errMsg}", true);
+                    FileUploadFailed?.Invoke(tracker.Session!, tracker.RemotePath, fileName, errMsg);
+                    return;
+                }
+
                 LogMessageReceived?.Invoke($"[Remote Edit] File '{fileName}' changed locally. Uploading to server...", false);
 
                 var (ok, err) = await tracker.Session.SftpService.UploadFileAsync(tracker.LocalPath, tracker.RemotePath);
                 if (ok)
                 {
+                    tracker.LastHash = currentHash;
                     var fi = new FileInfo(tracker.LocalPath);
                     LogMessageReceived?.Invoke($"[Remote Edit] File '{fileName}' uploaded successfully ({FormatBytes(fi.Length)}).", false);
                     FileUploaded?.Invoke(tracker.Session, tracker.RemotePath, fi.Length, fi.LastWriteTime);
                 }
                 else
                 {
-                    LogMessageReceived?.Invoke($"[Remote Edit] Error uploading '{fileName}': {err}", true);
+                    var errMsg = err ?? "Unknown SFTP upload failure.";
+                    LogMessageReceived?.Invoke($"[Remote Edit] Error uploading '{fileName}': {errMsg}", true);
+                    FileUploadFailed?.Invoke(tracker.Session, tracker.RemotePath, fileName, errMsg);
                 }
             }
             catch (Exception ex)
             {
+                var fileName = Path.GetFileName(tracker.LocalPath);
                 LogMessageReceived?.Invoke($"[Remote Edit] Error processing saved file: {ex.Message}", true);
+                FileUploadFailed?.Invoke(tracker.Session, tracker.RemotePath, fileName, ex.Message);
             }
             finally
             {
@@ -268,6 +281,27 @@ namespace RsyncZilla.Services
                 len /= 1024;
             }
             return $"{len:0.##} {sizes[order]}";
+        }
+
+        internal async Task<bool> TriggerProcessFileChangeAsync(string localPath)
+        {
+            if (_trackedFiles.TryGetValue(localPath, out var tracker))
+            {
+                await ProcessFileChangeAsync(tracker);
+                return true;
+            }
+            return false;
+        }
+
+        internal void RegisterTestTracker(string localPath, string remotePath, RemoteSessionViewModel session, byte[] initialHash)
+        {
+            _trackedFiles[localPath] = new TrackedFile
+            {
+                LocalPath = localPath,
+                RemotePath = remotePath,
+                Session = session,
+                LastHash = initialHash
+            };
         }
 
         public void StopTrackingSession(RemoteSessionViewModel session)

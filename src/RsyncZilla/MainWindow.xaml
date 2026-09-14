@@ -536,6 +536,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
@@ -555,8 +556,14 @@
 
                             <Button Grid.Column="3" ToolTip="Refresh directory" 
                                     Command="{Binding LocalBrowser.RefreshCommand}"
-                                    Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0">
+                                    Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0" Margin="0,0,4,0">
                                 <ContentControl ContentTemplate="{StaticResource RefreshIconTemplate}" Focusable="False"/>
+                            </Button>
+
+                            <Button Grid.Column="4" ToolTip="Show in Windows Explorer" 
+                                    Command="{Binding ShowInExplorerCommand}" CommandParameter="{Binding LocalBrowser.SelectedItem}"
+                                    Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0">
+                                <TextBlock Text="📂" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
                         </Grid>
 
@@ -578,6 +585,8 @@
                             <DataGrid.ContextMenu>
                                 <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
                                     <MenuItem Header="🚀 Upload to server with rsync" Command="{Binding UploadSelectedCommand}"/>
+                                    <Separator Background="#E0E0E0"/>
+                                    <MenuItem Header="📂 Show in Explorer" Command="{Binding ShowInExplorerCommand}" CommandParameter="{Binding LocalBrowser.SelectedItem}"/>
                                     <Separator Background="#E0E0E0"/>
                                     <MenuItem Header="📁 New local folder..." Click="NewLocalFolder_Click"/>
                                     <MenuItem Header="✏️ Rename..." Click="RenameLocalItem_Click"/>
