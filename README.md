@@ -68,29 +68,52 @@ Engineered to eliminate the classic issue of silent FTP transfer failures, ensur
   - `ViewModels/`: Decoupled MVVM presentation logic.
   - `Views/`: Custom XAML dialogs (Site Manager, InputDialog, SiteEditDialog).
 - `src/RsyncAskPass/`: Secure credential pipe bridge for OpenSSH `SSH_ASKPASS`.
-- `tests/RsyncZilla.Tests/`: xUnit test suite (52 tests covering rsync path translation, watchers, explorer integration, and CLI args).
+- `tests/RsyncZilla.Tests/`: xUnit test suite (78 tests covering rsync path translation, watchers, explorer integration, multi-selection, update checks, and CLI args).
 - `dist/RsyncZilla/`: Ready-to-run precompiled portable distribution (`RsyncZilla.exe`).
 
 ---
 
-## 🚀 Building & Running
+## 🚀 Installation & Running
 
-### Option 1: Run the Precompiled Binary
-Run directly:
-```
+### Option 1: Download Latest Release
+Download the ready-to-run portable `.zip` from **[GitHub Releases](https://github.com/kanowins/RsyncZilla/releases/latest)**, extract it anywhere, and launch `RsyncZilla.exe`.
+
+> [!NOTE]
+> **Windows Defender SmartScreen Notice:**
+> When launching RsyncZilla for the first time on Windows, Microsoft Defender SmartScreen may display a blue warning screen: *"Windows protected your PC — Microsoft Defender SmartScreen prevented an unrecognized app from starting"*.
+>
+> This is standard Windows behavior for open-source software downloaded from the internet that does not carry an expensive paid commercial code-signing certificate. The application is completely open-source, and all release binaries are compiled transparently by [GitHub Actions](https://github.com/kanowins/RsyncZilla/actions).
+>
+> **How to bypass it (first launch only):**
+> 1. Click **More info** (*Más información*).
+> 2. Click **Run anyway** (*Ejecutar de todas formas*).
+>
+> *Alternatively*, right-click the downloaded `.zip` or `RsyncZilla.exe` → **Properties** → check the **Unblock** box at the bottom → click **OK**. Or run in PowerShell:
+> ```powershell
+> Unblock-File .\RsyncZilla.exe
+> ```
+
+### Option 2: Run Local Build
+Run directly from the local repository:
+```cmd
 dist\RsyncZilla\RsyncZilla.exe
 ```
 
-### Option 2: Build from Source
-Run `build.bat` or use the .NET CLI:
+### Option 3: Build from Source
+Run `build.bat` or compile with the .NET 8 SDK:
 ```bash
 dotnet publish src/RsyncZilla/RsyncZilla.csproj -c Release -r win-x64 --self-contained false -o dist/RsyncZilla
 ```
 
-### Option 3: Run the Test Suite
+### Option 4: Run the Test Suite
 ```bash
 dotnet test
 ```
+
+### 🛠️ Versioning & Automated Release Scripts
+For project maintainers:
+- **Set or bump version**: `.\set-version.bat 1.0.2` (or `.\set-version.bat -Patch` / `-Minor` / `-Major`)
+- **One-click publish to GitHub**: `.\publish-release.bat` (or `.\publish-release.bat -Patch`) — runs tests, commits, pushes tag, and triggers automated GitHub Actions release build.
 
 ---
 
