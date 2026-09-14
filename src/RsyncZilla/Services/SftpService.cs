@@ -12,6 +12,7 @@ namespace RsyncZilla.Services
     public class SftpService : IDisposable
     {
         private SftpClient? _client;
+        private ConnectionInfo? _connectionInfo;
         public bool IsConnected => _client != null && _client.IsConnected;
         public string CurrentPath { get; private set; } = "/";
 
@@ -38,6 +39,7 @@ namespace RsyncZilla.Services
 
                     _client = new SftpClient(connectionInfo);
                     _client.Connect();
+                    _connectionInfo = connectionInfo;
 
                     CurrentPath = _client.WorkingDirectory;
                     LogMessageReceived?.Invoke($"Connected successfully. Initial directory: {CurrentPath}", false);
@@ -57,6 +59,7 @@ namespace RsyncZilla.Services
 
         public void Disconnect()
         {
+            _connectionInfo = null;
             if (_client != null)
             {
                 try
@@ -176,31 +179,73 @@ namespace RsyncZilla.Services
             });
         }
 
-        public async Task<bool> DeleteItemAsync(string path, bool isDirectory)
+        public async Task<bool> DeleteItemsAsync(IEnumerable<(string path, bool isDirectory)> items)
         {
             if (_client == null || !_client.IsConnected) return false;
+            var itemList = items.ToList();
+            if (!itemList.Any()) return true;
+
             return await Task.Run(() =>
             {
-                try
+                // 1. Try fast batch deletion via SSH command (rm -rf)
+                if (_connectionInfo != null)
                 {
-                    if (isDirectory)
+                    try
                     {
-                        DeleteDirectoryRecursive(_client, path);
-                        LogMessageReceived?.Invoke($"Remote folder deleted: {path}", false);
+                        using var sshClient = new SshClient(_connectionInfo);
+                        sshClient.Connect();
+                        if (sshClient.IsConnected)
+                        {
+                            var escapedPaths = string.Join(" ", itemList.Select(i => $"'{i.path.Replace("'", "'\\''")}'"));
+                            var cmd = sshClient.RunCommand($"rm -rf -- {escapedPaths}");
+                            if (cmd.ExitStatus == 0)
+                            {
+                                LogMessageReceived?.Invoke($"[SSH] Successfully deleted {itemList.Count} items via rm -rf", false);
+                                return true;
+                            }
+                            else if (!string.IsNullOrEmpty(cmd.Error))
+                            {
+                                LogMessageReceived?.Invoke($"[SSH] rm -rf note: {cmd.Error.Trim()}", false);
+                            }
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        _client.DeleteFile(path);
-                        LogMessageReceived?.Invoke($"Remote file deleted: {path}", false);
+                        LogMessageReceived?.Invoke($"[SSH] Direct shell unavailable ({ex.Message}). Using SFTP batch deletion...", false);
                     }
-                    return true;
                 }
-                catch (Exception ex)
+
+                // 2. Fallback: Batch delete directly over SFTP
+                bool allSuccess = true;
+                foreach (var item in itemList)
                 {
-                    LogMessageReceived?.Invoke($"Error deleting remote item '{path}': {ex.Message}", true);
-                    return false;
+                    try
+                    {
+                        if (item.isDirectory)
+                        {
+                            DeleteDirectoryRecursive(_client, item.path);
+                            LogMessageReceived?.Invoke($"Remote folder deleted: {item.path}", false);
+                        }
+                        else
+                        {
+                            _client.DeleteFile(item.path);
+                            LogMessageReceived?.Invoke($"Remote file deleted: {item.path}", false);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        allSuccess = false;
+                        LogMessageReceived?.Invoke($"Error deleting remote item '{item.path}': {ex.Message}", true);
+                    }
                 }
+
+                return allSuccess;
             });
+        }
+
+        public async Task<bool> DeleteItemAsync(string path, bool isDirectory)
+        {
+            return await DeleteItemsAsync(new[] { (path, isDirectory) });
         }
 
         private static void DeleteDirectoryRecursive(SftpClient client, string path)

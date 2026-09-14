@@ -438,10 +438,7 @@ namespace RsyncZilla
             var confirm = MessageBox.Show(prompt, "Confirm Local Deletion", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (confirm == MessageBoxResult.Yes)
             {
-                foreach (var item in selected)
-                {
-                    await _viewModel.LocalBrowser.DeleteItemAsync(item);
-                }
+                await _viewModel.LocalBrowser.DeleteItemsAsync(selected);
             }
         }
 
@@ -459,10 +456,7 @@ namespace RsyncZilla
             var confirm = MessageBox.Show(prompt, "Confirm Remote Deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (confirm == MessageBoxResult.Yes)
             {
-                foreach (var item in selected)
-                {
-                    await _viewModel.RemoteBrowser.DeleteItemAsync(item);
-                }
+                await _viewModel.RemoteBrowser.DeleteItemsAsync(selected);
             }
         }
     }

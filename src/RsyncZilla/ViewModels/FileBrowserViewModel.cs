@@ -244,22 +244,32 @@ namespace RsyncZilla.ViewModels
             }
         }
 
-        public async Task DeleteItemAsync(FileItem item)
+        public async Task DeleteItemsAsync(IEnumerable<FileItem> items)
         {
-            if (item.IsParent || item.IsDrive) return;
+            var validItems = items.Where(i => i != null && !i.IsParent && !i.IsDrive).ToList();
+            if (!validItems.Any()) return;
 
             if (IsRemote)
             {
                 if (_sftpService == null || !_sftpService.IsConnected) return;
-                var success = await _sftpService.DeleteItemAsync(item.FullPath, item.IsDirectory);
-                if (success) await RefreshAsync();
+                var tuples = validItems.Select(i => (i.FullPath, i.IsDirectory));
+                await _sftpService.DeleteItemsAsync(tuples);
+                await RefreshAsync();
             }
             else
             {
                 if (_localService == null) return;
-                _localService.DeleteItem(item.FullPath, item.IsDirectory);
+                foreach (var item in validItems)
+                {
+                    _localService.DeleteItem(item.FullPath, item.IsDirectory);
+                }
                 await RefreshAsync();
             }
+        }
+
+        public async Task DeleteItemAsync(FileItem item)
+        {
+            await DeleteItemsAsync(new[] { item });
         }
 
         private static string GetRemoteParent(string path)
