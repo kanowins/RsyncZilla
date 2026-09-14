@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RsyncAskPass/RsyncAskPass.csproj" />
+    <Project Path="src/RsyncZilla/RsyncZilla.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RsyncZilla.Tests/RsyncZilla.Tests.csproj" />
+  </Folder>
+</Solution>

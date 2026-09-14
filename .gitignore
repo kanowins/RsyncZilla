@@ -1,0 +1,22 @@
+## Build outputs and distributions
+[Bb]in/
+[Oo]bj/
+dist/
+TestResults/
+
+## Visual Studio & IDE files
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.ide/
+
+## Temporary binaries and logs
+*.log
+crash.log
+*.tmp
+*.zip
+/rsync-win.exe
+/cygwin64/
