@@ -1,9 +1,9 @@
 <Window x:Class="RsyncZilla.Views.ConnectionManagerDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Gestor de Conexiones - RsyncZilla"
+        Title="Site Manager - RsyncZilla"
         Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
-        Height="440" Width="780"
+        Height="450" Width="800"
         WindowStartupLocation="CenterOwner"
         Background="#F0F2F5" Foreground="#111111"
         FontFamily="Segoe UI, Arial"
@@ -17,7 +17,7 @@
         </Grid.RowDefinitions>
 
         <!-- Header explanation -->
-        <TextBlock Grid.Row="0" Text="Conexiones guardadas (las contraseñas nunca se almacenan por seguridad):" 
+        <TextBlock Grid.Row="0" Text="Saved sites (passwords are never stored for security reasons):" 
                    FontWeight="SemiBold" Foreground="#333333" Margin="0,0,0,10"/>
 
         <!-- DataGrid of connections -->
@@ -29,13 +29,13 @@
                       Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F9FAFB"
                       MouseDoubleClick="ConnectionsGrid_MouseDoubleClick">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="140"/>
-                    <DataGridTextColumn Header="Servidor (Host)" Binding="{Binding Host}" Width="160"/>
-                    <DataGridTextColumn Header="Usuario" Binding="{Binding Username}" Width="100"/>
-                    <DataGridTextColumn Header="Puerto" Binding="{Binding Port}" Width="60"/>
-                    <DataGridTextColumn Header="Último local" Binding="{Binding LastLocalPath}" Width="130"/>
-                    <DataGridTextColumn Header="Último remoto" Binding="{Binding LastRemotePath}" Width="130"/>
-                    <DataGridTextColumn Header="Último uso" Binding="{Binding LastUsed, StringFormat='dd/MM/yyyy HH:mm'}" Width="*"/>
+                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="140"/>
+                    <DataGridTextColumn Header="Host" Binding="{Binding Host}" Width="160"/>
+                    <DataGridTextColumn Header="User" Binding="{Binding Username}" Width="100"/>
+                    <DataGridTextColumn Header="Port" Binding="{Binding Port}" Width="60"/>
+                    <DataGridTextColumn Header="Last Local Path" Binding="{Binding LastLocalPath}" Width="130"/>
+                    <DataGridTextColumn Header="Last Remote Path" Binding="{Binding LastRemotePath}" Width="130"/>
+                    <DataGridTextColumn Header="Last Used" Binding="{Binding LastUsed, StringFormat='MM/dd/yyyy HH:mm'}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
@@ -43,18 +43,27 @@
         <!-- Action buttons -->
         <Grid Grid.Row="2" Margin="0,12,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button Click="NewSiteButton_Click"
+                        Background="#0078D7" Foreground="#FFFFFF" BorderBrush="#005A9E"
+                        Padding="12,5" FontWeight="SemiBold" Cursor="Hand" Margin="0,0,8,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="➕" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
+                        <TextBlock Text="New Site" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
                 <Button Click="DeleteButton_Click"
                         Background="#F5F5F5" Foreground="#C62828" BorderBrush="#CCCCCC"
                         Padding="12,5" FontWeight="SemiBold" Cursor="Hand">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="🗑️" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="12"/>
-                        <TextBlock Text="Eliminar" VerticalAlignment="Center"/>
+                        <TextBlock Text="Delete" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Cancelar" Click="CancelButton_Click"
+                <Button Content="Cancel" Click="CancelButton_Click" IsCancel="True"
                         Background="#F5F5F5" Foreground="#333333" BorderBrush="#CCCCCC"
                         Padding="14,5" Margin="0,0,8,0" Cursor="Hand"/>
                 <Button Click="ConnectButton_Click"
@@ -62,7 +71,7 @@
                         Padding="16,5" FontWeight="SemiBold" Cursor="Hand">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="🔌" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="12"/>
-                        <TextBlock Text="Conectar" VerticalAlignment="Center"/>
+                        <TextBlock Text="Connect" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
             </StackPanel>

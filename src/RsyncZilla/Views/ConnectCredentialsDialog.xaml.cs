@@ -17,9 +17,9 @@ namespace RsyncZilla.Views
             Port = port;
 
             SiteTitleTextBlock.Text = !string.IsNullOrWhiteSpace(siteName) 
-                ? $"Conectar a {siteName}" 
-                : $"Conectar a {host}";
-            HostInfoTextBlock.Text = $"Servidor: {host} (Puerto: {port})";
+                ? $"Connect to {siteName}" 
+                : $"Connect to {host}";
+            HostInfoTextBlock.Text = $"Server: {host} (Port: {port})";
             UsernameTextBox.Text = username;
 
             Loaded += (s, e) =>
@@ -39,7 +39,7 @@ namespace RsyncZilla.Views
         {
             if (string.IsNullOrWhiteSpace(Username))
             {
-                MessageBox.Show("Por favor, ingrese un nombre de usuario.", "Usuario requerido", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Please enter a username.", "Username Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 UsernameTextBox.Focus();
                 return;
             }

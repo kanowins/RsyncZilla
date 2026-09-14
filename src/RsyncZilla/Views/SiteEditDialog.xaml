@@ -1,0 +1,102 @@
+<Window x:Class="RsyncZilla.Views.SiteEditDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="New Site - RsyncZilla"
+        Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
+        Width="500" Height="380"
+        WindowStartupLocation="CenterOwner"
+        Background="#F0F2F5" Foreground="#111111"
+        FontFamily="Segoe UI, Segoe UI Emoji, Arial"
+        ResizeMode="NoResize">
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Title/Subtitle -->
+            <RowDefinition Height="*"/>    <!-- Form Fields -->
+            <RowDefinition Height="Auto"/> <!-- Buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Site Details" FontSize="16" FontWeight="SemiBold" Foreground="#005A9E"/>
+            <TextBlock Text="Configure a remote server connection (passwords are entered upon connecting)." FontSize="12" Foreground="#666666" Margin="0,2,0,0"/>
+        </StackPanel>
+
+        <!-- Form fields -->
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="6"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="6"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="6"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="6"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="130"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Site Name -->
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Site Name:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#333333"/>
+            <TextBox Grid.Row="0" Grid.Column="1" x:Name="SiteNameTextBox" Padding="6,4" Height="28" VerticalContentAlignment="Center"
+                     ToolTip="A friendly name for this connection (e.g. My VPS)"/>
+
+            <!-- Host & Port -->
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Host / Server:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#333333"/>
+            <Grid Grid.Row="2" Grid.Column="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="65"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" x:Name="HostTextBox" Padding="6,4" Height="28" VerticalContentAlignment="Center"
+                         ToolTip="Host name or IP address (e.g. 192.168.1.50 or sftp.domain.com)"/>
+                <TextBlock Grid.Column="1" Text="Port:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#333333" Margin="8,0,6,0"/>
+                <TextBox Grid.Column="2" x:Name="PortTextBox" Text="22" Padding="6,4" Height="28" VerticalContentAlignment="Center"/>
+            </Grid>
+
+            <!-- Username -->
+            <TextBlock Grid.Row="4" Grid.Column="0" Text="Username:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#333333"/>
+            <TextBox Grid.Row="4" Grid.Column="1" x:Name="UsernameTextBox" Padding="6,4" Height="28" VerticalContentAlignment="Center"
+                     ToolTip="SSH / SFTP user (e.g. root, ubuntu, deploy)"/>
+
+            <!-- Initial Local Path -->
+            <TextBlock Grid.Row="6" Grid.Column="0" Text="Local Path (optional):" VerticalAlignment="Center" Foreground="#333333"/>
+            <Grid Grid.Row="6" Grid.Column="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" x:Name="LocalPathTextBox" Padding="6,4" Height="28" VerticalContentAlignment="Center" Margin="0,0,6,0"
+                         ToolTip="Default local folder when connected to this site"/>
+                <Button Grid.Column="1" Content="Browse..." Click="BrowseLocalPath_Click" Padding="10,4" Height="28"
+                        Background="#F5F5F5" BorderBrush="#CCCCCC" Cursor="Hand"/>
+            </Grid>
+
+            <!-- Initial Remote Path -->
+            <TextBlock Grid.Row="8" Grid.Column="0" Text="Remote Path (opt):" VerticalAlignment="Center" Foreground="#333333"/>
+            <TextBox Grid.Row="8" Grid.Column="1" x:Name="RemotePathTextBox" Padding="6,4" Height="28" VerticalContentAlignment="Center"
+                     ToolTip="Default remote directory (e.g. /var/www/html or leave blank for user home)"/>
+        </Grid>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Cancel" Click="CancelButton_Click" IsCancel="True"
+                    Background="#F5F5F5" Foreground="#333333" BorderBrush="#CCCCCC"
+                    Padding="14,5" Margin="0,0,8,0" Cursor="Hand"/>
+
+            <Button Click="SaveButton_Click" IsDefault="True"
+                    Background="#0078D7" Foreground="#FFFFFF" BorderBrush="#005A9E"
+                    Padding="16,5" FontWeight="SemiBold" Cursor="Hand">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="💾" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="12"/>
+                    <TextBlock Text="Save Site" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using RsyncZilla.Models;
@@ -37,6 +38,39 @@ namespace RsyncZilla.Views
         public string? ConnectionPassword { get; private set; }
         public string? ConnectionUsername { get; private set; }
 
+        private void NewSiteButton_Click(object sender, RoutedEventArgs e)
+        {
+            var editDialog = new SiteEditDialog
+            {
+                Owner = this
+            };
+
+            if (editDialog.ShowDialog() == true)
+            {
+                _service.SaveOrUpdate(
+                    editDialog.Host, 
+                    editDialog.Username, 
+                    editDialog.Port, 
+                    editDialog.SiteName, 
+                    editDialog.LocalPath, 
+                    editDialog.RemotePath);
+
+                LoadConnections();
+
+                // Select the newly added or updated connection
+                var created = Connections.FirstOrDefault(c => 
+                    c.Host.Equals(editDialog.Host, System.StringComparison.OrdinalIgnoreCase) &&
+                    c.Username.Equals(editDialog.Username, System.StringComparison.OrdinalIgnoreCase) &&
+                    c.Port == editDialog.Port);
+
+                if (created != null)
+                {
+                    ConnectionsGrid.SelectedItem = created;
+                    ConnectionsGrid.ScrollIntoView(created);
+                }
+            }
+        }
+
         private void ConnectButton_Click(object sender, RoutedEventArgs e)
         {
             if (ConnectionsGrid.SelectedItem is SavedConnection conn)
@@ -56,7 +90,7 @@ namespace RsyncZilla.Views
             }
             else
             {
-                MessageBox.Show("Seleccione una conexión de la lista.", "Aviso", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Please select a site from the list.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -64,7 +98,7 @@ namespace RsyncZilla.Views
         {
             if (ConnectionsGrid.SelectedItem is SavedConnection conn)
             {
-                var confirm = MessageBox.Show($"¿Desea eliminar la conexión '{conn.DisplayName}'?", "Confirmar eliminación", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                var confirm = MessageBox.Show($"Are you sure you want to delete the site '{conn.DisplayName}'?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (confirm == MessageBoxResult.Yes)
                 {
                     _service.DeleteConnection(conn.Id);

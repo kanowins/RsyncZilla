@@ -6,7 +6,7 @@
         xmlns:vm="clr-namespace:RsyncZilla.ViewModels"
         xmlns:converters="clr-namespace:RsyncZilla.Views.Converters"
         mc:Ignorable="d"
-        Title="RsyncZilla - Cliente SFTP con sincronización verificada rsync"
+        Title="RsyncZilla - SFTP Client with Verified rsync Synchronization"
         Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
         Height="780" Width="1200"
         MinHeight="600" MinWidth="950"
@@ -294,25 +294,25 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Host -->
-                <TextBlock Grid.Column="0" Text="Servidor:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold" Foreground="#333333"/>
+                <TextBlock Grid.Column="0" Text="Host:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold" Foreground="#333333"/>
                 <TextBox Grid.Column="1" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}" 
                          IsEnabled="{Binding IsConnected, Converter={StaticResource InverseBoolConverter}}"
-                         ToolTip="Ej: sftp.ejemplo.com o 192.168.1.50" Margin="0,0,10,0"/>
+                         ToolTip="e.g. sftp.example.com or 192.168.1.50" Margin="0,0,10,0"/>
 
                 <!-- User -->
-                <TextBlock Grid.Column="2" Text="Usuario:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold" Foreground="#333333"/>
+                <TextBlock Grid.Column="2" Text="Username:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold" Foreground="#333333"/>
                 <TextBox Grid.Column="3" Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
                          IsEnabled="{Binding IsConnected, Converter={StaticResource InverseBoolConverter}}"
-                         ToolTip="Usuario SSH / SFTP" Margin="0,0,10,0"/>
+                         ToolTip="SSH / SFTP Username" Margin="0,0,10,0"/>
 
                 <!-- Password -->
-                <TextBlock Grid.Column="4" Text="Contraseña:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold" Foreground="#333333"/>
+                <TextBlock Grid.Column="4" Text="Password:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold" Foreground="#333333"/>
                 <PasswordBox Grid.Column="5" x:Name="PasswordInput" 
                              IsEnabled="{Binding IsConnected, Converter={StaticResource InverseBoolConverter}}"
                              Margin="0,0,10,0"/>
 
                 <!-- Port -->
-                <TextBlock Grid.Column="6" Text="Puerto:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold" Foreground="#333333"/>
+                <TextBlock Grid.Column="6" Text="Port:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold" Foreground="#333333"/>
                 <TextBox Grid.Column="7" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
                          IsEnabled="{Binding IsConnected, Converter={StaticResource InverseBoolConverter}}"
                          Margin="0,0,12,0"/>
@@ -327,12 +327,12 @@
                             MinWidth="110" Height="28" Margin="0,0,6,0"/>
 
                     <Button Command="{Binding OpenSiteManagerCommand}"
-                            ToolTip="Gestor de conexiones guardadas"
+                            ToolTip="Saved connections manager"
                             Style="{StaticResource SecondaryButtonStyle}"
                             Padding="8,3" Height="28">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="📂" Margin="0,0,4,0" VerticalAlignment="Center" FontSize="12"/>
-                            <TextBlock Text="Sitios" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                            <TextBlock Text="Sites" VerticalAlignment="Center" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -379,13 +379,13 @@
                                  Text="{Binding LocalBrowser.CurrentPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                  KeyDown="LocalPathTextBox_KeyDown" Margin="0,0,4,0"/>
 
-                        <Button Grid.Column="2" ToolTip="Subir un nivel" 
+                        <Button Grid.Column="2" ToolTip="Up one level" 
                                 Command="{Binding LocalBrowser.NavigateUpCommand}"
                                 Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0" Margin="0,0,4,0">
                             <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"/>
                         </Button>
 
-                        <Button Grid.Column="3" ToolTip="Actualizar directorio" 
+                        <Button Grid.Column="3" ToolTip="Refresh directory" 
                                 Command="{Binding LocalBrowser.RefreshCommand}"
                                 Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0">
                             <ContentControl ContentTemplate="{StaticResource RefreshIconTemplate}" Focusable="False"/>
@@ -407,16 +407,16 @@
                               Drop="LocalDataGrid_Drop">
                         <DataGrid.ContextMenu>
                             <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
-                                <MenuItem Header="🚀 Subir con rsync al servidor" Command="{Binding UploadSelectedCommand}"/>
+                                <MenuItem Header="🚀 Upload to server with rsync" Command="{Binding UploadSelectedCommand}"/>
                                 <Separator Background="#E0E0E0"/>
-                                <MenuItem Header="📁 Nueva carpeta local..." Click="NewLocalFolder_Click"/>
-                                <MenuItem Header="🗑️ Eliminar archivo/carpeta" Click="DeleteLocalItem_Click"/>
+                                <MenuItem Header="📁 New local folder..." Click="NewLocalFolder_Click"/>
+                                <MenuItem Header="🗑️ Delete file/folder" Click="DeleteLocalItem_Click"/>
                                 <Separator Background="#E0E0E0"/>
-                                <MenuItem Header="🔄 Actualizar lista" Command="{Binding LocalBrowser.RefreshCommand}"/>
+                                <MenuItem Header="🔄 Refresh list" Command="{Binding LocalBrowser.RefreshCommand}"/>
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Header="Nombre" Width="2*">
+                            <DataGridTemplateColumn Header="Name" Width="2*">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" Margin="4,2">
@@ -434,9 +434,9 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Tamaño" Binding="{Binding DisplaySize}" Width="90"/>
-                            <DataGridTextColumn Header="Tipo" Binding="{Binding DisplayType}" Width="110"/>
-                            <DataGridTextColumn Header="Modificado" Binding="{Binding LastWriteTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="130"/>
+                            <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="90"/>
+                            <DataGridTextColumn Header="Type" Binding="{Binding DisplayType}" Width="110"/>
+                            <DataGridTextColumn Header="Modified" Binding="{Binding LastWriteTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="130"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
@@ -444,14 +444,14 @@
 
             <!-- CENTER TRANSFER BUTTONS -->
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0" Width="46">
-                <Button ToolTip="Subir seleccionados al servidor usando rsync (Local ➔ Remoto)"
+                <Button ToolTip="Upload selected items to server using rsync (Local ➔ Remote)"
                         Command="{Binding UploadSelectedCommand}"
                         Style="{StaticResource SecondaryButtonStyle}"
                         Width="44" Height="36" Padding="0" Margin="0,0,0,8">
                     <TextBlock Text="⏩" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Button>
 
-                <Button ToolTip="Descargar seleccionados del servidor usando rsync (Remoto ➔ Local)"
+                <Button ToolTip="Download selected items from server using rsync (Remote ➔ Local)"
                         Command="{Binding DownloadSelectedCommand}"
                         Style="{StaticResource SecondaryButtonStyle}"
                         Width="44" Height="36" Padding="0">
@@ -479,7 +479,7 @@
 
                         <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
                             <TextBlock Text="🌐" FontSize="13" Margin="0,0,3,0"/>
-                            <TextBlock Text="Remoto (SFTP):" FontWeight="Bold" Foreground="#0E7036"/>
+                            <TextBlock Text="Remote (SFTP):" FontWeight="Bold" Foreground="#0E7036"/>
                         </StackPanel>
 
                         <TextBox Grid.Column="1" x:Name="RemotePathTextBox"
@@ -488,14 +488,14 @@
                                  IsEnabled="{Binding IsConnected}"
                                  Margin="0,0,4,0"/>
 
-                        <Button Grid.Column="2" ToolTip="Subir un nivel remoto"
+                        <Button Grid.Column="2" ToolTip="Up one level"
                                 Command="{Binding RemoteBrowser.NavigateUpCommand}"
                                 IsEnabled="{Binding IsConnected}"
                                 Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0" Margin="0,0,4,0">
                             <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"/>
                         </Button>
 
-                        <Button Grid.Column="3" ToolTip="Actualizar directorio remoto"
+                        <Button Grid.Column="3" ToolTip="Refresh remote directory"
                                 Command="{Binding RemoteBrowser.RefreshCommand}"
                                 IsEnabled="{Binding IsConnected}"
                                 Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0">
@@ -518,16 +518,16 @@
                               Drop="RemoteDataGrid_Drop">
                         <DataGrid.ContextMenu>
                             <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
-                                <MenuItem Header="🚀 Descargar con rsync a local" Command="{Binding DownloadSelectedCommand}"/>
+                                <MenuItem Header="🚀 Download to local with rsync" Command="{Binding DownloadSelectedCommand}"/>
                                 <Separator Background="#E0E0E0"/>
-                                <MenuItem Header="📁 Nueva carpeta remota..." Click="NewRemoteFolder_Click"/>
-                                <MenuItem Header="🗑️ Eliminar elemento remoto" Click="DeleteRemoteItem_Click"/>
+                                <MenuItem Header="📁 New remote folder..." Click="NewRemoteFolder_Click"/>
+                                <MenuItem Header="🗑️ Delete remote item" Click="DeleteRemoteItem_Click"/>
                                 <Separator Background="#E0E0E0"/>
-                                <MenuItem Header="🔄 Actualizar lista" Command="{Binding RemoteBrowser.RefreshCommand}"/>
+                                <MenuItem Header="🔄 Refresh list" Command="{Binding RemoteBrowser.RefreshCommand}"/>
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Header="Nombre" Width="2*">
+                            <DataGridTemplateColumn Header="Name" Width="2*">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" Margin="4,2">
@@ -545,9 +545,9 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Tamaño" Binding="{Binding DisplaySize}" Width="90"/>
-                            <DataGridTextColumn Header="Permisos" Binding="{Binding Permissions}" Width="95"/>
-                            <DataGridTextColumn Header="Modificado" Binding="{Binding LastWriteTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="130"/>
+                            <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="90"/>
+                            <DataGridTextColumn Header="Permissions" Binding="{Binding Permissions}" Width="95"/>
+                            <DataGridTextColumn Header="Modified" Binding="{Binding LastWriteTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="130"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
@@ -569,10 +569,10 @@
 
                     <DataGrid Grid.Row="0" ItemsSource="{Binding ActiveTransfers}">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Estado" Binding="{Binding StatusBadge}" Width="110"/>
-                            <DataGridTextColumn Header="Dirección" Binding="{Binding DirectionIcon}" Width="90"/>
-                            <DataGridTextColumn Header="Archivo / Carpeta" Binding="{Binding FileName}" Width="200"/>
-                            <DataGridTemplateColumn Header="Progreso" Width="220">
+                            <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110"/>
+                            <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90"/>
+                            <DataGridTextColumn Header="File / Folder" Binding="{Binding FileName}" Width="200"/>
+                            <DataGridTemplateColumn Header="Progress" Width="220">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Grid Margin="4">
@@ -584,9 +584,9 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Velocidad" Binding="{Binding Speed}" Width="95"/>
+                            <DataGridTextColumn Header="Speed" Binding="{Binding Speed}" Width="95"/>
                             <DataGridTextColumn Header="ETA" Binding="{Binding Eta}" Width="75"/>
-                            <DataGridTextColumn Header="Detalles" Binding="{Binding TransferredInfo}" Width="*"/>
+                            <DataGridTextColumn Header="Details" Binding="{Binding TransferredInfo}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -595,7 +595,7 @@
                                 Style="{StaticResource SecondaryButtonStyle}" Foreground="#C62828" FontWeight="SemiBold" Padding="10,4">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="⏹" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
-                                <TextBlock Text="Cancelar todo (activa y pendientes)" VerticalAlignment="Center"/>
+                                <TextBlock Text="Cancel all (active &amp; pending)" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -612,13 +612,13 @@
 
                     <DataGrid Grid.Row="0" ItemsSource="{Binding FailedTransfers}" SelectedItem="{Binding SelectedFailedTransfer, Mode=TwoWay}">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Estado" Binding="{Binding StatusBadge}" Width="110"/>
-                            <DataGridTextColumn Header="Dirección" Binding="{Binding DirectionIcon}" Width="90"/>
-                            <DataGridTextColumn Header="Archivo" Binding="{Binding FileName}" Width="190"/>
-                            <DataGridTextColumn Header="Error / Causa" Binding="{Binding ErrorMessage}" Width="280"/>
-                            <DataGridTextColumn Header="ExitCode" Binding="{Binding ExitCode}" Width="70"/>
-                            <DataGridTextColumn Header="Origen" Binding="{Binding SourcePath}" Width="*"/>
-                            <DataGridTextColumn Header="Destino" Binding="{Binding DestinationPath}" Width="*"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110"/>
+                            <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90"/>
+                            <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="190"/>
+                            <DataGridTextColumn Header="Error / Cause" Binding="{Binding ErrorMessage}" Width="280"/>
+                            <DataGridTextColumn Header="Exit Code" Binding="{Binding ExitCode}" Width="70"/>
+                            <DataGridTextColumn Header="Source" Binding="{Binding SourcePath}" Width="*"/>
+                            <DataGridTextColumn Header="Destination" Binding="{Binding DestinationPath}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -627,17 +627,17 @@
                                 Style="{StaticResource SecondaryButtonStyle}" Padding="10,4" Margin="0,0,6,0">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="🔄" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
-                                <TextBlock Text="Reintentar seleccionada" VerticalAlignment="Center"/>
+                                <TextBlock Text="Retry selected" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Command="{Binding RetryAllFailedCommand}" 
                                 Style="{StaticResource SecondaryButtonStyle}" Padding="10,4" Margin="0,0,6,0">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="🔄" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
-                                <TextBlock Text="Reintentar todas las fallidas" VerticalAlignment="Center"/>
+                                <TextBlock Text="Retry all failed" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Content="Limpiar fallidas" Command="{Binding ClearFailedCommand}" 
+                        <Button Content="Clear failed" Command="{Binding ClearFailedCommand}" 
                                 Style="{StaticResource SecondaryButtonStyle}" Padding="10,4"/>
                     </StackPanel>
                 </Grid>
@@ -653,25 +653,25 @@
 
                     <DataGrid Grid.Row="0" ItemsSource="{Binding CompletedTransfers}">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Estado" Binding="{Binding StatusBadge}" Width="110"/>
-                            <DataGridTextColumn Header="Dirección" Binding="{Binding DirectionIcon}" Width="90"/>
-                            <DataGridTextColumn Header="Archivo" Binding="{Binding FileName}" Width="220"/>
-                            <DataGridTextColumn Header="ExitCode" Binding="{Binding ExitCode}" Width="70"/>
-                            <DataGridTextColumn Header="Origen" Binding="{Binding SourcePath}" Width="*"/>
-                            <DataGridTextColumn Header="Destino" Binding="{Binding DestinationPath}" Width="*"/>
-                            <DataGridTextColumn Header="Fin" Binding="{Binding EndTime, StringFormat='HH:mm:ss'}" Width="80"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110"/>
+                            <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90"/>
+                            <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="220"/>
+                            <DataGridTextColumn Header="Exit Code" Binding="{Binding ExitCode}" Width="70"/>
+                            <DataGridTextColumn Header="Source" Binding="{Binding SourcePath}" Width="*"/>
+                            <DataGridTextColumn Header="Destination" Binding="{Binding DestinationPath}" Width="*"/>
+                            <DataGridTextColumn Header="Completed At" Binding="{Binding EndTime, StringFormat='HH:mm:ss'}" Width="95"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="6">
-                        <Button Content="Limpiar historial" Command="{Binding ClearCompletedCommand}" 
+                        <Button Content="Clear history" Command="{Binding ClearCompletedCommand}" 
                                 Style="{StaticResource SecondaryButtonStyle}"/>
                     </StackPanel>
                 </Grid>
             </TabItem>
 
             <!-- TAB 4: SERVER & RSYNC CONSOLE LOG -->
-            <TabItem Header="📜 Registro de Servidor y rsync">
+            <TabItem Header="📜 Server &amp; rsync Log">
                 <Grid Background="#FAFAFA">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -693,7 +693,7 @@
                     </ListBox>
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="6">
-                        <Button Content="Limpiar consola" Command="{Binding ClearLogsCommand}" 
+                        <Button Content="Clear log" Command="{Binding ClearLogsCommand}" 
                                 Style="{StaticResource SecondaryButtonStyle}"/>
                     </StackPanel>
                 </Grid>
@@ -711,7 +711,7 @@
                 <TextBlock Grid.Column="0" Text="{Binding StatusText}" Foreground="#495057" FontSize="12" VerticalAlignment="Center"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Motor: rsync 3.3.0 portable (Cygwin64) + SSH.NET" Foreground="#6C757D" FontSize="11"/>
+                    <TextBlock Text="Engine: rsync 3.3.0 portable (Cygwin64) + SSH.NET" Foreground="#6C757D" FontSize="11"/>
                 </StackPanel>
             </Grid>
         </Border>

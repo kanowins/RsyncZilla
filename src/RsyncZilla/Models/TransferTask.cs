@@ -108,15 +108,15 @@ namespace RsyncZilla.Models
 
         public string StatusBadge => Status switch
         {
-            TransferStatus.Pending => "⏳ Pendiente",
-            TransferStatus.Running => "🚀 Transfiriendo",
-            TransferStatus.Completed => "✅ Completado",
-            TransferStatus.Failed => "❌ Error",
-            TransferStatus.Cancelled => "⏹ Cancelado",
+            TransferStatus.Pending => "⏳ Pending",
+            TransferStatus.Running => "🚀 Transferring",
+            TransferStatus.Completed => "✅ Completed",
+            TransferStatus.Failed => "❌ Failed",
+            TransferStatus.Cancelled => "⏹ Cancelled",
             _ => Status.ToString()
         };
 
-        public string DirectionIcon => Direction == TransferDirection.Upload ? "⬆️ Subida" : "⬇️ Descarga";
+        public string DirectionIcon => Direction == TransferDirection.Upload ? "⬆️ Upload" : "⬇️ Download";
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

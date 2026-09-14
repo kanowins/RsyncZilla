@@ -162,23 +162,23 @@ namespace RsyncZilla.Services
                 // If error is PERMISSION DENIED or AUTHENTICATION FAILED, do NOT retry!
                 if (reason == RsyncFailureReason.PermissionDenied)
                 {
-                    task.ErrorMessage = $"Error de permisos: no se puede escribir o leer el archivo en destino. {errorDetail}";
-                    LogMessageReceived?.Invoke($"[rsync] 🚫 Error de permisos permanente en '{task.FileName}'. No se reintentará.", true);
+                    task.ErrorMessage = $"Permission error: cannot write or read file at destination. {errorDetail}";
+                    LogMessageReceived?.Invoke($"[rsync] 🚫 Permanent permission error on '{task.FileName}'. Will not retry.", true);
                     return false;
                 }
 
                 if (reason == RsyncFailureReason.AuthenticationFailed)
                 {
-                    task.ErrorMessage = $"Error de autenticación SSH. Verifique las credenciales. {errorDetail}";
-                    LogMessageReceived?.Invoke($"[rsync] 🚫 Fallo de autenticación en '{task.FileName}'. No se reintentará.", true);
+                    task.ErrorMessage = $"SSH authentication error. Please verify credentials. {errorDetail}";
+                    LogMessageReceived?.Invoke($"[rsync] 🚫 Authentication failure on '{task.FileName}'. Will not retry.", true);
                     return false;
                 }
 
                 // If it's a CONNECTION ERROR and we have attempts left: retry!
                 if (attempt < maxRetries)
                 {
-                    LogMessageReceived?.Invoke($"[rsync] ⚠️ Fallo de conexión en '{task.FileName}'. Reintentando automáticamente ({attempt}/{maxRetries}) en 2 segundos...", true);
-                    task.ErrorMessage = $"Fallo de conexión. Reintentando ({attempt}/{maxRetries})...";
+                    LogMessageReceived?.Invoke($"[rsync] ⚠️ Connection failure on '{task.FileName}'. Automatically retrying ({attempt}/{maxRetries}) in 2 seconds...", true);
+                    task.ErrorMessage = $"Connection failure. Retrying ({attempt}/{maxRetries})...";
                     try
                     {
                         await Task.Delay(2000, cancellationToken);
@@ -190,8 +190,8 @@ namespace RsyncZilla.Services
                 }
                 else
                 {
-                    task.ErrorMessage = $"Fallo de conexión tras {maxRetries} intentos: {errorDetail}";
-                    LogMessageReceived?.Invoke($"[rsync] ❌ Agotados los {maxRetries} reintentos de conexión para '{task.FileName}'.", true);
+                    task.ErrorMessage = $"Connection failure after {maxRetries} attempts: {errorDetail}";
+                    LogMessageReceived?.Invoke($"[rsync] ❌ Exhausted {maxRetries} connection retries for '{task.FileName}'.", true);
                     return false;
                 }
             }
@@ -208,7 +208,7 @@ namespace RsyncZilla.Services
             if (!File.Exists(rsyncPath))
             {
                 task.Status = TransferStatus.Failed;
-                task.ErrorMessage = $"No se encontró rsync.exe en: {rsyncPath}";
+                task.ErrorMessage = $"rsync.exe not found at: {rsyncPath}";
                 return (false, RsyncFailureReason.Other, task.ErrorMessage);
             }
 
@@ -242,7 +242,7 @@ namespace RsyncZilla.Services
             // Args with -s (protect-args) to prevent remote shell splitting filenames with spaces
             var args = $"-avzP -s --stats --update -e \"{sshCommand}\" \"{sourceArg}\" \"{destArg}\"";
 
-            LogMessageReceived?.Invoke($"[rsync] Transfiriendo: {task.FileName}", false);
+            LogMessageReceived?.Invoke($"[rsync] Transferring: {task.FileName}", false);
 
             var startInfo = new ProcessStartInfo
             {
@@ -289,7 +289,7 @@ namespace RsyncZilla.Services
                         }
                         task.Speed = match.Groups[3].Value;
                         task.Eta = match.Groups[4].Value;
-                        task.TransferredInfo = $"{bytesStr} bytes ({task.Speed}, restan {task.Eta})";
+                        task.TransferredInfo = $"{bytesStr} bytes ({task.Speed}, {task.Eta} remaining)";
                     }
                 };
 
@@ -328,7 +328,7 @@ namespace RsyncZilla.Services
                 if (cancellationToken.IsCancellationRequested || task.Status == TransferStatus.Cancelled)
                 {
                     task.Status = TransferStatus.Cancelled;
-                    task.ErrorMessage = "Transferencia cancelada por el usuario.";
+                    task.ErrorMessage = "Transfer cancelled by user.";
                     return (false, RsyncFailureReason.Other, task.ErrorMessage);
                 }
 
@@ -337,14 +337,14 @@ namespace RsyncZilla.Services
                     task.Status = TransferStatus.Completed;
                     task.ProgressPercentage = 100;
                     task.Eta = "0:00:00";
-                    LogMessageReceived?.Invoke($"[rsync] ✅ {task.FileName} transferido con éxito (ExitCode: 0)", false);
+                    LogMessageReceived?.Invoke($"[rsync] ✅ {task.FileName} transferred successfully (ExitCode: 0)", false);
                     return (true, RsyncFailureReason.Other, "");
                 }
                 else
                 {
                     task.Status = TransferStatus.Failed;
                     var err = errorOutput.ToString().Trim();
-                    task.ErrorMessage = string.IsNullOrEmpty(err) ? $"rsync devolvió código {process.ExitCode}" : err;
+                    task.ErrorMessage = string.IsNullOrEmpty(err) ? $"rsync returned exit code {process.ExitCode}" : err;
                     var reason = ClassifyError(process.ExitCode, err);
                     return (false, reason, task.ErrorMessage);
                 }

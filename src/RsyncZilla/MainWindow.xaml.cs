@@ -396,7 +396,7 @@ namespace RsyncZilla
 
         private async void NewLocalFolder_Click(object sender, RoutedEventArgs e)
         {
-            var dlg = new Views.InputDialog("Nueva carpeta local", "Ingrese el nombre de la nueva carpeta local:", "Nueva carpeta")
+            var dlg = new Views.InputDialog("New Local Folder", "Enter name for the new local folder:", "New Folder")
             {
                 Owner = this
             };
@@ -408,7 +408,7 @@ namespace RsyncZilla
 
         private async void NewRemoteFolder_Click(object sender, RoutedEventArgs e)
         {
-            var dlg = new Views.InputDialog("Nueva carpeta remota", "Ingrese el nombre de la nueva carpeta remota:", "nueva_carpeta")
+            var dlg = new Views.InputDialog("New Remote Folder", "Enter name for the new remote folder:", "new_folder")
             {
                 Owner = this
             };
@@ -426,10 +426,10 @@ namespace RsyncZilla
             if (!selected.Any()) return;
 
             string prompt = selected.Count == 1
-                ? $"¿Está seguro de eliminar '{selected[0].Name}'?"
-                : $"¿Está seguro de eliminar los {selected.Count} elementos locales seleccionados?";
+                ? $"Are you sure you want to delete '{selected[0].Name}'?"
+                : $"Are you sure you want to delete the {selected.Count} selected local items?";
 
-            var confirm = MessageBox.Show(prompt, "Confirmar eliminación local", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            var confirm = MessageBox.Show(prompt, "Confirm Local Deletion", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (confirm == MessageBoxResult.Yes)
             {
                 foreach (var item in selected)
@@ -447,10 +447,10 @@ namespace RsyncZilla
             if (!selected.Any()) return;
 
             string prompt = selected.Count == 1
-                ? $"¿Está seguro de eliminar '{selected[0].Name}' del servidor remoto?"
-                : $"¿Está seguro de eliminar los {selected.Count} elementos remotos seleccionados?";
+                ? $"Are you sure you want to delete '{selected[0].Name}' from the remote server?"
+                : $"Are you sure you want to delete the {selected.Count} selected remote items?";
 
-            var confirm = MessageBox.Show(prompt, "Confirmar eliminación remota", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            var confirm = MessageBox.Show(prompt, "Confirm Remote Deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (confirm == MessageBoxResult.Yes)
             {
                 foreach (var item in selected)

@@ -25,7 +25,7 @@ namespace RsyncZilla.Services
             {
                 try
                 {
-                    LogMessageReceived?.Invoke($"Conectando a {username}@{host}:{port} via SFTP...", false);
+                    LogMessageReceived?.Invoke($"Connecting to {username}@{host}:{port} via SFTP...", false);
                     var connectionInfo = new ConnectionInfo(
                         host,
                         port,
@@ -40,12 +40,12 @@ namespace RsyncZilla.Services
                     _client.Connect();
 
                     CurrentPath = _client.WorkingDirectory;
-                    LogMessageReceived?.Invoke($"Conectado con éxito. Directorio inicial: {CurrentPath}", false);
+                    LogMessageReceived?.Invoke($"Connected successfully. Initial directory: {CurrentPath}", false);
                     return true;
                 }
                 catch (Exception ex)
                 {
-                    LogMessageReceived?.Invoke($"Error al conectar por SFTP: {ex.Message}", true);
+                    LogMessageReceived?.Invoke($"SFTP connection error: {ex.Message}", true);
                     Disconnect();
                     return false;
                 }
@@ -71,7 +71,7 @@ namespace RsyncZilla.Services
                 finally
                 {
                     _client = null;
-                    LogMessageReceived?.Invoke("Desconectado del servidor SFTP.", false);
+                    LogMessageReceived?.Invoke("Disconnected from SFTP server.", false);
                 }
             }
         }
@@ -81,7 +81,7 @@ namespace RsyncZilla.Services
             var results = new List<FileItem>();
             if (_client == null || !_client.IsConnected)
             {
-                return (results, "No hay conexión activa con el servidor SFTP.");
+                return (results, "No active connection to SFTP server.");
             }
 
             return await Task.Run<(List<FileItem> items, string? error)>(() =>
@@ -142,12 +142,12 @@ namespace RsyncZilla.Services
                     results.AddRange(dirItems);
                     results.AddRange(regularFiles);
 
-                    LogMessageReceived?.Invoke($"Directorio remoto listado: {CurrentPath} ({results.Count} elementos)", false);
+                    LogMessageReceived?.Invoke($"Remote directory listed: {CurrentPath} ({results.Count} items)", false);
                     return (results, null);
                 }
                 catch (Exception ex)
                 {
-                    var msg = $"Error al listar directorio remoto '{remotePath}': {ex.Message}";
+                    var msg = $"Error listing remote directory '{remotePath}': {ex.Message}";
                     LogMessageReceived?.Invoke(msg, true);
                     return (results, msg);
                 }
@@ -162,12 +162,12 @@ namespace RsyncZilla.Services
                 try
                 {
                     _client.CreateDirectory(path);
-                    LogMessageReceived?.Invoke($"Carpeta remota creada: {path}", false);
+                    LogMessageReceived?.Invoke($"Remote folder created: {path}", false);
                     return true;
                 }
                 catch (Exception ex)
                 {
-                    LogMessageReceived?.Invoke($"Error creando carpeta remota '{path}': {ex.Message}", true);
+                    LogMessageReceived?.Invoke($"Error creating remote folder '{path}': {ex.Message}", true);
                     return false;
                 }
             });
@@ -183,18 +183,18 @@ namespace RsyncZilla.Services
                     if (isDirectory)
                     {
                         DeleteDirectoryRecursive(_client, path);
-                        LogMessageReceived?.Invoke($"Carpeta remota eliminada: {path}", false);
+                        LogMessageReceived?.Invoke($"Remote folder deleted: {path}", false);
                     }
                     else
                     {
                         _client.DeleteFile(path);
-                        LogMessageReceived?.Invoke($"Archivo remoto eliminado: {path}", false);
+                        LogMessageReceived?.Invoke($"Remote file deleted: {path}", false);
                     }
                     return true;
                 }
                 catch (Exception ex)
                 {
-                    LogMessageReceived?.Invoke($"Error eliminando elemento remoto '{path}': {ex.Message}", true);
+                    LogMessageReceived?.Invoke($"Error deleting remote item '{path}': {ex.Message}", true);
                     return false;
                 }
             });

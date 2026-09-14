@@ -98,5 +98,33 @@ namespace RsyncZilla.Tests
                 throw new Exception($"Fallo al instanciar ConnectCredentialsDialog: {thrown.GetType().Name}: {thrown.Message}\n{thrown.StackTrace}", thrown);
             }
         }
+
+        [Fact]
+        public void SiteEditDialog_ShouldInstantiateWithoutExceptions()
+        {
+            Exception? thrown = null;
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    var app = System.Windows.Application.Current ?? new System.Windows.Application();
+                    var dialog = new RsyncZilla.Views.SiteEditDialog();
+                    Assert.NotNull(dialog);
+                }
+                catch (Exception ex)
+                {
+                    thrown = ex;
+                }
+            });
+
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            thread.Join(5000);
+
+            if (thrown != null)
+            {
+                throw new Exception($"Fallo al instanciar SiteEditDialog: {thrown.GetType().Name}: {thrown.Message}\n{thrown.StackTrace}", thrown);
+            }
+        }
     }
 }

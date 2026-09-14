@@ -64,19 +64,19 @@ namespace RsyncZilla.ViewModels
             set => SetProperty(ref _isConnecting, value);
         }
 
-        private string _statusText = "Desconectado";
+        private string _statusText = "Disconnected";
         public string StatusText
         {
             get => _statusText;
             set => SetProperty(ref _statusText, value);
         }
 
-        public string ConnectionButtonText => IsConnected ? "Desconectar" : "Conexión rápida";
-        public string ConnectionStatusIndicator => IsConnected ? "🟢 Conectado" : "⚪ Desconectado";
+        public string ConnectionButtonText => IsConnected ? "Disconnect" : "Quick Connect";
+        public string ConnectionStatusIndicator => IsConnected ? "🟢 Connected" : "⚪ Disconnected";
 
-        public string ActiveTabHeader => $"🚀 Cola ({ActiveTransfers.Count})";
-        public string FailedTabHeader => $"❌ Fallidas ({FailedTransfers.Count})";
-        public string CompletedTabHeader => $"✅ Éxitos ({CompletedTransfers.Count})";
+        public string ActiveTabHeader => $"🚀 Queue ({ActiveTransfers.Count})";
+        public string FailedTabHeader => $"❌ Failed ({FailedTransfers.Count})";
+        public string CompletedTabHeader => $"✅ Completed ({CompletedTransfers.Count})";
 
         public FileBrowserViewModel LocalBrowser { get; }
         public FileBrowserViewModel RemoteBrowser { get; }
@@ -159,9 +159,9 @@ namespace RsyncZilla.ViewModels
                 }
             };
 
-            AddLog("RsyncZilla inicializado. Listo para conectar.", false);
+            AddLog("RsyncZilla initialized. Ready to connect.", false);
             var rsyncPath = _rsyncService.FindRsyncBinary();
-            AddLog($"Motor rsync detectado en: {rsyncPath}", false);
+            AddLog($"rsync engine detected at: {rsyncPath}", false);
         }
 
         private void OnBrowserPathChanged()
@@ -178,7 +178,7 @@ namespace RsyncZilla.ViewModels
             {
                 _sftpService.Disconnect();
                 IsConnected = false;
-                StatusText = "Desconectado";
+                StatusText = "Disconnected";
                 RunOnUi(() =>
                 {
                     RemoteBrowser.Items.Clear();
@@ -194,12 +194,12 @@ namespace RsyncZilla.ViewModels
 
             if (string.IsNullOrWhiteSpace(Host) || string.IsNullOrWhiteSpace(Username))
             {
-                MessageBox.Show("Por favor, ingrese Servidor (Host) y Nombre de usuario.", "Datos incompletos", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Please enter Server (Host) and Username.", "Missing Information", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             IsConnecting = true;
-            StatusText = "Conectando al servidor...";
+            StatusText = "Connecting to server...";
 
             try
             {
@@ -222,7 +222,7 @@ namespace RsyncZilla.ViewModels
                     await RemoteBrowser.NavigateToAsync(initialPath);
 
                     IsConnected = true;
-                    StatusText = $"Conectado a {Username}@{Host}:{Port}";
+                    StatusText = $"Connected to {Username}@{Host}:{Port}";
 
                     // Save or update to connection manager (without password) and record current active paths
                     _connectionManagerService.SaveOrUpdate(
@@ -235,8 +235,8 @@ namespace RsyncZilla.ViewModels
                 else
                 {
                     IsConnected = false;
-                    StatusText = "Error al conectar.";
-                    MessageBox.Show("No se pudo conectar al servidor SFTP. Revise los registros inferiores para más detalles.", "Error de conexión", MessageBoxButton.OK, MessageBoxImage.Error);
+                    StatusText = "Connection error.";
+                    MessageBox.Show("Could not connect to SFTP server. Check logs below for details.", "Connection Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
             finally
@@ -463,13 +463,13 @@ namespace RsyncZilla.ViewModels
                 foreach (var t in pending)
                 {
                     t.Status = TransferStatus.Cancelled;
-                    t.ErrorMessage = "Cancelado por el usuario.";
+                    t.ErrorMessage = "Cancelled by user.";
                     ActiveTransfers.Remove(t);
                     FailedTransfers.Insert(0, t);
                 }
             });
 
-            AddLog("Todas las transferencias activas y pendientes han sido canceladas.", true);
+            AddLog("All active and pending transfers have been cancelled.", true);
         }
 
         public void RetrySelectedFailed(TransferTask? task)

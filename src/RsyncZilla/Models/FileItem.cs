@@ -16,7 +16,7 @@ namespace RsyncZilla.Models
         {
             get
             {
-                if (IsDirectory) return "<CARPETA>";
+                if (IsDirectory) return "<DIR>";
                 return FormatBytes(Length);
             }
         }
@@ -25,10 +25,10 @@ namespace RsyncZilla.Models
         {
             get
             {
-                if (IsParent) return "Subir nivel";
-                if (IsDirectory) return "Carpeta de archivos";
+                if (IsParent) return "Up one level";
+                if (IsDirectory) return "File folder";
                 var ext = System.IO.Path.GetExtension(Name).ToLowerInvariant();
-                return string.IsNullOrEmpty(ext) ? "Archivo" : $"{ext.TrimStart('.').ToUpper()} Archivo";
+                return string.IsNullOrEmpty(ext) ? "File" : $"{ext.TrimStart('.').ToUpper()} File";
             }
         }
 

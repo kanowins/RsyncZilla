@@ -42,7 +42,7 @@ namespace RsyncZilla.Tests
         public void FileItem_DisplaySize_ShouldFormatCorrectly()
         {
             var dirItem = new FileItem { Name = "docs", IsDirectory = true, Length = 0 };
-            Assert.Equal("<CARPETA>", dirItem.DisplaySize);
+            Assert.Equal("<DIR>", dirItem.DisplaySize);
 
             var file1 = new FileItem { Name = "test.txt", IsDirectory = false, Length = 1024 };
             Assert.Equal("1 KB", file1.DisplaySize);
@@ -61,15 +61,15 @@ namespace RsyncZilla.Tests
             };
 
             Assert.False(task.IsRunning);
-            Assert.Contains("Pendiente", task.StatusBadge);
+            Assert.Contains("Pending", task.StatusBadge);
 
             task.Status = TransferStatus.Running;
             Assert.True(task.IsRunning);
-            Assert.Contains("Transfiriendo", task.StatusBadge);
+            Assert.Contains("Transferring", task.StatusBadge);
 
             task.Status = TransferStatus.Completed;
             Assert.False(task.IsRunning);
-            Assert.Contains("Completado", task.StatusBadge);
+            Assert.Contains("Completed", task.StatusBadge);
         }
 
         [Theory]
