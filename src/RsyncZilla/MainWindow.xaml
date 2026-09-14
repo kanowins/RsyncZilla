@@ -266,6 +266,94 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="TabCloseButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="#777777"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="2">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#E81123"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NewTabButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#E9ECEF"/>
+            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="#444444"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#FFFFFF"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#0078D7"/>
+                                <Setter Property="Foreground" Value="#0078D7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SessionTabItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Background" Value="#E9ECEF"/>
+            <Setter Property="Foreground" Value="#555555"/>
+            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderThickness" Value="1,1,1,0"/>
+            <Setter Property="Margin" Value="0,0,3,0"/>
+            <Setter Property="Padding" Value="8,4,6,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="tabBorder" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4,4,0,0" Margin="{TemplateBinding Margin}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="tabBorder" Property="Background" Value="#FFFFFF"/>
+                                <Setter TargetName="tabBorder" Property="BorderThickness" Value="1,2,1,0"/>
+                                <Setter TargetName="tabBorder" Property="BorderBrush" Value="#0078D7"/>
+                                <Setter Property="Foreground" Value="#000000"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="tabBorder" Property="Background" Value="#F8F9FA"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -344,214 +432,260 @@
             </Grid>
         </Border>
 
-        <!-- 2. DUAL EXPLORER PANELS -->
-        <Grid Grid.Row="1" Margin="8,6,8,4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="300"/>
-                <ColumnDefinition Width="Auto"/> <!-- Center Actions -->
-                <ColumnDefinition Width="*" MinWidth="300"/>
-            </Grid.ColumnDefinitions>
+        <!-- 2. DUAL EXPLORER PANELS (UNDER CONNECTION TABS) -->
+        <Grid Grid.Row="1" Margin="8,4,8,4">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Connection Tabs Strip across both Local and Remote -->
+                <RowDefinition Height="*"/>    <!-- Dual Explorer Area -->
+            </Grid.RowDefinitions>
 
-            <!-- LEFT PANEL: LOCAL MACHINE -->
-            <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6"
-                    AllowDrop="True" DragOver="LocalDataGrid_DragOver" DragEnter="LocalDataGrid_DragEnter" Drop="LocalDataGrid_Drop">
+            <!-- Connection Tabs Strip (Spans across both Local and Remote explorers) -->
+            <Border Grid.Row="0" Background="#F1F3F5" BorderBrush="#D0D0D0" BorderThickness="1,1,1,0" CornerRadius="4,4,0,0" Padding="6,4,6,0">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/> <!-- Navigation Toolbar -->
-                        <RowDefinition Height="*"/>    <!-- File List -->
-                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                    <!-- Local Header & Path Bar -->
-                    <Grid Grid.Row="0" Margin="2,2,2,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                    <ListBox Grid.Column="0" ItemsSource="{Binding RemoteSessions}"
+                             SelectedItem="{Binding ActiveSession, Mode=TwoWay}"
+                             ItemContainerStyle="{StaticResource SessionTabItemStyle}"
+                             BorderThickness="0" Background="Transparent"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                             ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding StatusIndicator}" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" MaxWidth="220" TextTrimming="CharacterEllipsis"/>
+                                    <Button Command="{Binding CloseCommand}" ToolTip="Close connection" Margin="8,0,0,0" Style="{StaticResource TabCloseButtonStyle}">
+                                        <TextBlock Text="✕" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
 
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
-                            <TextBlock Text="💻" FontSize="13" Margin="0,0,3,0"/>
-                            <TextBlock Text="Local:" FontWeight="Bold" Foreground="#0066CC"/>
-                        </StackPanel>
-
-                        <TextBox Grid.Column="1" x:Name="LocalPathTextBox" 
-                                 Text="{Binding LocalBrowser.CurrentPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                 KeyDown="LocalPathTextBox_KeyDown" Margin="0,0,4,0"/>
-
-                        <Button Grid.Column="2" ToolTip="Up one level" 
-                                Command="{Binding LocalBrowser.NavigateUpCommand}"
-                                Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0" Margin="0,0,4,0">
-                            <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"/>
-                        </Button>
-
-                        <Button Grid.Column="3" ToolTip="Refresh directory" 
-                                Command="{Binding LocalBrowser.RefreshCommand}"
-                                Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0">
-                            <ContentControl ContentTemplate="{StaticResource RefreshIconTemplate}" Focusable="False"/>
-                        </Button>
-                    </Grid>
-
-                    <!-- Local DataGrid -->
-                    <DataGrid Grid.Row="1" x:Name="LocalDataGrid"
-                              ItemsSource="{Binding LocalBrowser.Items}"
-                              SelectedItem="{Binding LocalBrowser.SelectedItem, Mode=TwoWay}"
-                              MouseDoubleClick="LocalDataGrid_MouseDoubleClick"
-                              AllowDrop="True"
-                              PreviewMouseRightButtonDown="DataGrid_PreviewMouseRightButtonDown"
-                              PreviewMouseLeftButtonDown="LocalDataGrid_PreviewMouseLeftButtonDown"
-                              PreviewMouseLeftButtonUp="LocalDataGrid_PreviewMouseLeftButtonUp"
-                              MouseMove="LocalDataGrid_MouseMove"
-                              DragOver="LocalDataGrid_DragOver"
-                              DragEnter="LocalDataGrid_DragEnter"
-                              Drop="LocalDataGrid_Drop">
-                        <DataGrid.ContextMenu>
-                            <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
-                                <MenuItem Header="🚀 Upload to server with rsync" Command="{Binding UploadSelectedCommand}"/>
-                                <Separator Background="#E0E0E0"/>
-                                <MenuItem Header="📁 New local folder..." Click="NewLocalFolder_Click"/>
-                                <MenuItem Header="🗑️ Delete file/folder" Click="DeleteLocalItem_Click"/>
-                                <Separator Background="#E0E0E0"/>
-                                <MenuItem Header="🔄 Refresh list" Command="{Binding LocalBrowser.RefreshCommand}"/>
-                            </ContextMenu>
-                        </DataGrid.ContextMenu>
-                        <DataGrid.Columns>
-                            <DataGridTemplateColumn Header="Name" Width="2*">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" Margin="4,2">
-                                            <!-- Icon for Parent Folder '..' -->
-                                            <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"
-                                                            Margin="0,0,6,0" VerticalAlignment="Center"
-                                                            Visibility="{Binding IsParent, Converter={StaticResource BoolToVisConverter}}"/>
-
-                                            <!-- Regular icon for files and folders -->
-                                            <TextBlock Text="{Binding IconEmoji}" Margin="0,0,6,0" VerticalAlignment="Center"
-                                                       Visibility="{Binding IsParent, Converter={StaticResource InverseBoolToVisConverter}}"/>
-
-                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Foreground="#111111"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="90"/>
-                            <DataGridTextColumn Header="Type" Binding="{Binding DisplayType}" Width="110"/>
-                            <DataGridTextColumn Header="Modified" Binding="{Binding LastWriteTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="130"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <Button Grid.Column="1" Command="{Binding NewTabCommand}" ToolTip="New connection tab" Style="{StaticResource NewTabButtonStyle}">
+                        <TextBlock Text="+" FontSize="14" FontWeight="Bold" Margin="0,-1,0,0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
                 </Grid>
             </Border>
 
-            <!-- CENTER TRANSFER BUTTONS -->
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0" Width="46">
-                <Button ToolTip="Upload selected items to server using rsync (Local ➔ Remote)"
-                        Command="{Binding UploadSelectedCommand}"
-                        Style="{StaticResource SecondaryButtonStyle}"
-                        Width="44" Height="36" Padding="0" Margin="0,0,0,8">
-                    <TextBlock Text="⏩" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Button>
+            <!-- Dual Explorers Area -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="300"/>
+                    <ColumnDefinition Width="Auto"/> <!-- Center Actions -->
+                    <ColumnDefinition Width="*" MinWidth="300"/>
+                </Grid.ColumnDefinitions>
 
-                <Button ToolTip="Download selected items from server using rsync (Remote ➔ Local)"
-                        Command="{Binding DownloadSelectedCommand}"
-                        Style="{StaticResource SecondaryButtonStyle}"
-                        Width="44" Height="36" Padding="0">
-                    <TextBlock Text="⏪" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Button>
-            </StackPanel>
+                <!-- LEFT PANEL: LOCAL MACHINE -->
+                <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6"
+                        AllowDrop="True" DragOver="LocalDataGrid_DragOver" DragEnter="LocalDataGrid_DragEnter" Drop="LocalDataGrid_Drop">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/> <!-- Navigation Toolbar -->
+                            <RowDefinition Height="*"/>    <!-- File List -->
+                        </Grid.RowDefinitions>
 
-            <!-- RIGHT PANEL: REMOTE SFTP SERVER -->
-            <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6"
-                    AllowDrop="True" DragOver="RemoteDataGrid_DragOver" DragEnter="RemoteDataGrid_DragEnter" Drop="RemoteDataGrid_Drop">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/> <!-- Navigation Toolbar -->
-                        <RowDefinition Height="*"/>    <!-- Remote File List -->
-                    </Grid.RowDefinitions>
+                        <!-- Local Header & Path Bar -->
+                        <Grid Grid.Row="0" Margin="2,2,2,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                    <!-- Remote Header & Path Bar -->
-                    <Grid Grid.Row="0" Margin="2,2,2,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
+                                <TextBlock Text="💻" FontSize="13" Margin="0,0,3,0"/>
+                                <TextBlock Text="Local:" FontWeight="Bold" Foreground="#0066CC"/>
+                            </StackPanel>
 
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
-                            <TextBlock Text="🌐" FontSize="13" Margin="0,0,3,0"/>
-                            <TextBlock Text="Remote (SFTP):" FontWeight="Bold" Foreground="#0E7036"/>
-                        </StackPanel>
+                            <TextBox Grid.Column="1" x:Name="LocalPathTextBox" 
+                                     Text="{Binding LocalBrowser.CurrentPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     KeyDown="LocalPathTextBox_KeyDown" Margin="0,0,4,0"/>
 
-                        <TextBox Grid.Column="1" x:Name="RemotePathTextBox"
-                                 Text="{Binding RemoteBrowser.CurrentPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                                 KeyDown="RemotePathTextBox_KeyDown"
-                                 IsEnabled="{Binding IsConnected}"
-                                 Margin="0,0,4,0"/>
+                            <Button Grid.Column="2" ToolTip="Up one level" 
+                                    Command="{Binding LocalBrowser.NavigateUpCommand}"
+                                    Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0" Margin="0,0,4,0">
+                                    <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"/>
+                            </Button>
 
-                        <Button Grid.Column="2" ToolTip="Up one level"
-                                Command="{Binding RemoteBrowser.NavigateUpCommand}"
-                                IsEnabled="{Binding IsConnected}"
-                                Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0" Margin="0,0,4,0">
-                            <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"/>
-                        </Button>
+                            <Button Grid.Column="3" ToolTip="Refresh directory" 
+                                    Command="{Binding LocalBrowser.RefreshCommand}"
+                                    Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0">
+                                <ContentControl ContentTemplate="{StaticResource RefreshIconTemplate}" Focusable="False"/>
+                            </Button>
+                        </Grid>
 
-                        <Button Grid.Column="3" ToolTip="Refresh remote directory"
-                                Command="{Binding RemoteBrowser.RefreshCommand}"
-                                IsEnabled="{Binding IsConnected}"
-                                Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0">
-                            <ContentControl ContentTemplate="{StaticResource RefreshIconTemplate}" Focusable="False"/>
-                        </Button>
+                        <!-- Local DataGrid -->
+                        <DataGrid Grid.Row="1" x:Name="LocalDataGrid"
+                                  ItemsSource="{Binding LocalBrowser.Items}"
+                                  SelectedItem="{Binding LocalBrowser.SelectedItem, Mode=TwoWay}"
+                                  MouseDoubleClick="LocalDataGrid_MouseDoubleClick"
+                                  AllowDrop="True"
+                                  PreviewMouseRightButtonDown="DataGrid_PreviewMouseRightButtonDown"
+                                  PreviewMouseLeftButtonDown="LocalDataGrid_PreviewMouseLeftButtonDown"
+                                  PreviewMouseLeftButtonUp="LocalDataGrid_PreviewMouseLeftButtonUp"
+                                  MouseMove="LocalDataGrid_MouseMove"
+                                  DragOver="LocalDataGrid_DragOver"
+                                  DragEnter="LocalDataGrid_DragEnter"
+                                  Drop="LocalDataGrid_Drop">
+                            <DataGrid.ContextMenu>
+                                <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
+                                    <MenuItem Header="🚀 Upload to server with rsync" Command="{Binding UploadSelectedCommand}"/>
+                                    <Separator Background="#E0E0E0"/>
+                                    <MenuItem Header="📁 New local folder..." Click="NewLocalFolder_Click"/>
+                                    <MenuItem Header="🗑️ Delete file/folder" Click="DeleteLocalItem_Click"/>
+                                    <Separator Background="#E0E0E0"/>
+                                    <MenuItem Header="🔄 Refresh list" Command="{Binding LocalBrowser.RefreshCommand}"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="Name" Width="2*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="4,2">
+                                                <!-- Icon for Parent Folder '..' -->
+                                                <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"
+                                                                Margin="0,0,6,0" VerticalAlignment="Center"
+                                                                Visibility="{Binding IsParent, Converter={StaticResource BoolToVisConverter}}"/>
+
+                                                <!-- Regular icon for files and folders -->
+                                                <TextBlock Text="{Binding IconEmoji}" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                           Visibility="{Binding IsParent, Converter={StaticResource InverseBoolToVisConverter}}"/>
+
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Foreground="#111111"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="90"/>
+                                <DataGridTextColumn Header="Type" Binding="{Binding DisplayType}" Width="110"/>
+                                <DataGridTextColumn Header="Modified" Binding="{Binding LastWriteTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="130"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
                     </Grid>
+                </Border>
 
-                    <!-- Remote DataGrid -->
-                    <DataGrid Grid.Row="1" x:Name="RemoteDataGrid"
-                              ItemsSource="{Binding RemoteBrowser.Items}"
-                              SelectedItem="{Binding RemoteBrowser.SelectedItem, Mode=TwoWay}"
-                              MouseDoubleClick="RemoteDataGrid_MouseDoubleClick"
-                              AllowDrop="True"
-                              PreviewMouseRightButtonDown="DataGrid_PreviewMouseRightButtonDown"
-                              PreviewMouseLeftButtonDown="RemoteDataGrid_PreviewMouseLeftButtonDown"
-                              PreviewMouseLeftButtonUp="RemoteDataGrid_PreviewMouseLeftButtonUp"
-                              MouseMove="RemoteDataGrid_MouseMove"
-                              DragOver="RemoteDataGrid_DragOver"
-                              DragEnter="RemoteDataGrid_DragEnter"
-                              Drop="RemoteDataGrid_Drop">
-                        <DataGrid.ContextMenu>
-                            <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
-                                <MenuItem Header="🚀 Download to local with rsync" Command="{Binding DownloadSelectedCommand}"/>
-                                <Separator Background="#E0E0E0"/>
-                                <MenuItem Header="📁 New remote folder..." Click="NewRemoteFolder_Click"/>
-                                <MenuItem Header="🗑️ Delete remote item" Click="DeleteRemoteItem_Click"/>
-                                <Separator Background="#E0E0E0"/>
-                                <MenuItem Header="🔄 Refresh list" Command="{Binding RemoteBrowser.RefreshCommand}"/>
-                            </ContextMenu>
-                        </DataGrid.ContextMenu>
-                        <DataGrid.Columns>
-                            <DataGridTemplateColumn Header="Name" Width="2*">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" Margin="4,2">
-                                            <!-- Icon for Parent Folder '..' -->
-                                            <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"
-                                                            Margin="0,0,6,0" VerticalAlignment="Center"
-                                                            Visibility="{Binding IsParent, Converter={StaticResource BoolToVisConverter}}"/>
+                <!-- CENTER TRANSFER BUTTONS -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0" Width="46">
+                    <Button ToolTip="Upload selected items to server using rsync (Local ➔ Remote)"
+                            Command="{Binding UploadSelectedCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Width="44" Height="36" Padding="0" Margin="0,0,0,8">
+                        <TextBlock Text="⏩" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
 
-                                            <!-- Regular icon for files and folders -->
-                                            <TextBlock Text="{Binding IconEmoji}" Margin="0,0,6,0" VerticalAlignment="Center"
-                                                       Visibility="{Binding IsParent, Converter={StaticResource InverseBoolToVisConverter}}"/>
+                    <Button ToolTip="Download selected items from server using rsync (Remote ➔ Local)"
+                            Command="{Binding DownloadSelectedCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Width="44" Height="36" Padding="0">
+                        <TextBlock Text="⏪" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
 
-                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Foreground="#111111"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="90"/>
-                            <DataGridTextColumn Header="Permissions" Binding="{Binding Permissions}" Width="95"/>
-                            <DataGridTextColumn Header="Modified" Binding="{Binding LastWriteTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="130"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
-            </Border>
+                <!-- RIGHT PANEL: REMOTE SFTP SERVER -->
+                <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6"
+                        AllowDrop="True" DragOver="RemoteDataGrid_DragOver" DragEnter="RemoteDataGrid_DragEnter" Drop="RemoteDataGrid_Drop">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/> <!-- Navigation Toolbar -->
+                            <RowDefinition Height="*"/>    <!-- Remote File List -->
+                        </Grid.RowDefinitions>
+
+                        <!-- Remote Header & Path Bar -->
+                        <Grid Grid.Row="0" Margin="2,2,2,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
+                                <TextBlock Text="🌐" FontSize="13" Margin="0,0,3,0"/>
+                                <TextBlock Text="Remote (SFTP):" FontWeight="Bold" Foreground="#0E7036"/>
+                            </StackPanel>
+
+                            <TextBox Grid.Column="1" x:Name="RemotePathTextBox"
+                                     Text="{Binding RemoteBrowser.CurrentPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     KeyDown="RemotePathTextBox_KeyDown"
+                                     IsEnabled="{Binding IsConnected}"
+                                     Margin="0,0,4,0"/>
+
+                            <Button Grid.Column="2" ToolTip="Up one level"
+                                    Command="{Binding RemoteBrowser.NavigateUpCommand}"
+                                    IsEnabled="{Binding IsConnected}"
+                                    Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0" Margin="0,0,4,0">
+                                <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"/>
+                            </Button>
+
+                            <Button Grid.Column="3" ToolTip="Refresh remote directory"
+                                    Command="{Binding RemoteBrowser.RefreshCommand}"
+                                    IsEnabled="{Binding IsConnected}"
+                                    Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0">
+                                <ContentControl ContentTemplate="{StaticResource RefreshIconTemplate}" Focusable="False"/>
+                            </Button>
+                        </Grid>
+
+                        <!-- Remote DataGrid -->
+                        <DataGrid Grid.Row="1" x:Name="RemoteDataGrid"
+                                  ItemsSource="{Binding RemoteBrowser.Items}"
+                                  SelectedItem="{Binding RemoteBrowser.SelectedItem, Mode=TwoWay}"
+                                  MouseDoubleClick="RemoteDataGrid_MouseDoubleClick"
+                                  AllowDrop="True"
+                                  PreviewMouseRightButtonDown="DataGrid_PreviewMouseRightButtonDown"
+                                  PreviewMouseLeftButtonDown="RemoteDataGrid_PreviewMouseLeftButtonDown"
+                                  PreviewMouseLeftButtonUp="RemoteDataGrid_PreviewMouseLeftButtonUp"
+                                  MouseMove="RemoteDataGrid_MouseMove"
+                                  DragOver="RemoteDataGrid_DragOver"
+                                  DragEnter="RemoteDataGrid_DragEnter"
+                                  Drop="RemoteDataGrid_Drop">
+                            <DataGrid.ContextMenu>
+                                <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
+                                    <MenuItem Header="🚀 Download to local with rsync" Command="{Binding DownloadSelectedCommand}"/>
+                                    <Separator Background="#E0E0E0"/>
+                                    <MenuItem Header="📁 New remote folder..." Click="NewRemoteFolder_Click"/>
+                                    <MenuItem Header="🗑️ Delete remote item" Click="DeleteRemoteItem_Click"/>
+                                    <Separator Background="#E0E0E0"/>
+                                    <MenuItem Header="🔄 Refresh list" Command="{Binding RemoteBrowser.RefreshCommand}"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="Name" Width="2*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="4,2">
+                                                <!-- Icon for Parent Folder '..' -->
+                                                <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"
+                                                                Margin="0,0,6,0" VerticalAlignment="Center"
+                                                                Visibility="{Binding IsParent, Converter={StaticResource BoolToVisConverter}}"/>
+
+                                                <!-- Regular icon for files and folders -->
+                                                <TextBlock Text="{Binding IconEmoji}" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                           Visibility="{Binding IsParent, Converter={StaticResource InverseBoolToVisConverter}}"/>
+
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Foreground="#111111"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="90"/>
+                                <DataGridTextColumn Header="Permissions" Binding="{Binding Permissions}" Width="95"/>
+                                <DataGridTextColumn Header="Modified" Binding="{Binding LastWriteTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="130"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+            </Grid>
         </Grid>
 
         <!-- 3. SPLITTER -->

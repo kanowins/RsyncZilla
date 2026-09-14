@@ -16,63 +16,83 @@ namespace RsyncZilla.ViewModels
     public class MainViewModel : ViewModelBase
     {
         private readonly LocalFileService _localService;
-        private readonly SftpService _sftpService;
         private readonly RsyncService _rsyncService;
         private readonly ConnectionManagerService _connectionManagerService;
 
-        private string _host = "";
+        public ObservableCollection<RemoteSessionViewModel> RemoteSessions { get; } = new();
+
+        private RemoteSessionViewModel _activeSession;
+        public RemoteSessionViewModel ActiveSession
+        {
+            get => _activeSession;
+            set => _ = SwitchToSessionAsync(value);
+        }
+
+        public FileBrowserViewModel LocalBrowser => ActiveSession?.LocalBrowser ?? _fallbackLocalBrowser;
+        public FileBrowserViewModel RemoteBrowser => ActiveSession?.RemoteBrowser ?? _fallbackRemoteBrowser;
+        public SftpService SftpService => ActiveSession?.SftpService ?? _fallbackSftpService;
+
+        private readonly FileBrowserViewModel _fallbackLocalBrowser;
+        private readonly FileBrowserViewModel _fallbackRemoteBrowser;
+        private readonly SftpService _fallbackSftpService;
+
         public string Host
         {
-            get => _host;
-            set => SetProperty(ref _host, value);
-        }
-
-        private string _username = "";
-        public string Username
-        {
-            get => _username;
-            set => SetProperty(ref _username, value);
-        }
-
-        private string _cachedPassword = "";
-
-        private int _port = 22;
-        public int Port
-        {
-            get => _port;
-            set => SetProperty(ref _port, value);
-        }
-
-        private bool _isConnected;
-        public bool IsConnected
-        {
-            get => _isConnected;
+            get => _activeSession?.Host ?? "";
             set
             {
-                if (SetProperty(ref _isConnected, value))
+                if (_activeSession != null && _activeSession.Host != value)
                 {
-                    OnPropertyChanged(nameof(ConnectionButtonText));
-                    OnPropertyChanged(nameof(ConnectionStatusIndicator));
+                    _activeSession.Host = value;
+                    OnPropertyChanged(nameof(Host));
                 }
             }
         }
 
-        private bool _isConnecting;
-        public bool IsConnecting
+        public string Username
         {
-            get => _isConnecting;
-            set => SetProperty(ref _isConnecting, value);
+            get => _activeSession?.Username ?? "";
+            set
+            {
+                if (_activeSession != null && _activeSession.Username != value)
+                {
+                    _activeSession.Username = value;
+                    OnPropertyChanged(nameof(Username));
+                }
+            }
         }
 
-        private string _statusText = "Disconnected";
-        public string StatusText
+        public int Port
         {
-            get => _statusText;
-            set => SetProperty(ref _statusText, value);
+            get => _activeSession?.Port ?? 22;
+            set
+            {
+                if (_activeSession != null && _activeSession.Port != value)
+                {
+                    _activeSession.Port = value;
+                    OnPropertyChanged(nameof(Port));
+                }
+            }
         }
+
+        private string _cachedPassword
+        {
+            get => _activeSession?.Password ?? "";
+            set
+            {
+                if (_activeSession != null)
+                {
+                    _activeSession.Password = value;
+                }
+            }
+        }
+
+        public bool IsConnected => ActiveSession?.IsConnected ?? false;
+        public bool IsConnecting => ActiveSession?.IsConnecting ?? false;
+        public string StatusText => ActiveSession?.StatusText ?? "Disconnected";
 
         public string ConnectionButtonText => IsConnected ? "Disconnect" : "Quick Connect";
-        public string ConnectionStatusIndicator => IsConnected ? "🟢 Connected" : "⚪ Disconnected";
+        public string ConnectionStatusIndicator => IsConnected ? "🟢 Connected" : (IsConnecting ? "🟡 Connecting" : "⚪ Disconnected");
 
         public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
         public string FooterInfo => $"RsyncZilla v{AppVersion} | Engine: rsync 3.3.0 portable (Cygwin64) + SSH.NET";
@@ -80,9 +100,6 @@ namespace RsyncZilla.ViewModels
         public string ActiveTabHeader => $"🚀 Queue ({ActiveTransfers.Count})";
         public string FailedTabHeader => $"❌ Failed ({FailedTransfers.Count})";
         public string CompletedTabHeader => $"✅ Completed ({CompletedTransfers.Count})";
-
-        public FileBrowserViewModel LocalBrowser { get; }
-        public FileBrowserViewModel RemoteBrowser { get; }
 
         public ObservableCollection<TransferTask> ActiveTransfers { get; } = new();
         public ObservableCollection<TransferTask> CompletedTransfers { get; } = new();
@@ -101,6 +118,8 @@ namespace RsyncZilla.ViewModels
         private bool _isProcessingQueue = false;
 
         public ICommand ConnectCommand { get; }
+        public ICommand NewTabCommand { get; }
+        public ICommand CloseTabCommand { get; }
         public ICommand UploadSelectedCommand { get; }
         public ICommand DownloadSelectedCommand { get; }
         public ICommand CancelAllTransfersCommand { get; }
@@ -118,18 +137,25 @@ namespace RsyncZilla.ViewModels
         public MainViewModel()
         {
             _localService = new LocalFileService();
-            _sftpService = new SftpService();
             _rsyncService = new RsyncService();
             _connectionManagerService = new ConnectionManagerService();
 
-            LocalBrowser = new FileBrowserViewModel(_localService);
-            RemoteBrowser = new FileBrowserViewModel(_sftpService);
+            _fallbackLocalBrowser = new FileBrowserViewModel(_localService);
+            _fallbackSftpService = new SftpService();
+            _fallbackRemoteBrowser = new FileBrowserViewModel(_fallbackSftpService);
 
-            // Hook up logging
-            _sftpService.LogMessageReceived += (msg, isErr) => AddLog(msg, isErr);
+            // Create initial session tab
+            var initialSession = CreateNewSession();
+            RemoteSessions.Add(initialSession);
+            _activeSession = initialSession;
+
+            // Hook up rsync logging
             _rsyncService.LogMessageReceived += (msg, isErr) => AddLog(msg, isErr);
 
             ConnectCommand = new RelayCommand(async (param) => await ToggleConnectionAsync(param));
+            NewTabCommand = new RelayCommand(() => AddNewTab());
+            CloseTabCommand = new RelayCommand((param) => CloseTab(param as RemoteSessionViewModel));
+
             UploadSelectedCommand = new RelayCommand(async () => await UploadSelectedAsync(), () => IsConnected);
             DownloadSelectedCommand = new RelayCommand(async () => await DownloadSelectedAsync(), () => IsConnected);
             CancelAllTransfersCommand = new RelayCommand(CancelAllTransfers);
@@ -145,48 +171,163 @@ namespace RsyncZilla.ViewModels
             FailedTransfers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(FailedTabHeader));
             CompletedTransfers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(CompletedTabHeader));
 
-            // Persist paths immediately on change when connected to a site
-            LocalBrowser.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(FileBrowserViewModel.CurrentPath))
-                {
-                    OnBrowserPathChanged();
-                }
-            };
-
-            RemoteBrowser.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(FileBrowserViewModel.CurrentPath))
-                {
-                    OnBrowserPathChanged();
-                }
-            };
-
             AddLog($"RsyncZilla v{AppVersion} initialized. Ready to connect.", false);
             var rsyncPath = _rsyncService.FindRsyncBinary();
             AddLog($"rsync engine detected at: {rsyncPath}", false);
         }
 
-        private void OnBrowserPathChanged()
+        private RemoteSessionViewModel CreateNewSession(string? host = null, string? username = null, int port = 22, string? siteName = null, string? password = null, string? initialLocalPath = null)
         {
-            if (IsConnected && !string.IsNullOrWhiteSpace(Host) && !string.IsNullOrWhiteSpace(Username))
+            var session = new RemoteSessionViewModel(_localService, new SftpService());
+            if (!string.IsNullOrWhiteSpace(host)) session.Host = host;
+            if (!string.IsNullOrWhiteSpace(username)) session.Username = username;
+            session.Port = port > 0 ? port : 22;
+            if (!string.IsNullOrWhiteSpace(siteName)) session.SiteName = siteName;
+            if (password != null) session.Password = password;
+
+            if (!string.IsNullOrWhiteSpace(initialLocalPath) && (Directory.Exists(initialLocalPath) || initialLocalPath.Equals("This PC", StringComparison.OrdinalIgnoreCase)))
             {
-                _connectionManagerService.UpdatePaths(Host.Trim(), Username.Trim(), Port, LocalBrowser.CurrentPath, RemoteBrowser.CurrentPath);
+                _ = session.LocalBrowser.NavigateToAsync(initialLocalPath);
+            }
+
+            session.CloseRequested += (s) => CloseTab(s);
+            session.SftpService.LogMessageReceived += (msg, isErr) => AddLog($"[{session.Title}] {msg}", isErr);
+            session.RemoteBrowser.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(FileBrowserViewModel.CurrentPath))
+                {
+                    OnBrowserPathChanged(session);
+                }
+            };
+            session.LocalBrowser.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(FileBrowserViewModel.CurrentPath))
+                {
+                    OnBrowserPathChanged(session);
+                }
+            };
+
+            return session;
+        }
+
+        public RemoteSessionViewModel AddNewTab(string? host = null, string? username = null, int port = 22, string? siteName = null, string? password = null, string? initialLocalPath = null)
+        {
+            var session = CreateNewSession(host, username, port, siteName, password, initialLocalPath);
+            RemoteSessions.Add(session);
+            ActiveSession = session;
+            return session;
+        }
+
+        public async Task SwitchToSessionAsync(RemoteSessionViewModel? newSession)
+        {
+            if (newSession == null || _activeSession == newSession) return;
+
+            // 1. Save outgoing session's path
+            if (_activeSession != null)
+            {
+                _activeSession.LastLocalPath = _activeSession.LocalBrowser.CurrentPath;
+                if (_activeSession.IsConnected && !string.IsNullOrWhiteSpace(_activeSession.Host) && !string.IsNullOrWhiteSpace(_activeSession.Username))
+                {
+                    _connectionManagerService.SaveOrUpdate(
+                        _activeSession.Host.Trim(),
+                        _activeSession.Username.Trim(),
+                        _activeSession.Port,
+                        localPath: _activeSession.LocalBrowser.CurrentPath,
+                        remotePath: _activeSession.RemoteBrowser.CurrentPath);
+                }
+            }
+
+            // 2. Switch active session
+            _activeSession = newSession;
+            OnSessionStateChanged();
+            await Task.CompletedTask;
+        }
+
+        public void CloseTab(RemoteSessionViewModel? session)
+        {
+            session ??= ActiveSession;
+            if (session == null) return;
+
+            session.Disconnect();
+
+            if (RemoteSessions.Count <= 1)
+            {
+                // Reset the single remaining tab rather than leaving 0 tabs
+                session.Host = "";
+                session.Username = "";
+                session.Password = "";
+                session.Port = 22;
+                session.SiteName = null;
+                session.LastLocalPath = null;
+                session.StatusText = "Disconnected";
+                session.RemoteBrowser.Items.Clear();
+                session.RemoteBrowser.CurrentPath = "";
+                session.NotifyConnectionChanged();
+                OnSessionStateChanged();
+                return;
+            }
+
+            var index = RemoteSessions.IndexOf(session);
+            var isClosingActive = (_activeSession == session);
+
+            RemoteSessions.Remove(session);
+            session.Dispose();
+
+            if (isClosingActive)
+            {
+                var nextIndex = Math.Min(index, RemoteSessions.Count - 1);
+                if (nextIndex >= 0 && nextIndex < RemoteSessions.Count)
+                {
+                    ActiveSession = RemoteSessions[nextIndex];
+                }
+            }
+        }
+
+        public void OnSessionStateChanged()
+        {
+            OnPropertyChanged(nameof(ActiveSession));
+            OnPropertyChanged(nameof(LocalBrowser));
+            OnPropertyChanged(nameof(RemoteBrowser));
+            OnPropertyChanged(nameof(IsConnected));
+            OnPropertyChanged(nameof(IsConnecting));
+            OnPropertyChanged(nameof(ConnectionButtonText));
+            OnPropertyChanged(nameof(ConnectionStatusIndicator));
+            OnPropertyChanged(nameof(Host));
+            OnPropertyChanged(nameof(Username));
+            OnPropertyChanged(nameof(Port));
+            OnPropertyChanged(nameof(StatusText));
+            CommandManager.InvalidateRequerySuggested();
+
+            if (_activeSession != null)
+            {
+                ApplySavedConnectionAction?.Invoke(null!, _activeSession.Password);
+            }
+        }
+
+        private void OnBrowserPathChanged(RemoteSessionViewModel? session = null)
+        {
+            session ??= ActiveSession;
+            if (session != null && session.IsConnected && !string.IsNullOrWhiteSpace(session.Host) && !string.IsNullOrWhiteSpace(session.Username))
+            {
+                session.LastLocalPath = session.LocalBrowser.CurrentPath;
+                _connectionManagerService.UpdatePaths(session.Host.Trim(), session.Username.Trim(), session.Port, session.LocalBrowser.CurrentPath, session.RemoteBrowser.CurrentPath);
             }
         }
 
         private async Task ToggleConnectionAsync(object? param)
         {
+            if (ActiveSession == null) return;
+
             if (IsConnected)
             {
-                _sftpService.Disconnect();
-                IsConnected = false;
-                StatusText = "Disconnected";
+                ActiveSession.Disconnect();
+                ActiveSession.StatusText = "Disconnected";
                 RunOnUi(() =>
                 {
-                    RemoteBrowser.Items.Clear();
-                    RemoteBrowser.CurrentPath = "";
+                    ActiveSession.RemoteBrowser.Items.Clear();
+                    ActiveSession.RemoteBrowser.CurrentPath = "";
                 });
+                OnSessionStateChanged();
                 return;
             }
 
@@ -201,45 +342,54 @@ namespace RsyncZilla.ViewModels
                 return;
             }
 
-            IsConnecting = true;
-            StatusText = "Connecting to server...";
+            ActiveSession.IsConnecting = true;
+            ActiveSession.StatusText = "Connecting to server...";
+            OnSessionStateChanged();
 
             try
             {
-                var (success, error) = await _sftpService.ConnectAsync(Host.Trim(), Port, Username.Trim(), _cachedPassword);
+                var (success, error) = await ActiveSession.SftpService.ConnectAsync(Host.Trim(), Port, Username.Trim(), _cachedPassword);
                 if (success)
                 {
+                    ActiveSession.NotifyConnectionChanged();
+
                     // Look up if this connection has previously saved paths
                     var saved = _connectionManagerService.FindConnection(Host.Trim(), Username.Trim(), Port);
 
                     if (saved != null && !string.IsNullOrWhiteSpace(saved.LastLocalPath) && 
                         (Directory.Exists(saved.LastLocalPath) || saved.LastLocalPath.Equals("This PC", StringComparison.OrdinalIgnoreCase)))
                     {
-                        await LocalBrowser.NavigateToAsync(saved.LastLocalPath);
+                        ActiveSession.LastLocalPath = saved.LastLocalPath;
+                        await ActiveSession.LocalBrowser.NavigateToAsync(saved.LastLocalPath);
+                    }
+                    else
+                    {
+                        ActiveSession.LastLocalPath = ActiveSession.LocalBrowser.CurrentPath;
                     }
 
                     // Navigate to user's remote home directory or saved last remote path
                     var initialPath = (saved != null && !string.IsNullOrWhiteSpace(saved.LastRemotePath))
                         ? saved.LastRemotePath
-                        : (string.IsNullOrWhiteSpace(_sftpService.CurrentPath) ? "." : _sftpService.CurrentPath);
+                        : (string.IsNullOrWhiteSpace(ActiveSession.SftpService.CurrentPath) ? "." : ActiveSession.SftpService.CurrentPath);
 
-                    await RemoteBrowser.NavigateToAsync(initialPath);
+                    await ActiveSession.RemoteBrowser.NavigateToAsync(initialPath);
 
-                    IsConnected = true;
-                    StatusText = $"Connected to {Username}@{Host}:{Port}";
+                    ActiveSession.StatusText = $"Connected to {Username}@{Host}:{Port}";
+                    OnSessionStateChanged();
 
                     // Save or update to connection manager (without password) and record current active paths
                     _connectionManagerService.SaveOrUpdate(
                         Host.Trim(), 
                         Username.Trim(), 
                         Port, 
-                        localPath: LocalBrowser.CurrentPath, 
-                        remotePath: RemoteBrowser.CurrentPath);
+                        localPath: ActiveSession.LocalBrowser.CurrentPath, 
+                        remotePath: ActiveSession.RemoteBrowser.CurrentPath);
                 }
                 else
                 {
-                    IsConnected = false;
-                    StatusText = "Connection error.";
+                    ActiveSession.NotifyConnectionChanged();
+                    ActiveSession.StatusText = "Connection error.";
+                    OnSessionStateChanged();
                     var msg = !string.IsNullOrWhiteSpace(error)
                         ? $"Could not connect to SFTP server:\n\n{error}"
                         : "Could not connect to SFTP server. Check logs below for details.";
@@ -248,14 +398,16 @@ namespace RsyncZilla.ViewModels
             }
             catch (Exception ex)
             {
-                IsConnected = false;
-                StatusText = "Connection error.";
+                ActiveSession.NotifyConnectionChanged();
+                ActiveSession.StatusText = "Connection error.";
+                OnSessionStateChanged();
                 var errorMsg = ex.InnerException != null ? $"{ex.Message} ({ex.InnerException.Message})" : ex.Message;
                 MessageBox.Show($"Connection error:\n\n{errorMsg}", "Connection Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
-                IsConnecting = false;
+                ActiveSession.IsConnecting = false;
+                OnSessionStateChanged();
             }
         }
 
@@ -269,19 +421,36 @@ namespace RsyncZilla.ViewModels
             if (dialog.ShowDialog() == true && dialog.SelectedConnection != null)
             {
                 var conn = dialog.SelectedConnection;
-                Host = conn.Host;
-                Username = !string.IsNullOrWhiteSpace(dialog.ConnectionUsername) ? dialog.ConnectionUsername : conn.Username;
-                Port = conn.Port;
+                var username = !string.IsNullOrWhiteSpace(dialog.ConnectionUsername) ? dialog.ConnectionUsername : conn.Username;
 
-                if (!string.IsNullOrWhiteSpace(conn.LastLocalPath) && 
-                    (Directory.Exists(conn.LastLocalPath) || conn.LastLocalPath.Equals("This PC", StringComparison.OrdinalIgnoreCase)))
+                // If active tab is already connected, open in a new tab!
+                RemoteSessionViewModel sessionToUse;
+                if (IsConnected)
                 {
-                    _ = LocalBrowser.NavigateToAsync(conn.LastLocalPath);
+                    sessionToUse = AddNewTab(conn.Host, username, conn.Port, siteName: conn.Host, password: dialog.ConnectionPassword, initialLocalPath: conn.LastLocalPath);
+                }
+                else
+                {
+                    sessionToUse = ActiveSession;
+                    sessionToUse.Host = conn.Host;
+                    sessionToUse.Username = username;
+                    sessionToUse.Port = conn.Port;
+                    sessionToUse.SiteName = conn.Host;
+                    if (dialog.ConnectionPassword != null)
+                    {
+                        sessionToUse.Password = dialog.ConnectionPassword;
+                    }
+                    if (!string.IsNullOrWhiteSpace(conn.LastLocalPath) && 
+                        (Directory.Exists(conn.LastLocalPath) || conn.LastLocalPath.Equals("This PC", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        sessionToUse.LastLocalPath = conn.LastLocalPath;
+                        _ = sessionToUse.LocalBrowser.NavigateToAsync(conn.LastLocalPath);
+                    }
+                    OnSessionStateChanged();
                 }
 
                 if (dialog.ConnectionPassword != null)
                 {
-                    _cachedPassword = dialog.ConnectionPassword;
                     ApplySavedConnectionAction?.Invoke(conn, dialog.ConnectionPassword);
                     _ = ToggleConnectionAsync(null);
                 }
@@ -381,11 +550,20 @@ namespace RsyncZilla.ViewModels
             var list = tasks.ToList();
             if (!list.Any()) return;
 
+            var profile = ActiveSession?.CreateConnectionProfile() ?? CreateConnectionProfile();
+            var sessionId = ActiveSession?.Id;
+
+            foreach (var t in list)
+            {
+                t.ConnectionProfile ??= profile;
+                t.SessionId ??= sessionId;
+                t.Status = TransferStatus.Pending;
+            }
+
             RunOnUi(() =>
             {
                 foreach (var t in list)
                 {
-                    t.Status = TransferStatus.Pending;
                     ActiveTransfers.Add(t);
                 }
             });
@@ -414,7 +592,7 @@ namespace RsyncZilla.ViewModels
                     if (nextTask == null) break;
 
                     _currentTransferCts = new CancellationTokenSource();
-                    var connection = CreateConnectionProfile();
+                    var connection = nextTask.ConnectionProfile ?? CreateConnectionProfile();
 
                     try
                     {
@@ -435,9 +613,17 @@ namespace RsyncZilla.ViewModels
                         if (success)
                         {
                             if (nextTask.Direction == TransferDirection.Upload)
-                                await RemoteBrowser.RefreshAsync();
+                            {
+                                var targetSession = RemoteSessions.FirstOrDefault(s => s.Id == nextTask.SessionId) ?? ActiveSession;
+                                if (targetSession != null)
+                                {
+                                    await targetSession.RemoteBrowser.RefreshAsync();
+                                }
+                            }
                             else
+                            {
                                 await LocalBrowser.RefreshAsync();
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -478,13 +664,10 @@ namespace RsyncZilla.ViewModels
                 foreach (var t in pending)
                 {
                     t.Status = TransferStatus.Cancelled;
-                    t.ErrorMessage = "Cancelled by user.";
                     ActiveTransfers.Remove(t);
                     FailedTransfers.Insert(0, t);
                 }
             });
-
-            AddLog("All active and pending transfers have been cancelled.", true);
         }
 
         public void RetrySelectedFailed(TransferTask? task)
@@ -520,6 +703,11 @@ namespace RsyncZilla.ViewModels
 
         private ConnectionProfile CreateConnectionProfile()
         {
+            if (ActiveSession != null)
+            {
+                return ActiveSession.CreateConnectionProfile();
+            }
+
             return new ConnectionProfile
             {
                 Host = Host.Trim(),
@@ -543,15 +731,23 @@ namespace RsyncZilla.ViewModels
 
         private static void RunOnUi(Action action)
         {
-            if (Application.Current != null && Application.Current.Dispatcher != null)
+            var app = Application.Current;
+            if (app?.Dispatcher != null && !app.Dispatcher.HasShutdownStarted && app.Dispatcher.Thread.IsAlive)
             {
-                if (Application.Current.Dispatcher.CheckAccess())
+                if (app.Dispatcher.CheckAccess())
                 {
                     action();
                 }
                 else
                 {
-                    Application.Current.Dispatcher.Invoke(action);
+                    try
+                    {
+                        app.Dispatcher.Invoke(action, TimeSpan.FromMilliseconds(200));
+                    }
+                    catch
+                    {
+                        action();
+                    }
                 }
             }
             else

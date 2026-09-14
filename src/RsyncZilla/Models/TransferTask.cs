@@ -104,6 +104,9 @@ namespace RsyncZilla.Models
         public DateTime? EndTime { get; set; }
         public int? ExitCode { get; set; }
 
+        public ConnectionProfile? ConnectionProfile { get; set; }
+        public Guid? SessionId { get; set; }
+
         public bool IsRunning => Status == TransferStatus.Running;
 
         public string StatusBadge => Status switch
