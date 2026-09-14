@@ -93,6 +93,21 @@ dotnet test
 
 ---
 
+## ☕ Want to support the developer?
+
+RsyncZilla is free and open source.
+
+If it saves you some time and you feel like buying me a coffee... **I'd rather you check out one of the games we make at Sumalab! 🎮**
+
+- **[HeadHunters](https://store.steampowered.com/app/3675690/)** — A chaotic multiplayer party game where you literally play as a head.
+- **[Vertigo Rush](https://store.steampowered.com/app/1483380/Vertigo_Rush/)** — VR racing + parkour. Basically, what happens when Mario Kart meets Gorilla Tag.
+
+You can also find our games on other platforms at **[sumalab.com](https://sumalab.com/)**.
+
+A wishlist, a review, or simply telling someone about them helps us more than a coffee ever could. ❤️
+
+---
+
 ## 📄 License
 
 MIT License. Open source and free to use.
