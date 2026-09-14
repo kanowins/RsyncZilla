@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <PackageReference Include="SSH.NET" Version="2026.0.0" />
+    <PackageReference Include="VirtualFileDataObject" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>

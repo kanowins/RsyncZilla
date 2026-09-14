@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -9,6 +11,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using RsyncZilla.Models;
+using RsyncZilla.Services;
 using RsyncZilla.ViewModels;
 
 namespace RsyncZilla
@@ -34,6 +37,7 @@ namespace RsyncZilla
         private readonly HashSet<FileItem> _leftDragInitialSelectedItems = new();
 
         private SelectionAdorner? _selectionAdorner;
+        private List<FileItem>? _activeRemoteDragItems;
 
         public MainWindow()
         {
@@ -192,41 +196,40 @@ namespace RsyncZilla
                 grid.Focus();
                 e.Handled = true;
             }
-            else if (row.IsSelected)
+            else
             {
-                // Row is already selected:
-                // If clicked on the Name/icon column without Ctrl/Shift, this is a potential drag & drop operation
-                if (cell?.Column is DataGridTemplateColumn && !isCtrlOrShift)
+                // Clicked ON a file: marquee selection is NEVER allowed when clicking on a file
+                _isLeftDragCandidate = false;
+                _draggedRow = row;
+
+                if (row.IsSelected)
                 {
-                    _isDragDropCandidate = true;
-                    _isLeftDragCandidate = false;
-                    _draggedRow = row;
-                    row.Focus();
-                    e.Handled = true; // Wait to determine whether user drags or simply clicks
+                    if (!isCtrlOrShift)
+                    {
+                        // Row is already selected: mark candidate for Drag & Drop
+                        _isDragDropCandidate = true;
+                        row.Focus();
+                        e.Handled = true; // Wait for mouse move to drag, or mouse up to isolate single row
+                    }
+                    else
+                    {
+                        _isDragDropCandidate = false;
+                    }
                 }
                 else
                 {
-                    // Clicked on Size, Type, Date or with Ctrl/Shift: candidate for rubber-band selection box
-                    _isDragDropCandidate = false;
-                    _isLeftDragCandidate = true;
-                    _draggedRow = null;
+                    // Row is not currently selected
+                    if (!isCtrlOrShift)
+                    {
+                        grid.SelectedItems.Clear();
+                    }
+                    row.IsSelected = true;
+                    row.Focus();
+                    _isDragDropCandidate = true;
                 }
-            }
-            else
-            {
-                // Row is not currently selected
-                _isDragDropCandidate = false;
-                _isLeftDragCandidate = true;
-                _draggedRow = null;
-
-                if (!isCtrlOrShift)
-                {
-                    grid.SelectedItems.Clear();
-                }
-                row.IsSelected = true;
-                row.Focus();
             }
         }
+
 
         private void DataGrid_PreviewMouseMove(object sender, MouseEventArgs e)
         {
@@ -298,24 +301,76 @@ namespace RsyncZilla
 
                         if (selected.Any())
                         {
-                            var data = new DataObject();
                             if (isLocal)
                             {
+                                var data = new DataObject();
                                 var paths = selected.Select(i => i.FullPath).ToArray();
                                 data.SetData(DataFormats.FileDrop, paths);
                                 data.SetData("RsyncZilla.Source", "Local");
+                                data.SetData("RsyncZilla.Items", selected);
+
+                                DragDrop.DoDragDrop(_leftDragGrid, data, DragDropEffects.Copy);
                             }
                             else
                             {
-                                data.SetData("RsyncZilla.Source", "Remote");
-                            }
-                            data.SetData("RsyncZilla.Items", selected);
+                                var sftp = _viewModel.SftpService;
+                                var descriptors = new List<VirtualFileDataObject.VirtualFileDataObject.FileDescriptor>();
 
-                            DragDrop.DoDragDrop(_leftDragGrid, data, DragDropEffects.Copy);
+                                if (sftp != null && sftp.IsConnected)
+                                {
+                                    foreach (var item in selected)
+                                    {
+                                        if (item.IsDirectory)
+                                        {
+                                            var files = sftp.GetFilesRecursive(item.FullPath, item.Name);
+                                            foreach (var f in files)
+                                            {
+                                                descriptors.Add(new VirtualFileDataObject.VirtualFileDataObject.FileDescriptor
+                                                {
+                                                    Name = f.relativePath,
+                                                    Length = f.size,
+                                                    ChangeTimeUtc = f.modified,
+                                                    StreamContents = stream => sftp.DownloadFileToStream(f.fullPath, stream)
+                                                });
+                                            }
+                                        }
+                                        else
+                                        {
+                                            descriptors.Add(new VirtualFileDataObject.VirtualFileDataObject.FileDescriptor
+                                            {
+                                                Name = item.Name,
+                                                Length = item.Length,
+                                                ChangeTimeUtc = item.LastWriteTime,
+                                                StreamContents = stream => sftp.DownloadFileToStream(item.FullPath, stream)
+                                            });
+                                        }
+                                    }
+                                }
+
+                                var vfdo = new VirtualFileDataObject.VirtualFileDataObject();
+                                if (descriptors.Count > 0)
+                                {
+                                    vfdo.SetData(descriptors);
+                                }
+
+                                var format = DataFormats.GetDataFormat("RsyncZilla.Source");
+                                vfdo.SetData((short)format.Id, Encoding.UTF8.GetBytes("Remote"));
+
+                                _activeRemoteDragItems = selected;
+                                try
+                                {
+                                    DragDrop.DoDragDrop(_leftDragGrid, vfdo, DragDropEffects.Copy);
+                                }
+                                finally
+                                {
+                                    _activeRemoteDragItems = null;
+                                }
+                            }
                         }
                     }
                     return;
                 }
+
 
                 // Branch B: Rubber-band marquee selection with left button
                 if (_isLeftDragCandidate)
@@ -560,8 +615,8 @@ namespace RsyncZilla
 
         private void LocalDataGrid_DragOver(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent("RsyncZilla.Source") &&
-                e.Data.GetData("RsyncZilla.Source") as string == "Remote")
+            if (_activeRemoteDragItems != null ||
+                (e.Data.GetDataPresent("RsyncZilla.Source") && IsSourceRemote(e.Data)))
             {
                 e.Effects = DragDropEffects.Copy;
                 e.Handled = true;
@@ -579,12 +634,14 @@ namespace RsyncZilla
 
         private void LocalDataGrid_Drop(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent("RsyncZilla.Source") &&
-                e.Data.GetData("RsyncZilla.Source") as string == "Remote")
+            var items = _activeRemoteDragItems;
+            if (items == null && e.Data.GetDataPresent("RsyncZilla.Items"))
             {
-                var items = e.Data.GetData("RsyncZilla.Items") as List<FileItem>;
-                if (items == null || !items.Any()) return;
+                items = e.Data.GetData("RsyncZilla.Items") as List<FileItem>;
+            }
 
+            if (items != null && items.Any())
+            {
                 // Determine target directory (specific hovered folder or current folder)
                 var pos = e.GetPosition(LocalDataGrid);
                 var targetItem = GetItemAtPosition(LocalDataGrid, pos);
@@ -600,6 +657,20 @@ namespace RsyncZilla
             }
         }
 
+        private static bool IsSourceRemote(IDataObject data)
+        {
+            try
+            {
+                var src = data.GetData("RsyncZilla.Source");
+                if (src is string s) return s == "Remote";
+                if (src is MemoryStream ms) return Encoding.UTF8.GetString(ms.ToArray()) == "Remote";
+                if (src is byte[] b) return Encoding.UTF8.GetString(b) == "Remote";
+            }
+            catch { }
+            return false;
+        }
+
+
         private void RemoteDataGrid_DragOver(object sender, DragEventArgs e)
         {
             if (!_viewModel.IsConnected)
@@ -608,8 +679,10 @@ namespace RsyncZilla
                 return;
             }
 
-            if (e.Data.GetDataPresent(DataFormats.FileDrop) ||
-                (e.Data.GetDataPresent("RsyncZilla.Source") && e.Data.GetData("RsyncZilla.Source") as string == "Local"))
+            var formats = e.Data.GetFormats();
+            if ((e.Data.GetDataPresent("RsyncZilla.Source") && e.Data.GetData("RsyncZilla.Source") as string == "Local") ||
+                DropDataHelper.HasDroppableFiles(e.Data) ||
+                (formats != null && formats.Length > 0))
             {
                 e.Effects = DragDropEffects.Copy;
                 e.Handled = true;
@@ -652,17 +725,52 @@ namespace RsyncZilla
                 }
             }
 
-            // Case 2: Dropped from external Windows File Explorer
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            // Case 2: Dropped from external sources (Visual Studio Code, Windows Explorer, Chromium, etc.)
+            var formats = e.Data.GetFormats() ?? Array.Empty<string>();
+            _viewModel.AddLog($"[Drop] Received external drop into '{targetPath}'. Formats ({formats.Length}): {string.Join(", ", formats)}", false);
+
+            foreach (var fmt in formats)
             {
-                var paths = e.Data.GetData(DataFormats.FileDrop) as string[];
-                if (paths != null && paths.Length > 0)
+                try
                 {
-                    _ = _viewModel.UploadPathsAsync(paths, targetPath);
-                    e.Handled = true;
+                    var data = e.Data.GetData(fmt);
+                    if (data is string str)
+                    {
+                        var preview = str.Length > 150 ? str.Substring(0, 150) + "..." : str;
+                        _viewModel.AddLog($"[Drop] Format '{fmt}' (text): {preview.Replace("\r", " ").Replace("\n", " ")}", false);
+                    }
+                    else if (data is string[] arr)
+                    {
+                        _viewModel.AddLog($"[Drop] Format '{fmt}' (files): {string.Join("; ", arr)}", false);
+                    }
+                    else if (data is Stream stream)
+                    {
+                        _viewModel.AddLog($"[Drop] Format '{fmt}' (stream): {stream.Length} bytes", false);
+                    }
+                    else if (data != null)
+                    {
+                        _viewModel.AddLog($"[Drop] Format '{fmt}' ({data.GetType().Name})", false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _viewModel.AddLog($"[Drop] Note reading '{fmt}': {ex.Message}", false);
                 }
             }
+
+            var externalPaths = DropDataHelper.ExtractLocalPaths(e.Data);
+            if (externalPaths.Count > 0)
+            {
+                _viewModel.AddLog($"[Drop] Successfully resolved {externalPaths.Count} local item(s) to upload: {string.Join(", ", externalPaths.Select(Path.GetFileName))}", false);
+                _ = _viewModel.UploadPathsAsync(externalPaths, targetPath);
+                e.Handled = true;
+            }
+            else
+            {
+                _viewModel.AddLog("[Drop] ⚠️ No valid local file/folder paths matching existing files could be extracted from this drop payload.", true);
+            }
         }
+
 
         // ==========================================
         // HELPER: HIT TEST FOR ROW

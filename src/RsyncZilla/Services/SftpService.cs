@@ -318,6 +318,56 @@ namespace RsyncZilla.Services
             });
         }
 
+        public bool DownloadFileToStream(string remotePath, Stream output)
+        {
+            if (_client == null || !_client.IsConnected) return false;
+            try
+            {
+                _client.DownloadFile(remotePath, output);
+                LogMessageReceived?.Invoke($"Streamed '{remotePath}' successfully", false);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                var msg = $"Error streaming '{remotePath}': {ex.Message}";
+                LogMessageReceived?.Invoke(msg, true);
+                return false;
+            }
+        }
+
+        public List<(string relativePath, string fullPath, long size, DateTime? modified)> GetFilesRecursive(string remotePath, string baseName)
+        {
+            var list = new List<(string relativePath, string fullPath, long size, DateTime? modified)>();
+            if (_client == null || !_client.IsConnected) return list;
+            try
+            {
+                CollectFilesRecursive(_client, remotePath, baseName, list);
+            }
+            catch (Exception ex)
+            {
+                LogMessageReceived?.Invoke($"Error enumerating files in '{remotePath}': {ex.Message}", true);
+            }
+            return list;
+        }
+
+        private static void CollectFilesRecursive(SftpClient client, string currentRemotePath, string currentRelativePath, List<(string relativePath, string fullPath, long size, DateTime? modified)> list)
+        {
+            foreach (var item in client.ListDirectory(currentRemotePath))
+            {
+                if (item.Name == "." || item.Name == "..") continue;
+                var itemRelative = string.IsNullOrEmpty(currentRelativePath) ? item.Name : $"{currentRelativePath}\\{item.Name}";
+                if (item.IsDirectory)
+                {
+                    CollectFilesRecursive(client, item.FullName, itemRelative, list);
+                }
+                else
+                {
+                    list.Add((itemRelative, item.FullName, item.Length, item.LastWriteTimeUtc));
+                }
+            }
+        }
+
+
         private static void DeleteDirectoryRecursive(SftpClient client, string path)
         {
             foreach (var item in client.ListDirectory(path))
