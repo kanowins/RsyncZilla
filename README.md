@@ -1,4 +1,5 @@
 # RsyncZilla 🚀
+RsyncZilla is a FileZilla-like file transfer client powered by rsync.
 
 A modern SFTP client for Windows with an intuitive dual-pane GUI (FileZilla-style) powered by **verified transfers using portable rsync (v3.3.0) over SSH**.
 
