@@ -1,78 +1,98 @@
 # RsyncZilla 🚀
 
-Cliente SFTP para Windows con interfaz gráfica de doble panel (estilo FileZilla) y **transferencias verificadas mediante rsync portable (v3.3.0) sobre SSH**.
+A modern SFTP client for Windows with an intuitive dual-pane GUI (FileZilla-style) powered by **verified transfers using portable rsync (v3.3.0) over SSH**.
 
-Diseñado para resolver el problema clásico de fallos silenciosos de transmisiones FTP, garantizando sincronizaciones atómicas, reanudables y que solo transfieren archivos nuevos y modificados.
+Engineered to eliminate the classic issue of silent FTP transfer failures, ensuring atomic, resumable synchronizations that only upload new and modified byte deltas.
 
----
-
-## 🌟 Características Principales
-
-1. **Navegación Fluida con SFTP (SSH.NET):**
-   - Panel izquierdo: Explorador del sistema de archivos local de Windows.
-   - Panel derecho: Explorador de archivos del servidor remoto vía SFTP.
-   - **Selección múltiple:** Selecciona varios archivos a la vez con Shift / Ctrl o arrastrando el ratón en ambos paneles.
-   - **Drag & Drop bidireccional:**
-     - Arrastra elementos entre el panel Local y Remoto para subirlos o descargarlos de inmediato.
-     - Si sueltas sobre una subcarpeta concreta, se transfiere directamente al interior de esa carpeta.
-   - **Drag & Drop desde el Explorador de Windows:** Arrastra archivos o carpetas directamente desde Windows Explorer hacia el panel Remoto para subirlos con rsync.
-   - Doble clic para entrar en carpetas o subir de nivel (`..`).
-   - Creación y eliminación de carpetas y archivos locales y remotos (individual o múltiple).
-
-2. **Transferencias con rsync Portable (v3.3.0):**
-   - Utiliza una suite portable empaquetada de `rsync.exe` y `ssh.exe` (Cygwin64) de ~6 MB.
-   - **Cero fallos silenciosos:** Si algo se interrumpe o falla, rsync devuelve un código de salida inequívoco (`ExitCode != 0`) y la app alerta de inmediato con el error detallado.
-   - **Solo envía modificaciones:** Emplea los flags `-avzP --stats --update` para enviar exclusivamente archivos nuevos o deltas modificados.
-   - **Escritura atómica:** rsync crea ficheros temporales ocultos antes de reemplazarlos, impidiendo que queden archivos corruptos o a medias.
-
-3. **Autenticación y Gestor de Conexiones:**
-   - **Gestor de Sitios (📂 Sitios):** Almacena tus servidores habituales (Host, Usuario y Puerto) para conectarte en un clic.
-   - **Seguridad estricta:** **NUNCA guarda contraseñas** en disco.
-   - Permite consultar y eliminar conexiones guardadas en cualquier momento.
-   - Navega automáticamente al **directorio personal (`home`)** del usuario remoto al iniciar sesión.
-   - Asistente integrado `RsyncAskPass.exe` y `SSH_ASKPASS` para alimentar las credenciales al subproceso de forma segura y transparente, sin ventanas emergentes molestas.
-
-4. **Pestañas de Control de Transferencias y Logs:**
-   - **🚀 Cola de Transferencias:** Muestra la tarea en curso (con progreso, velocidad y ETA) junto con todas las tareas en espera (`⏳ Pendiente`).
-   - **⏹ Cancelar todo:** Detiene la transferencia activa de rsync de inmediato y retira todas las tareas pendientes de la cola.
-   - **❌ Transferencias Fallidas:** Pestaña dedicada con el motivo exacto del fallo y código de salida. Permite **reintentar la seleccionada** o **reintentar todas las fallidas** con un solo clic.
-   - **✅ Historial de Éxitos:** Registro detallado de transferencias finalizadas correctamente.
-   - **📜 Registro de Servidor y rsync:** Consola en tiempo real de eventos SFTP y comandos rsync.
+> 📖 **[👉 Read the detailed comparison: Why RsyncZilla is Better Than FileZilla](WHY_RSYNCZILLA.md)**
 
 ---
 
-## 🏗️ Estructura del Repositorio
+## 🌟 Key Features
 
-- `src/RsyncZilla/`: Aplicación principal WPF (.NET 8).
-  - `tools/cygwin64/`: Binarios portables (`rsync.exe`, `ssh.exe`, DLLs).
-  - `Models/`: Modelos de archivos, tareas de transferencia, conexión y logs.
+1. **Fluid Navigation via SFTP (SSH.NET):**
+   - **Left Panel:** Windows local filesystem browser.
+   - **Right Panel:** Remote server filesystem browser over SFTP.
+   - **Multi-Selection:** Select multiple items with Shift / Ctrl or drag a selection box in either panel.
+   - **Bidirectional Drag & Drop:**
+     - Drag items between Local and Remote panels to trigger instant uploads or downloads.
+     - Drop directly onto subfolders to transfer into that specific destination.
+   - **Drag & Drop from Windows Explorer:** Drag files or folders directly from desktop or Windows Explorer windows into the Remote panel to upload with rsync.
+   - Double-click to navigate directories or open files in their native Windows associated applications.
+   - **📂 Show in Explorer:** Right-click any local file or folder (or click the header button) to reveal and select it directly in Windows Explorer (`/select`).
+
+2. **Delta Transfers with Portable rsync (v3.3.0):**
+   - Bundles a clean, portable suite of `rsync.exe` and `ssh.exe` (Cygwin64) (~6 MB total).
+   - **Zero Silent Failures:** If a transfer is interrupted or rejected, rsync returns an unequivocal exit code (`ExitCode != 0`) and the UI immediately reports the exact error log.
+   - **Transfers Deltas Only:** Uses `-avzP --stats --update` to transmit only modified byte blocks and new files.
+   - **Atomic Writes:** rsync writes to hidden temporary files before swapping, preventing corrupt or half-written files on your server.
+
+3. **💻 Integrated Remote SSH Terminal (Portable KiTTY) (`Ctrl + T`):**
+   - Instantly launches an authenticated SSH console positioned directly inside your current remote directory.
+   - Run server-side commands (`npm run build`, `composer install`, `git pull`, `pm2 restart`, etc.) without opening PuTTY or manually typing `cd` paths.
+
+4. **📝 Live Remote File Editing (`F4`):**
+   - Press `F4` or double-click on any remote file to open it in your favorite local text editor (VS Code, Notepad++, Sublime, etc.).
+   - On save (`Ctrl + S`), a background file watcher debounces writes (450 ms), computes SHA256 hashes, and quietly auto-uploads the file via SFTP.
+   - If the connection drops or permissions fail, a clear error dialog alerts you immediately and preserves changes for automatic retry.
+
+5. **Site Manager & Zero-Leak Credential Security:**
+   - **Site Manager (📂 Sites):** Save frequently used servers (Host, User, Port) to connect in a single click.
+   - **Strict Security:** **NEVER saves passwords to disk** (unlike FileZilla's plaintext XML).
+   - Automatically navigates to the remote user's **home directory** upon login.
+   - Built-in `RsyncAskPass.exe` and `SSH_ASKPASS` helper pipes credentials to OpenSSH subprocesses in-memory without intrusive popups.
+
+6. **Transfer Queue & Real-Time Logs:**
+   - **🚀 Queue:** Shows the active transfer with live progress, speed, and ETA, alongside queued tasks.
+   - **⏹ Cancel All:** Immediately terminates active rsync processes and clears pending queue tasks.
+   - **❌ Failed Transfers:** Dedicated tab with the exact exit code and stderr error output. Retry single items or **retry all failed** with one click.
+   - **✅ Completed History:** Clean audit record of successful operations.
+   - **📜 Live Log Console:** Real-time log stream of SFTP events, rsync commands, and diagnostics.
+
+---
+
+## 🏗️ Repository Architecture
+
+- `src/RsyncZilla/`: Main WPF application (.NET 8 Windows x64).
+  - `tools/cygwin64/`: Portable binaries (`rsync.exe`, `ssh.exe`, runtime DLLs).
+  - `tools/kitty.exe`: Portable KiTTY SSH terminal.
+  - `Models/`: Data models for files, transfer tasks, connections, and logs.
   - `Services/`:
-    - `LocalFileService.cs`: Exploración de disco local.
-    - `SftpService.cs`: Conexión persistente SFTP con SSH.NET.
-    - `RsyncService.cs`: Orquestador de subprocesos rsync, parsing de progreso y validación de ExitCode.
-  - `ViewModels/`: Lógica MVVM desacoplada.
-  - `Views/`: Interfaz XAML moderna, InputDialog personalizado y converters.
-- `src/RsyncAskPass/`: Micro-helper para canalizar contraseñas a OpenSSH de manera desatendida.
-- `tests/RsyncZilla.Tests/`: Suite de pruebas unitarias xUnit (conversión de rutas cygwin, validación de binarios, etc.).
-- `dist/RsyncZilla/`: Ejecutable compilado listo para usar (`RsyncZilla.exe`).
+    - `LocalFileService.cs`: Local disk browsing and file management.
+    - `SftpService.cs`: Persistent SFTP connection and file stream handling via SSH.NET.
+    - `RsyncService.cs`: Subprocess orchestration, progress stream parsing, and exit code validation.
+    - `RemoteEditService.cs`: Temporary file lifecycle, SHA256 hashing, and live file watcher auto-sync.
+    - `TerminalService.cs`: KiTTY terminal launcher with auto-navigation.
+    - `ConnectionManagerService.cs`: Site manager persistence (metadata only).
+  - `ViewModels/`: Decoupled MVVM presentation logic.
+  - `Views/`: Custom XAML dialogs (Site Manager, InputDialog, SiteEditDialog).
+- `src/RsyncAskPass/`: Secure credential pipe bridge for OpenSSH `SSH_ASKPASS`.
+- `tests/RsyncZilla.Tests/`: xUnit test suite (52 tests covering rsync path translation, watchers, explorer integration, and CLI args).
+- `dist/RsyncZilla/`: Ready-to-run precompiled portable distribution (`RsyncZilla.exe`).
 
 ---
 
-## 🚀 Cómo Ejecutar y Compilar
+## 🚀 Building & Running
 
-### Opción 1: Ejecutar directamente
-Hacer doble clic en:
+### Option 1: Run the Precompiled Binary
+Run directly:
 ```
 dist\RsyncZilla\RsyncZilla.exe
 ```
 
-### Opción 2: Compilar desde cero
-Ejecutar el archivo `build.bat` o desde la terminal:
+### Option 2: Build from Source
+Run `build.bat` or use the .NET CLI:
 ```bash
 dotnet publish src/RsyncZilla/RsyncZilla.csproj -c Release -r win-x64 --self-contained false -o dist/RsyncZilla
 ```
 
-### Opción 3: Ejecutar pruebas unitarias
+### Option 3: Run the Test Suite
 ```bash
 dotnet test
 ```
+
+---
+
+## 📄 License
+
+MIT License. Open source and free to use.
