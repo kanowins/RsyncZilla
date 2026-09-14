@@ -7,6 +7,7 @@
         xmlns:converters="clr-namespace:RsyncZilla.Views.Converters"
         mc:Ignorable="d"
         Title="RsyncZilla - Cliente SFTP con sincronización verificada rsync"
+        Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
         Height="780" Width="1200"
         MinHeight="600" MinWidth="950"
         Background="#F0F2F5"
@@ -96,6 +97,8 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="#005A9E"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -103,7 +106,8 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="3" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -130,6 +134,8 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="#CCCCCC"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -137,7 +143,8 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="3" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -291,11 +298,15 @@
                             Style="{StaticResource AccentButtonStyle}"
                             MinWidth="110" Height="28" Margin="0,0,6,0"/>
 
-                    <Button Content="📂 Sitios"
-                            Command="{Binding OpenSiteManagerCommand}"
+                    <Button Command="{Binding OpenSiteManagerCommand}"
                             ToolTip="Gestor de conexiones guardadas"
                             Style="{StaticResource SecondaryButtonStyle}"
-                            Padding="8,4" Height="28"/>
+                            Padding="8,3" Height="28">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="📂" Margin="0,0,4,0" VerticalAlignment="Center" FontSize="12"/>
+                            <TextBlock Text="Sitios" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
 
                 <!-- Connection Indicator -->
@@ -340,13 +351,17 @@
                                  Text="{Binding LocalBrowser.CurrentPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                  KeyDown="LocalPathTextBox_KeyDown" Margin="0,0,4,0"/>
 
-                        <Button Grid.Column="2" Content="⬆️" ToolTip="Subir un nivel" 
+                        <Button Grid.Column="2" ToolTip="Subir un nivel" 
                                 Command="{Binding LocalBrowser.NavigateUpCommand}"
-                                Style="{StaticResource SecondaryButtonStyle}" Width="28" Margin="0,0,4,0"/>
+                                Style="{StaticResource SecondaryButtonStyle}" Width="32" Height="26" Padding="0" Margin="0,0,4,0">
+                            <TextBlock Text="▲" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
 
-                        <Button Grid.Column="3" Content="🔄" ToolTip="Actualizar directorio" 
+                        <Button Grid.Column="3" ToolTip="Actualizar directorio" 
                                 Command="{Binding LocalBrowser.RefreshCommand}"
-                                Style="{StaticResource SecondaryButtonStyle}" Width="28"/>
+                                Style="{StaticResource SecondaryButtonStyle}" Width="32" Height="26" Padding="0">
+                            <TextBlock Text="🔄" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
                     </Grid>
 
                     <!-- Local DataGrid -->
@@ -392,16 +407,20 @@
             </Border>
 
             <!-- CENTER TRANSFER BUTTONS -->
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0" Width="44">
-                <Button Content="⏩" ToolTip="Subir seleccionados al servidor usando rsync"
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0" Width="46">
+                <Button ToolTip="Subir seleccionados al servidor usando rsync (Local ➔ Remoto)"
                         Command="{Binding UploadSelectedCommand}"
                         Style="{StaticResource SecondaryButtonStyle}"
-                        Height="36" FontSize="15" Margin="0,0,0,8"/>
+                        Width="44" Height="36" Padding="0" Margin="0,0,0,8">
+                    <TextBlock Text="⏩" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
 
-                <Button Content="⏪" ToolTip="Descargar seleccionados del servidor usando rsync"
+                <Button ToolTip="Descargar seleccionados del servidor usando rsync (Remoto ➔ Local)"
                         Command="{Binding DownloadSelectedCommand}"
                         Style="{StaticResource SecondaryButtonStyle}"
-                        Height="36" FontSize="15"/>
+                        Width="44" Height="36" Padding="0">
+                    <TextBlock Text="⏪" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
             </StackPanel>
 
             <!-- RIGHT PANEL: REMOTE SFTP SERVER -->
@@ -433,15 +452,19 @@
                                  IsEnabled="{Binding IsConnected}"
                                  Margin="0,0,4,0"/>
 
-                        <Button Grid.Column="2" Content="⬆️" ToolTip="Subir un nivel remoto"
+                        <Button Grid.Column="2" ToolTip="Subir un nivel remoto"
                                 Command="{Binding RemoteBrowser.NavigateUpCommand}"
                                 IsEnabled="{Binding IsConnected}"
-                                Style="{StaticResource SecondaryButtonStyle}" Width="28" Margin="0,0,4,0"/>
+                                Style="{StaticResource SecondaryButtonStyle}" Width="32" Height="26" Padding="0" Margin="0,0,4,0">
+                            <TextBlock Text="▲" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
 
-                        <Button Grid.Column="3" Content="🔄" ToolTip="Actualizar directorio remoto"
+                        <Button Grid.Column="3" ToolTip="Actualizar directorio remoto"
                                 Command="{Binding RemoteBrowser.RefreshCommand}"
                                 IsEnabled="{Binding IsConnected}"
-                                Style="{StaticResource SecondaryButtonStyle}" Width="28"/>
+                                Style="{StaticResource SecondaryButtonStyle}" Width="32" Height="26" Padding="0">
+                            <TextBlock Text="🔄" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
                     </Grid>
 
                     <!-- Remote DataGrid -->
@@ -524,8 +547,13 @@
                     </DataGrid>
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="6">
-                        <Button Content="⏹ Cancelar todo (activa y pendientes)" Command="{Binding CancelAllTransfersCommand}" 
-                                Style="{StaticResource SecondaryButtonStyle}" Foreground="#C62828" FontWeight="SemiBold"/>
+                        <Button Command="{Binding CancelAllTransfersCommand}" 
+                                Style="{StaticResource SecondaryButtonStyle}" Foreground="#C62828" FontWeight="SemiBold" Padding="10,4">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="⏹" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
+                                <TextBlock Text="Cancelar todo (activa y pendientes)" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                 </Grid>
             </TabItem>
@@ -551,12 +579,22 @@
                     </DataGrid>
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="6">
-                        <Button Content="🔄 Reintentar seleccionada" Command="{Binding RetrySelectedFailedCommand}" 
-                                Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
-                        <Button Content="🔄 Reintentar todas las fallidas" Command="{Binding RetryAllFailedCommand}" 
-                                Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0"/>
+                        <Button Command="{Binding RetrySelectedFailedCommand}" 
+                                Style="{StaticResource SecondaryButtonStyle}" Padding="10,4" Margin="0,0,6,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🔄" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
+                                <TextBlock Text="Reintentar seleccionada" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding RetryAllFailedCommand}" 
+                                Style="{StaticResource SecondaryButtonStyle}" Padding="10,4" Margin="0,0,6,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🔄" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
+                                <TextBlock Text="Reintentar todas las fallidas" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                         <Button Content="Limpiar fallidas" Command="{Binding ClearFailedCommand}" 
-                                Style="{StaticResource SecondaryButtonStyle}"/>
+                                Style="{StaticResource SecondaryButtonStyle}" Padding="10,4"/>
                     </StackPanel>
                 </Grid>
             </TabItem>

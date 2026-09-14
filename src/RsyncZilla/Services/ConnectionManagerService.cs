@@ -35,7 +35,18 @@ namespace RsyncZilla.Services
             return new List<SavedConnection>();
         }
 
-        public void SaveOrUpdate(string host, string username, int port, string? customName = null)
+        public SavedConnection? FindConnection(string host, string username, int port)
+        {
+            if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(username)) return null;
+
+            var list = LoadConnections();
+            return list.FirstOrDefault(c => 
+                c.Host.Equals(host.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                c.Username.Equals(username.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                c.Port == port);
+        }
+
+        public void SaveOrUpdate(string host, string username, int port, string? customName = null, string? localPath = null, string? remotePath = null)
         {
             if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(username)) return;
 
@@ -52,6 +63,14 @@ namespace RsyncZilla.Services
                 {
                     existing.Name = customName.Trim();
                 }
+                if (!string.IsNullOrWhiteSpace(localPath))
+                {
+                    existing.LastLocalPath = localPath;
+                }
+                if (!string.IsNullOrWhiteSpace(remotePath))
+                {
+                    existing.LastRemotePath = remotePath;
+                }
             }
             else
             {
@@ -61,11 +80,45 @@ namespace RsyncZilla.Services
                     Username = username.Trim(),
                     Port = port,
                     Name = customName?.Trim() ?? $"{username.Trim()}@{host.Trim()}",
+                    LastLocalPath = localPath ?? string.Empty,
+                    LastRemotePath = remotePath ?? string.Empty,
                     LastUsed = DateTime.Now
                 });
             }
 
             SaveToFile(list);
+        }
+
+        public void UpdatePaths(string host, string username, int port, string? localPath, string? remotePath)
+        {
+            if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(username)) return;
+
+            var list = LoadConnections();
+            var existing = list.FirstOrDefault(c => 
+                c.Host.Equals(host.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                c.Username.Equals(username.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                c.Port == port);
+
+            if (existing != null)
+            {
+                bool changed = false;
+                if (!string.IsNullOrWhiteSpace(localPath) && existing.LastLocalPath != localPath)
+                {
+                    existing.LastLocalPath = localPath;
+                    changed = true;
+                }
+                if (!string.IsNullOrWhiteSpace(remotePath) && existing.LastRemotePath != remotePath)
+                {
+                    existing.LastRemotePath = remotePath;
+                    changed = true;
+                }
+
+                if (changed)
+                {
+                    existing.LastUsed = DateTime.Now;
+                    SaveToFile(list);
+                }
+            }
         }
 
         public void DeleteConnection(Guid id)

@@ -2,11 +2,12 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Gestor de Conexiones - RsyncZilla"
-        Height="420" Width="680"
+        Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
+        Height="440" Width="780"
         WindowStartupLocation="CenterOwner"
         Background="#F0F2F5" Foreground="#111111"
         FontFamily="Segoe UI, Arial"
-        MinHeight="300" MinWidth="500">
+        MinHeight="320" MinWidth="550">
 
     <Grid Margin="14">
         <Grid.RowDefinitions>
@@ -28,10 +29,12 @@
                       Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F9FAFB"
                       MouseDoubleClick="ConnectionsGrid_MouseDoubleClick">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="160"/>
-                    <DataGridTextColumn Header="Servidor (Host)" Binding="{Binding Host}" Width="180"/>
-                    <DataGridTextColumn Header="Usuario" Binding="{Binding Username}" Width="110"/>
-                    <DataGridTextColumn Header="Puerto" Binding="{Binding Port}" Width="65"/>
+                    <DataGridTextColumn Header="Nombre" Binding="{Binding Name}" Width="140"/>
+                    <DataGridTextColumn Header="Servidor (Host)" Binding="{Binding Host}" Width="160"/>
+                    <DataGridTextColumn Header="Usuario" Binding="{Binding Username}" Width="100"/>
+                    <DataGridTextColumn Header="Puerto" Binding="{Binding Port}" Width="60"/>
+                    <DataGridTextColumn Header="Último local" Binding="{Binding LastLocalPath}" Width="130"/>
+                    <DataGridTextColumn Header="Último remoto" Binding="{Binding LastRemotePath}" Width="130"/>
                     <DataGridTextColumn Header="Último uso" Binding="{Binding LastUsed, StringFormat='dd/MM/yyyy HH:mm'}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
@@ -40,18 +43,28 @@
         <!-- Action buttons -->
         <Grid Grid.Row="2" Margin="0,12,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <Button Content="🗑️ Eliminar" Click="DeleteButton_Click"
+                <Button Click="DeleteButton_Click"
                         Background="#F5F5F5" Foreground="#C62828" BorderBrush="#CCCCCC"
-                        Padding="12,5" FontWeight="SemiBold" Cursor="Hand"/>
+                        Padding="12,5" FontWeight="SemiBold" Cursor="Hand">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="🗑️" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="12"/>
+                        <TextBlock Text="Eliminar" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Cancelar" Click="CancelButton_Click"
                         Background="#F5F5F5" Foreground="#333333" BorderBrush="#CCCCCC"
                         Padding="14,5" Margin="0,0,8,0" Cursor="Hand"/>
-                <Button Content="🔌 Conectar" Click="ConnectButton_Click"
+                <Button Click="ConnectButton_Click"
                         Background="#0078D7" Foreground="#FFFFFF" BorderBrush="#005A9E"
-                        Padding="16,5" FontWeight="SemiBold" Cursor="Hand"/>
+                        Padding="16,5" FontWeight="SemiBold" Cursor="Hand">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="🔌" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="12"/>
+                        <TextBlock Text="Conectar" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Grid>
     </Grid>

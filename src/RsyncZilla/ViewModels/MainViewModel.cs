@@ -142,9 +142,34 @@ namespace RsyncZilla.ViewModels
             FailedTransfers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(FailedTabHeader));
             CompletedTransfers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(CompletedTabHeader));
 
+            // Persist paths immediately on change when connected to a site
+            LocalBrowser.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(FileBrowserViewModel.CurrentPath))
+                {
+                    OnBrowserPathChanged();
+                }
+            };
+
+            RemoteBrowser.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(FileBrowserViewModel.CurrentPath))
+                {
+                    OnBrowserPathChanged();
+                }
+            };
+
             AddLog("RsyncZilla inicializado. Listo para conectar.", false);
             var rsyncPath = _rsyncService.FindRsyncBinary();
             AddLog($"Motor rsync detectado en: {rsyncPath}", false);
+        }
+
+        private void OnBrowserPathChanged()
+        {
+            if (IsConnected && !string.IsNullOrWhiteSpace(Host) && !string.IsNullOrWhiteSpace(Username))
+            {
+                _connectionManagerService.UpdatePaths(Host.Trim(), Username.Trim(), Port, LocalBrowser.CurrentPath, RemoteBrowser.CurrentPath);
+            }
         }
 
         private async Task ToggleConnectionAsync(object? param)
@@ -181,15 +206,31 @@ namespace RsyncZilla.ViewModels
                 var success = await _sftpService.ConnectAsync(Host.Trim(), Port, Username.Trim(), _cachedPassword);
                 if (success)
                 {
+                    // Look up if this connection has previously saved paths
+                    var saved = _connectionManagerService.FindConnection(Host.Trim(), Username.Trim(), Port);
+
+                    if (saved != null && !string.IsNullOrWhiteSpace(saved.LastLocalPath) && Directory.Exists(saved.LastLocalPath))
+                    {
+                        await LocalBrowser.NavigateToAsync(saved.LastLocalPath);
+                    }
+
+                    // Navigate to user's remote home directory or saved last remote path
+                    var initialPath = (saved != null && !string.IsNullOrWhiteSpace(saved.LastRemotePath))
+                        ? saved.LastRemotePath
+                        : (string.IsNullOrWhiteSpace(_sftpService.CurrentPath) ? "." : _sftpService.CurrentPath);
+
+                    await RemoteBrowser.NavigateToAsync(initialPath);
+
                     IsConnected = true;
                     StatusText = $"Conectado a {Username}@{Host}:{Port}";
 
-                    // Save to connection manager (without password)
-                    _connectionManagerService.SaveOrUpdate(Host.Trim(), Username.Trim(), Port);
-
-                    // Navigate to user's remote home directory
-                    var initialPath = string.IsNullOrWhiteSpace(_sftpService.CurrentPath) ? "." : _sftpService.CurrentPath;
-                    await RemoteBrowser.NavigateToAsync(initialPath);
+                    // Save or update to connection manager (without password) and record current active paths
+                    _connectionManagerService.SaveOrUpdate(
+                        Host.Trim(), 
+                        Username.Trim(), 
+                        Port, 
+                        localPath: LocalBrowser.CurrentPath, 
+                        remotePath: RemoteBrowser.CurrentPath);
                 }
                 else
                 {
@@ -217,6 +258,12 @@ namespace RsyncZilla.ViewModels
                 Host = conn.Host;
                 Username = conn.Username;
                 Port = conn.Port;
+
+                if (!string.IsNullOrWhiteSpace(conn.LastLocalPath) && Directory.Exists(conn.LastLocalPath))
+                {
+                    _ = LocalBrowser.NavigateToAsync(conn.LastLocalPath);
+                }
+
                 ApplySavedConnectionAction?.Invoke(conn);
             }
         }

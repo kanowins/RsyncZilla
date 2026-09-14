@@ -41,5 +41,32 @@ namespace RsyncZilla.Tests
                 throw new Exception($"Fallo al instanciar MainWindow: {thrown.GetType().Name}: {thrown.Message}\n{thrown.StackTrace}", thrown);
             }
         }
+        [Fact]
+        public void ConnectionManagerDialog_ShouldInstantiateWithoutExceptions()
+        {
+            Exception? thrown = null;
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    var app = System.Windows.Application.Current ?? new System.Windows.Application();
+                    var service = new RsyncZilla.Services.ConnectionManagerService();
+                    var dialog = new RsyncZilla.Views.ConnectionManagerDialog(service);
+                }
+                catch (Exception ex)
+                {
+                    thrown = ex;
+                }
+            });
+
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            thread.Join(5000);
+
+            if (thrown != null)
+            {
+                throw new Exception($"Fallo al instanciar ConnectionManagerDialog: {thrown.GetType().Name}: {thrown.Message}\n{thrown.StackTrace}", thrown);
+            }
+        }
     }
 }

@@ -9,6 +9,8 @@ namespace RsyncZilla.Models
         public string Host { get; set; } = string.Empty;
         public string Username { get; set; } = string.Empty;
         public int Port { get; set; } = 22;
+        public string LastLocalPath { get; set; } = string.Empty;
+        public string LastRemotePath { get; set; } = string.Empty;
         public DateTime LastUsed { get; set; } = DateTime.Now;
 
         public string DisplayName => string.IsNullOrWhiteSpace(Name) 

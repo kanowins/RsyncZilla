@@ -30,5 +30,30 @@ namespace RsyncZilla.Tests
             var afterDelete = service.LoadConnections();
             Assert.DoesNotContain(afterDelete, c => c.Id == found.Id);
         }
+
+        [Fact]
+        public void UpdatePaths_ShouldPersistLocalAndRemotePathsImmediately()
+        {
+            var service = new ConnectionManagerService();
+            var testHost = "paths-test.org";
+            var testUser = "pathuser";
+            var testPort = 22;
+
+            service.SaveOrUpdate(testHost, testUser, testPort);
+
+            var initial = service.FindConnection(testHost, testUser, testPort);
+            Assert.NotNull(initial);
+
+            // Update paths immediately
+            service.UpdatePaths(testHost, testUser, testPort, @"C:\MyLocal\Project", "/var/www/remote");
+
+            var updated = service.FindConnection(testHost, testUser, testPort);
+            Assert.NotNull(updated);
+            Assert.Equal(@"C:\MyLocal\Project", updated.LastLocalPath);
+            Assert.Equal("/var/www/remote", updated.LastRemotePath);
+
+            // Clean up
+            service.DeleteConnection(updated.Id);
+        }
     }
 }
