@@ -219,6 +219,12 @@
             <Setter Property="BorderThickness" Value="0,0,1,1"/>
         </Style>
 
+        <!-- Ensure DataGrid row and cell selection stay ALWAYS vibrant blue (#0078D7), never inactive grey -->
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#0078D7"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#0078D7"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#FFFFFF"/>
+
         <Style TargetType="DataGridRow">
             <Setter Property="Cursor" Value="Hand"/>
             <Style.Triggers>
@@ -226,8 +232,19 @@
                     <Setter Property="Background" Value="#E5F3FF"/>
                 </Trigger>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#CCE8FF"/>
-                    <Setter Property="Foreground" Value="#000000"/>
+                    <Setter Property="Background" Value="#0078D7"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#0078D7"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -539,9 +556,9 @@
                                   PreviewMouseRightButtonDown="DataGrid_PreviewMouseRightButtonDown"
                                   PreviewMouseMove="DataGrid_PreviewMouseMove"
                                   PreviewMouseRightButtonUp="DataGrid_PreviewMouseRightButtonUp"
-                                  PreviewMouseLeftButtonDown="LocalDataGrid_PreviewMouseLeftButtonDown"
-                                  PreviewMouseLeftButtonUp="LocalDataGrid_PreviewMouseLeftButtonUp"
-                                  MouseMove="LocalDataGrid_MouseMove"
+                                  PreviewMouseLeftButtonDown="DataGrid_PreviewMouseLeftButtonDown"
+                                  PreviewMouseLeftButtonUp="DataGrid_PreviewMouseLeftButtonUp"
+                                  LostMouseCapture="DataGrid_LostMouseCapture"
                                   DragOver="LocalDataGrid_DragOver"
                                   DragEnter="LocalDataGrid_DragEnter"
                                   Drop="LocalDataGrid_Drop">
@@ -570,7 +587,7 @@
                                                 <TextBlock Text="{Binding IconEmoji}" Margin="0,0,6,0" VerticalAlignment="Center"
                                                            Visibility="{Binding IsParent, Converter={StaticResource InverseBoolToVisConverter}}"/>
 
-                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Foreground="#111111"/>
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -653,9 +670,9 @@
                                   PreviewMouseRightButtonDown="DataGrid_PreviewMouseRightButtonDown"
                                   PreviewMouseMove="DataGrid_PreviewMouseMove"
                                   PreviewMouseRightButtonUp="DataGrid_PreviewMouseRightButtonUp"
-                                  PreviewMouseLeftButtonDown="RemoteDataGrid_PreviewMouseLeftButtonDown"
-                                  PreviewMouseLeftButtonUp="RemoteDataGrid_PreviewMouseLeftButtonUp"
-                                  MouseMove="RemoteDataGrid_MouseMove"
+                                  PreviewMouseLeftButtonDown="DataGrid_PreviewMouseLeftButtonDown"
+                                  PreviewMouseLeftButtonUp="DataGrid_PreviewMouseLeftButtonUp"
+                                  LostMouseCapture="DataGrid_LostMouseCapture"
                                   DragOver="RemoteDataGrid_DragOver"
                                   DragEnter="RemoteDataGrid_DragEnter"
                                   Drop="RemoteDataGrid_Drop">
@@ -684,7 +701,7 @@
                                                 <TextBlock Text="{Binding IconEmoji}" Margin="0,0,6,0" VerticalAlignment="Center"
                                                            Visibility="{Binding IsParent, Converter={StaticResource InverseBoolToVisConverter}}"/>
 
-                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Foreground="#111111"/>
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>

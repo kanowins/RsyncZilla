@@ -17,23 +17,23 @@ namespace RsyncZilla
     {
         private readonly MainViewModel _viewModel;
         
-        // Local drag tracking
-        private Point _localDragStart;
-        private bool _isLocalDragCandidate;
-        private DataGridRow? _localDraggedRow;
-
-        // Remote drag tracking
-        private Point _remoteDragStart;
-        private bool _isRemoteDragCandidate;
-        private DataGridRow? _remoteDraggedRow;
-
         // Right-click rubber-band marquee selection tracking
         private Point _rightDragStartPoint;
         private DataGrid? _rightDragGrid;
         private bool _isRightDragCandidate;
         private bool _isRightDragSelecting;
-        private SelectionAdorner? _selectionAdorner;
         private readonly HashSet<FileItem> _rightDragInitialSelectedItems = new();
+
+        // Left-click rubber-band selection & drag-and-drop tracking
+        private Point _leftDragStartPoint;
+        private DataGrid? _leftDragGrid;
+        private bool _isLeftDragCandidate;
+        private bool _isLeftDragSelecting;
+        private bool _isDragDropCandidate;
+        private DataGridRow? _draggedRow;
+        private readonly HashSet<FileItem> _leftDragInitialSelectedItems = new();
+
+        private SelectionAdorner? _selectionAdorner;
 
         public MainWindow()
         {
@@ -87,15 +87,15 @@ namespace RsyncZilla
             }
         }
 
-        // ==========================================
-        // RIGHT-CLICK RUBBER-BAND SELECTION & CONTEXT MENU
-        // ==========================================
+        // =========================================================================
+        // UNIFIED MOUSE SELECTION (LEFT & RIGHT BUTTON RUBBER-BAND) & DRAG-AND-DROP
+        // =========================================================================
 
         private void DataGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is not DataGrid grid) return;
 
-            // Check if user clicked on column headers or scrollbars
+            // Ignore column headers and scrollbars
             var dep = e.OriginalSource as DependencyObject;
             var testObj = dep;
             while (testObj != null && testObj != grid)
@@ -121,14 +121,12 @@ namespace RsyncZilla
             {
                 if (row.IsSelected)
                 {
-                    // Row is already selected as part of a multi-selection:
-                    // DO NOT let WPF clear other selected rows!
+                    // Row is already selected as part of a multi-selection: preserve selection
                     row.Focus();
                     e.Handled = true;
                 }
                 else
                 {
-                    // Clicked on an unselected row:
                     if (!Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl))
                     {
                         grid.SelectedItems.Clear();
@@ -147,58 +145,222 @@ namespace RsyncZilla
             }
         }
 
-        private void DataGrid_PreviewMouseMove(object sender, MouseEventArgs e)
+        private void DataGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.RightButton != MouseButtonState.Pressed || !_isRightDragCandidate || _rightDragGrid == null)
-            {
-                return;
-            }
+            if (sender is not DataGrid grid) return;
+            if (e.ClickCount > 1) return; // Allow double-click to pass through to navigation
 
-            var currentPoint = e.GetPosition(_rightDragGrid);
-            var diff = currentPoint - _rightDragStartPoint;
-
-            if (!_isRightDragSelecting)
+            // Ignore column headers and scrollbars
+            var dep = e.OriginalSource as DependencyObject;
+            var testObj = dep;
+            while (testObj != null && testObj != grid)
             {
-                // Must move at least 4 pixels to initiate rubber-band drag
-                if (Math.Abs(diff.X) < 4 && Math.Abs(diff.Y) < 4)
+                if (testObj is DataGridColumnHeader || testObj is ScrollBar)
                 {
                     return;
                 }
+                testObj = VisualTreeHelper.GetParent(testObj);
+            }
 
-                _isRightDragSelecting = true;
-                _rightDragGrid.CaptureMouse();
+            _leftDragStartPoint = e.GetPosition(grid);
+            _leftDragGrid = grid;
+            _isLeftDragSelecting = false;
 
-                var adornerLayer = AdornerLayer.GetAdornerLayer(_rightDragGrid) ?? AdornerLayer.GetAdornerLayer(this);
-                if (adornerLayer != null)
+            DataGridRow? row = null;
+            DataGridCell? cell = null;
+            var curr = dep;
+            while (curr != null && curr != grid)
+            {
+                if (curr is DataGridCell c && cell == null) cell = c;
+                if (curr is DataGridRow r) { row = r; break; }
+                curr = VisualTreeHelper.GetParent(curr);
+            }
+
+            bool isCtrlOrShift = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl) ||
+                                 Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+
+            if (row == null)
+            {
+                // Clicked on empty area (whitespace) below or beside items
+                if (!isCtrlOrShift)
                 {
-                    _selectionAdorner = new SelectionAdorner(_rightDragGrid);
-                    adornerLayer.Add(_selectionAdorner);
+                    grid.SelectedItems.Clear();
                 }
-
-                if (!Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl))
+                _isDragDropCandidate = false;
+                _isLeftDragCandidate = true;
+                _draggedRow = null;
+                grid.Focus();
+                e.Handled = true;
+            }
+            else if (row.IsSelected)
+            {
+                // Row is already selected:
+                // If clicked on the Name/icon column without Ctrl/Shift, this is a potential drag & drop operation
+                if (cell?.Column is DataGridTemplateColumn && !isCtrlOrShift)
                 {
-                    _rightDragInitialSelectedItems.Clear();
+                    _isDragDropCandidate = true;
+                    _isLeftDragCandidate = false;
+                    _draggedRow = row;
+                    row.Focus();
+                    e.Handled = true; // Wait to determine whether user drags or simply clicks
                 }
                 else
                 {
-                    _rightDragInitialSelectedItems.Clear();
-                    foreach (var sel in _rightDragGrid.SelectedItems.Cast<FileItem>())
-                    {
-                        _rightDragInitialSelectedItems.Add(sel);
-                    }
+                    // Clicked on Size, Type, Date or with Ctrl/Shift: candidate for rubber-band selection box
+                    _isDragDropCandidate = false;
+                    _isLeftDragCandidate = true;
+                    _draggedRow = null;
                 }
             }
+            else
+            {
+                // Row is not currently selected
+                _isDragDropCandidate = false;
+                _isLeftDragCandidate = true;
+                _draggedRow = null;
 
-            _selectionAdorner?.UpdateRect(_rightDragStartPoint, currentPoint);
+                if (!isCtrlOrShift)
+                {
+                    grid.SelectedItems.Clear();
+                }
+                row.IsSelected = true;
+                row.Focus();
+            }
+        }
 
-            var selectionRect = new Rect(
-                Math.Min(_rightDragStartPoint.X, currentPoint.X),
-                Math.Min(_rightDragStartPoint.Y, currentPoint.Y),
-                Math.Max(1, Math.Abs(_rightDragStartPoint.X - currentPoint.X)),
-                Math.Max(1, Math.Abs(_rightDragStartPoint.Y - currentPoint.Y))
-            );
+        private void DataGrid_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            // 1. Right-button marquee selection
+            if (e.RightButton == MouseButtonState.Pressed && _isRightDragCandidate && _rightDragGrid != null)
+            {
+                var currentPoint = e.GetPosition(_rightDragGrid);
+                var diff = currentPoint - _rightDragStartPoint;
 
-            UpdateSelectionFromRect(_rightDragGrid, selectionRect);
+                if (!_isRightDragSelecting)
+                {
+                    if (Math.Abs(diff.X) < 4 && Math.Abs(diff.Y) < 4) return;
+
+                    _isRightDragSelecting = true;
+                    _rightDragGrid.CaptureMouse();
+
+                    var adornerLayer = AdornerLayer.GetAdornerLayer(_rightDragGrid) ?? AdornerLayer.GetAdornerLayer(this);
+                    if (adornerLayer != null)
+                    {
+                        _selectionAdorner = new SelectionAdorner(_rightDragGrid);
+                        adornerLayer.Add(_selectionAdorner);
+                    }
+
+                    if (!Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl))
+                    {
+                        _rightDragInitialSelectedItems.Clear();
+                    }
+                    else
+                    {
+                        _rightDragInitialSelectedItems.Clear();
+                        foreach (var sel in _rightDragGrid.SelectedItems.Cast<FileItem>())
+                        {
+                            _rightDragInitialSelectedItems.Add(sel);
+                        }
+                    }
+                }
+
+                _selectionAdorner?.UpdateRect(_rightDragStartPoint, currentPoint);
+
+                var selectionRect = new Rect(
+                    Math.Min(_rightDragStartPoint.X, currentPoint.X),
+                    Math.Min(_rightDragStartPoint.Y, currentPoint.Y),
+                    Math.Max(1, Math.Abs(_rightDragStartPoint.X - currentPoint.X)),
+                    Math.Max(1, Math.Abs(_rightDragStartPoint.Y - currentPoint.Y))
+                );
+
+                UpdateSelectionFromRect(_rightDragGrid, selectionRect, _rightDragInitialSelectedItems);
+                return;
+            }
+
+            // 2. Left-button interactions (Marquee selection OR Drag & Drop)
+            if (e.LeftButton == MouseButtonState.Pressed && _leftDragGrid != null)
+            {
+                var currentPoint = e.GetPosition(_leftDragGrid);
+                var diff = currentPoint - _leftDragStartPoint;
+
+                // Branch A: Drag & Drop candidate (clicked on Name column of an already selected item)
+                if (_isDragDropCandidate)
+                {
+                    if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                        Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+                    {
+                        _isDragDropCandidate = false;
+                        _draggedRow = null;
+
+                        var isLocal = _leftDragGrid == LocalDataGrid;
+                        var selected = _leftDragGrid.SelectedItems.Cast<FileItem>()
+                            .Where(i => i != null && !i.IsParent && !i.IsDrive).ToList();
+
+                        if (selected.Any())
+                        {
+                            var data = new DataObject();
+                            if (isLocal)
+                            {
+                                var paths = selected.Select(i => i.FullPath).ToArray();
+                                data.SetData(DataFormats.FileDrop, paths);
+                                data.SetData("RsyncZilla.Source", "Local");
+                            }
+                            else
+                            {
+                                data.SetData("RsyncZilla.Source", "Remote");
+                            }
+                            data.SetData("RsyncZilla.Items", selected);
+
+                            DragDrop.DoDragDrop(_leftDragGrid, data, DragDropEffects.Copy);
+                        }
+                    }
+                    return;
+                }
+
+                // Branch B: Rubber-band marquee selection with left button
+                if (_isLeftDragCandidate)
+                {
+                    if (!_isLeftDragSelecting)
+                    {
+                        if (Math.Abs(diff.X) < 4 && Math.Abs(diff.Y) < 4) return;
+
+                        _isLeftDragSelecting = true;
+                        _leftDragGrid.CaptureMouse();
+
+                        var adornerLayer = AdornerLayer.GetAdornerLayer(_leftDragGrid) ?? AdornerLayer.GetAdornerLayer(this);
+                        if (adornerLayer != null)
+                        {
+                            _selectionAdorner = new SelectionAdorner(_leftDragGrid);
+                            adornerLayer.Add(_selectionAdorner);
+                        }
+
+                        if (!Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl) &&
+                            !Keyboard.IsKeyDown(Key.LeftShift) && !Keyboard.IsKeyDown(Key.RightShift))
+                        {
+                            _leftDragInitialSelectedItems.Clear();
+                        }
+                        else
+                        {
+                            _leftDragInitialSelectedItems.Clear();
+                            foreach (var sel in _leftDragGrid.SelectedItems.Cast<FileItem>())
+                            {
+                                _leftDragInitialSelectedItems.Add(sel);
+                            }
+                        }
+                    }
+
+                    _selectionAdorner?.UpdateRect(_leftDragStartPoint, currentPoint);
+
+                    var selectionRect = new Rect(
+                        Math.Min(_leftDragStartPoint.X, currentPoint.X),
+                        Math.Min(_leftDragStartPoint.Y, currentPoint.Y),
+                        Math.Max(1, Math.Abs(_leftDragStartPoint.X - currentPoint.X)),
+                        Math.Max(1, Math.Abs(_leftDragStartPoint.Y - currentPoint.Y))
+                    );
+
+                    UpdateSelectionFromRect(_leftDragGrid, selectionRect, _leftDragInitialSelectedItems);
+                }
+            }
         }
 
         private void DataGrid_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
@@ -217,7 +379,7 @@ namespace RsyncZilla
                 _isRightDragCandidate = false;
                 _rightDragGrid = null;
 
-                // Crucial: Suppress context menu after rubber-band dragging!
+                // Suppress context menu after rubber-band dragging!
                 e.Handled = true;
                 return;
             }
@@ -226,9 +388,78 @@ namespace RsyncZilla
             _rightDragGrid = null;
         }
 
-        private void UpdateSelectionFromRect(DataGrid grid, Rect selectionRect)
+        private void DataGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            bool ctrlPressed = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+            if (_isLeftDragSelecting)
+            {
+                if (_selectionAdorner != null && _leftDragGrid != null)
+                {
+                    var adornerLayer = AdornerLayer.GetAdornerLayer(_leftDragGrid) ?? AdornerLayer.GetAdornerLayer(this);
+                    adornerLayer?.Remove(_selectionAdorner);
+                    _selectionAdorner = null;
+                }
+
+                _leftDragGrid?.ReleaseMouseCapture();
+                _isLeftDragSelecting = false;
+                _isLeftDragCandidate = false;
+                _leftDragGrid = null;
+                e.Handled = true;
+                return;
+            }
+
+            if (_isDragDropCandidate && _draggedRow != null && _leftDragGrid != null)
+            {
+                // User clicked on an already selected row's Name column, but did NOT drag it: select only this row
+                bool isCtrlOrShift = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl) ||
+                                     Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+                if (!isCtrlOrShift)
+                {
+                    _leftDragGrid.SelectedItems.Clear();
+                    _draggedRow.IsSelected = true;
+                    _draggedRow.Focus();
+                }
+                _isDragDropCandidate = false;
+                _draggedRow = null;
+                _leftDragGrid = null;
+                return;
+            }
+
+            _isLeftDragCandidate = false;
+            _isDragDropCandidate = false;
+            _draggedRow = null;
+            _leftDragGrid = null;
+        }
+
+        private void DataGrid_LostMouseCapture(object sender, MouseEventArgs e)
+        {
+            if (_selectionAdorner != null)
+            {
+                var adornerLayer = AdornerLayer.GetAdornerLayer(this);
+                adornerLayer?.Remove(_selectionAdorner);
+                _selectionAdorner = null;
+            }
+
+            if (_rightDragGrid != null)
+            {
+                _isRightDragSelecting = false;
+                _isRightDragCandidate = false;
+                _rightDragGrid = null;
+            }
+
+            if (_leftDragGrid != null)
+            {
+                _isLeftDragSelecting = false;
+                _isLeftDragCandidate = false;
+                _isDragDropCandidate = false;
+                _draggedRow = null;
+                _leftDragGrid = null;
+            }
+        }
+
+        private void UpdateSelectionFromRect(DataGrid grid, Rect selectionRect, HashSet<FileItem> initialSelected)
+        {
+            bool ctrlPressed = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl) ||
+                               Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
 
             foreach (var item in grid.Items)
             {
@@ -254,7 +485,7 @@ namespace RsyncZilla
                         }
                         else
                         {
-                            if (!ctrlPressed && !_rightDragInitialSelectedItems.Contains(fileItem))
+                            if (!ctrlPressed && !initialSelected.Contains(fileItem))
                             {
                                 if (row.IsSelected)
                                 {
@@ -307,75 +538,8 @@ namespace RsyncZilla
         }
 
         // ==========================================
-        // DRAG & DROP: LOCAL PANEL
+        // DROP TARGET HANDLING (LOCAL & REMOTE)
         // ==========================================
-
-        private void LocalDataGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            var dep = e.OriginalSource as DependencyObject;
-            while (dep != null && dep is not DataGridRow)
-            {
-                dep = VisualTreeHelper.GetParent(dep);
-            }
-
-            _localDragStart = e.GetPosition(null);
-
-            if (dep is DataGridRow row && row.IsSelected && LocalDataGrid.SelectedItems.Count > 1)
-            {
-                // Clicking on an already selected row among multiple selected rows:
-                // Don't deselect yet; wait to see if it's a drag or a simple click
-                _isLocalDragCandidate = true;
-                _localDraggedRow = row;
-                e.Handled = true;
-                return;
-            }
-
-            _isLocalDragCandidate = false;
-            _localDraggedRow = null;
-        }
-
-        private void LocalDataGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (_isLocalDragCandidate && _localDraggedRow != null)
-            {
-                _isLocalDragCandidate = false;
-                // If the user clicked without dragging, select only this row (unless Ctrl/Shift held)
-                if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == 0)
-                {
-                    LocalDataGrid.SelectedItems.Clear();
-                    _localDraggedRow.IsSelected = true;
-                }
-                _localDraggedRow = null;
-            }
-        }
-
-        private void LocalDataGrid_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
-                var currentPos = e.GetPosition(null);
-                var diff = _localDragStart - currentPos;
-
-                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
-                {
-                    _isLocalDragCandidate = false;
-
-                    var selected = LocalDataGrid.SelectedItems.Cast<FileItem>()
-                        .Where(i => i != null && !i.IsParent).ToList();
-
-                    if (!selected.Any()) return;
-
-                    var data = new DataObject();
-                    var paths = selected.Select(i => i.FullPath).ToArray();
-                    data.SetData(DataFormats.FileDrop, paths);
-                    data.SetData("RsyncZilla.Source", "Local");
-                    data.SetData("RsyncZilla.Items", selected);
-
-                    DragDrop.DoDragDrop(LocalDataGrid, data, DragDropEffects.Copy);
-                }
-            }
-        }
 
         private void LocalDataGrid_DragOver(object sender, DragEventArgs e)
         {
@@ -416,72 +580,6 @@ namespace RsyncZilla
 
                 _ = _viewModel.DownloadItemsAsync(items, targetPath);
                 e.Handled = true;
-            }
-        }
-
-        // ==========================================
-        // DRAG & DROP: REMOTE PANEL
-        // ==========================================
-
-        private void RemoteDataGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            var dep = e.OriginalSource as DependencyObject;
-            while (dep != null && dep is not DataGridRow)
-            {
-                dep = VisualTreeHelper.GetParent(dep);
-            }
-
-            _remoteDragStart = e.GetPosition(null);
-
-            if (dep is DataGridRow row && row.IsSelected && RemoteDataGrid.SelectedItems.Count > 1)
-            {
-                _isRemoteDragCandidate = true;
-                _remoteDraggedRow = row;
-                e.Handled = true;
-                return;
-            }
-
-            _isRemoteDragCandidate = false;
-            _remoteDraggedRow = null;
-        }
-
-        private void RemoteDataGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (_isRemoteDragCandidate && _remoteDraggedRow != null)
-            {
-                _isRemoteDragCandidate = false;
-                if ((Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) == 0)
-                {
-                    RemoteDataGrid.SelectedItems.Clear();
-                    _remoteDraggedRow.IsSelected = true;
-                }
-                _remoteDraggedRow = null;
-            }
-        }
-
-        private void RemoteDataGrid_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
-                var currentPos = e.GetPosition(null);
-                var diff = _remoteDragStart - currentPos;
-
-                if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                    Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
-                {
-                    _isRemoteDragCandidate = false;
-
-                    var selected = RemoteDataGrid.SelectedItems.Cast<FileItem>()
-                        .Where(i => i != null && !i.IsParent).ToList();
-
-                    if (!selected.Any()) return;
-
-                    var data = new DataObject();
-                    data.SetData("RsyncZilla.Source", "Remote");
-                    data.SetData("RsyncZilla.Items", selected);
-
-                    DragDrop.DoDragDrop(RemoteDataGrid, data, DragDropEffects.Copy);
-                }
             }
         }
 
