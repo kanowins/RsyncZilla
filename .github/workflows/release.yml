@@ -52,6 +52,18 @@ jobs:
           echo "tag=$tag" >> $env:GITHUB_OUTPUT
           echo "zip_path=$zipName" >> $env:GITHUB_OUTPUT
 
+      - name: Extract Release Notes
+        run: |
+          $tag = "${{ steps.package.outputs.tag }}"
+          $cleanVer = $tag.TrimStart('v', 'V')
+          $content = Get-Content dist/RELEASE_NOTES.md -Raw
+          if ($content -match "(?s)(## Version $cleanVer\b.*?)(?=\r?\n## Version |\Z)") {
+            $versionNotes = $matches[1].Trim()
+            Set-Content -Path "current_release_notes.md" -Value $versionNotes
+          } else {
+            Copy-Item dist/RELEASE_NOTES.md current_release_notes.md
+          }
+
       - name: Create or Update GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -65,8 +77,8 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
             echo "Updating existing release $tag..."
             gh release upload $tag $zip --clobber
-            gh release edit $tag --title $title --notes-file dist/RELEASE_NOTES.md
+            gh release edit $tag --title $title --notes-file current_release_notes.md
           } else {
             echo "Creating new release $tag..."
-            gh release create $tag $zip --title $title --notes-file dist/RELEASE_NOTES.md
+            gh release create $tag $zip --title $title --notes-file current_release_notes.md
           }
