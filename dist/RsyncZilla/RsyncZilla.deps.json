@@ -10,7 +10,8 @@
       "RsyncZilla/1.0.0": {
         "dependencies": {
           "RsyncAskPass": "1.0.0",
-          "SSH.NET": "2026.0.0"
+          "SSH.NET": "2026.0.0",
+          "VirtualFileDataObject": "1.0.0"
         },
         "runtime": {
           "RsyncZilla.dll": {}
@@ -52,6 +53,14 @@
           "lib/net8.0/Renci.SshNet.dll": {
             "assemblyVersion": "2026.0.0.1",
             "fileVersion": "2026.0.0.1"
+          }
+        }
+      },
+      "VirtualFileDataObject/1.0.0": {
+        "runtime": {
+          "lib/net40/VirtualFileDataObject.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
           }
         }
       },
@@ -98,6 +107,13 @@
       "sha512": "sha512-Yu9dirPq8l3oaat0+OQ7K0nUf5MmYltpia5UGqsApTG4zTPvBC1cxbNnC3NERij26dUST0A3Ef1QdHSn5ArbWQ==",
       "path": "ssh.net/2026.0.0",
       "hashPath": "ssh.net.2026.0.0.nupkg.sha512"
+    },
+    "VirtualFileDataObject/1.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-NtW9XTT3A8l8Q+qqu2gOINMTCIdXDdyQoRY70PrKqkbp04k9n3wVQ32G6ScYDbn46odl5sWgHwVfBMq05jNu4g==",
+      "path": "virtualfiledataobject/1.0.0",
+      "hashPath": "virtualfiledataobject.1.0.0.nupkg.sha512"
     },
     "RsyncAskPass/1.0.0": {
       "type": "project",

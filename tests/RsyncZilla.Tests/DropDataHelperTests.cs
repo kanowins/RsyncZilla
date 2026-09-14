@@ -259,10 +259,62 @@ namespace RsyncZilla.Tests
         }
 
         [Fact]
+        public void ExtractLocalPaths_WhenOneFormatThrowsComException_ShouldContinueAndExtractFromOtherFormats()
+        {
+            var tempFile = Path.GetTempFileName();
+            try
+            {
+                var mockData = new MockComExceptionDataObject(tempFile);
+                var results = DropDataHelper.ExtractLocalPaths(mockData);
+
+                Assert.Single(results);
+                Assert.Equal(Path.GetFullPath(tempFile), results[0]);
+            }
+            finally
+            {
+                if (File.Exists(tempFile)) File.Delete(tempFile);
+            }
+        }
+
+        private class MockComExceptionDataObject : IDataObject
+        {
+            private readonly string _validPath;
+            public MockComExceptionDataObject(string validPath) => _validPath = validPath;
+
+            public object GetData(string format, bool autoConvert) => GetData(format);
+            public object GetData(Type format) => throw new NotImplementedException();
+            public object GetData(string format)
+            {
+                if (format == DataFormats.FileDrop)
+                {
+                    throw new System.Runtime.InteropServices.COMException("Invalid FORMATETC", unchecked((int)0x80040064));
+                }
+                if (format == DataFormats.UnicodeText || format == DataFormats.Text)
+                {
+                    return _validPath;
+                }
+                throw new NotImplementedException();
+            }
+
+            public bool GetDataPresent(string format, bool autoConvert) => GetDataPresent(format);
+            public bool GetDataPresent(Type format) => false;
+            public bool GetDataPresent(string format) => format == DataFormats.FileDrop || format == DataFormats.UnicodeText;
+
+            public string[] GetFormats(bool autoConvert) => GetFormats();
+            public string[] GetFormats() => new[] { DataFormats.FileDrop, DataFormats.UnicodeText };
+
+            public void SetData(string format, object data, bool autoConvert) { }
+            public void SetData(Type format, object data) { }
+            public void SetData(string format, object data) { }
+            public void SetData(object data) { }
+        }
+
+        [Fact]
         public void HasDroppableFiles_WithNullData_ShouldReturnFalse()
         {
             Assert.False(DropDataHelper.HasDroppableFiles(null));
         }
+
 
 
         [Fact]

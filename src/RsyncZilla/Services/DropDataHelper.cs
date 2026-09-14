@@ -20,63 +20,36 @@ namespace RsyncZilla.Services
             var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (dataObject == null) return results.ToList();
 
-            try
-            {
-                // 1. Standard Windows Explorer (CF_HDROP)
-                if (dataObject.GetDataPresent(DataFormats.FileDrop))
-                {
-                    if (dataObject.GetData(DataFormats.FileDrop) is string[] files)
-                    {
-                        foreach (var f in files)
-                        {
-                            AddIfValid(f, results);
-                        }
-                    }
-                }
+            var formats = dataObject.GetFormats();
+            if (formats == null || formats.Length == 0) return results.ToList();
 
-                // 2. Specific standard URI & Filename formats
-                string[] standardFormats = { "text/uri-list", "UniformResourceLocatorW", "UniformResourceLocator", "FileNameW", "FileName", DataFormats.UnicodeText, DataFormats.Text, "text/plain", "text/html" };
-                foreach (var format in standardFormats)
+            // Prioritize standard text / URI formats, but process ALL formats independently
+            var orderedFormats = formats.OrderByDescending(f =>
+                string.Equals(f, DataFormats.UnicodeText, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(f, DataFormats.Text, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(f, "System.String", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(f, "text/uri-list", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(f, DataFormats.FileDrop, StringComparison.OrdinalIgnoreCase) ? 1 : 0);
+
+            foreach (var format in orderedFormats)
+            {
+                try
                 {
                     if (dataObject.GetDataPresent(format))
                     {
-                        try
-                        {
-                            var obj = dataObject.GetData(format);
-                            ExtractFromObject(obj, results);
-                        }
-                        catch { }
+                        var obj = dataObject.GetData(format);
+                        ExtractFromObject(obj, results);
                     }
                 }
-
-                // 3. Scan all available formats (e.g. "Chromium Web Custom MIME Data Format", VS Code custom drag formats)
-                var allFormats = dataObject.GetFormats();
-                if (allFormats != null)
+                catch
                 {
-                    foreach (var format in allFormats)
-                    {
-                        if (standardFormats.Contains(format, StringComparer.OrdinalIgnoreCase) ||
-                            string.Equals(format, DataFormats.FileDrop, StringComparison.OrdinalIgnoreCase))
-                        {
-                            continue;
-                        }
-
-                        try
-                        {
-                            var obj = dataObject.GetData(format);
-                            ExtractFromObject(obj, results);
-                        }
-                        catch { }
-                    }
+                    // Ignore COM exceptions on individual formats (e.g. DV_E_FORMATETC on FileDrop/FileContents)
                 }
-            }
-            catch
-            {
-                // Ignore any COM/OLE format conversion exceptions
             }
 
             return results.ToList();
         }
+
 
         public static bool HasDroppableFiles(IDataObject? dataObject)
         {
