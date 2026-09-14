@@ -194,12 +194,70 @@ namespace RsyncZilla.Services
         {
             if (isDirectory)
             {
-                if (Directory.Exists(path)) Directory.Delete(path, true);
+                if (Directory.Exists(path))
+                {
+                    DeleteDirectoryRobust(path);
+                }
             }
             else
             {
-                if (File.Exists(path)) File.Delete(path);
+                if (File.Exists(path))
+                {
+                    try
+                    {
+                        File.SetAttributes(path, FileAttributes.Normal);
+                    }
+                    catch { }
+                    File.Delete(path);
+                }
             }
+        }
+
+        private static void DeleteDirectoryRobust(string path)
+        {
+            const int maxRetries = 6;
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    NormalizeAttributesRecursive(new DirectoryInfo(path));
+                    Directory.Delete(path, true);
+                    return;
+                }
+                catch (Exception) when (i < maxRetries - 1)
+                {
+                    System.Threading.Thread.Sleep(80 * (i + 1));
+                }
+            }
+
+            NormalizeAttributesRecursive(new DirectoryInfo(path));
+            Directory.Delete(path, true);
+        }
+
+        private static void NormalizeAttributesRecursive(DirectoryInfo dir)
+        {
+            if (!dir.Exists) return;
+            try
+            {
+                dir.Attributes = FileAttributes.Normal;
+                foreach (var file in dir.EnumerateFiles())
+                {
+                    try
+                    {
+                        file.Attributes = FileAttributes.Normal;
+                    }
+                    catch { }
+                }
+                foreach (var subDir in dir.EnumerateDirectories())
+                {
+                    try
+                    {
+                        NormalizeAttributesRecursive(subDir);
+                    }
+                    catch { }
+                }
+            }
+            catch { }
         }
     }
 }

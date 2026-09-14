@@ -13,7 +13,8 @@
         Background="#F0F2F5"
         Foreground="#1A1A1A"
         FontFamily="Segoe UI, Segoe UI Emoji, Arial"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.Resources>
         <converters:InverseBooleanConverter x:Key="InverseBoolConverter"/>

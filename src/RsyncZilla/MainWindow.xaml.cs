@@ -424,7 +424,70 @@ namespace RsyncZilla
             }
         }
 
+        private async void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Delete)
+            {
+                // Do not intercept Delete when editing text in a TextBox or PasswordBox
+                if (Keyboard.FocusedElement is TextBox or PasswordBox)
+                {
+                    return;
+                }
+
+                if (RemoteDataGrid.IsKeyboardFocusWithin)
+                {
+                    e.Handled = true;
+                    await DeleteRemoteSelectedItemsAsync();
+                }
+                else if (LocalDataGrid.IsKeyboardFocusWithin)
+                {
+                    e.Handled = true;
+                    await DeleteLocalSelectedItemsAsync();
+                }
+                else if (RemoteDataGrid.SelectedItems.Count > 0 && LocalDataGrid.SelectedItems.Count == 0)
+                {
+                    e.Handled = true;
+                    await DeleteRemoteSelectedItemsAsync();
+                }
+                else if (LocalDataGrid.SelectedItems.Count > 0 && RemoteDataGrid.SelectedItems.Count == 0)
+                {
+                    e.Handled = true;
+                    await DeleteLocalSelectedItemsAsync();
+                }
+            }
+            else if (e.Key == Key.F5)
+            {
+                if (RemoteDataGrid.IsKeyboardFocusWithin || RemotePathTextBox.IsKeyboardFocusWithin)
+                {
+                    e.Handled = true;
+                    if (_viewModel.IsConnected)
+                    {
+                        await _viewModel.RemoteBrowser.RefreshAsync();
+                    }
+                }
+                else if (LocalDataGrid.IsKeyboardFocusWithin || LocalPathTextBox.IsKeyboardFocusWithin)
+                {
+                    e.Handled = true;
+                    await _viewModel.LocalBrowser.RefreshAsync();
+                }
+                else
+                {
+                    e.Handled = true;
+                    await _viewModel.LocalBrowser.RefreshAsync();
+                    if (_viewModel.IsConnected)
+                    {
+                        await _viewModel.RemoteBrowser.RefreshAsync();
+                    }
+                }
+            }
+        }
+
         private async void DeleteLocalItem_Click(object sender, RoutedEventArgs e)
+        {
+            await DeleteLocalSelectedItemsAsync();
+        }
+
+        private async Task DeleteLocalSelectedItemsAsync()
         {
             var selected = LocalDataGrid.SelectedItems.Cast<FileItem>()
                 .Where(i => i != null && !i.IsParent && !i.IsDrive).ToList();
@@ -443,6 +506,11 @@ namespace RsyncZilla
         }
 
         private async void DeleteRemoteItem_Click(object sender, RoutedEventArgs e)
+        {
+            await DeleteRemoteSelectedItemsAsync();
+        }
+
+        private async Task DeleteRemoteSelectedItemsAsync()
         {
             var selected = RemoteDataGrid.SelectedItems.Cast<FileItem>()
                 .Where(i => i != null && !i.IsParent).ToList();
