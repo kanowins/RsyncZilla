@@ -1033,11 +1033,12 @@ namespace RsyncZilla.ViewModels
             };
         }
 
-        public void AddLog(string message, bool isError)
+        public void AddLog(string message, bool isError, bool isWarning = false)
         {
+            var warning = isWarning || (!isError && (message.Contains("warning", StringComparison.OrdinalIgnoreCase) || message.Contains("⚠️")));
             RunOnUi(() =>
             {
-                LogEntries.Add(new LogEntry { Message = message, IsError = isError });
+                LogEntries.Add(new LogEntry { Message = message, IsError = isError && !warning, IsWarning = warning });
                 if (LogEntries.Count > 1000)
                 {
                     LogEntries.RemoveAt(0);

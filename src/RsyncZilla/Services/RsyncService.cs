@@ -93,15 +93,27 @@ namespace RsyncZilla.Services
             return fullPath;
         }
 
+        public static bool IsFailedToSetTimesError(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line)) return false;
+            return line.Contains("failed to set times", StringComparison.OrdinalIgnoreCase);
+        }
+
         public static RsyncFailureReason ClassifyError(int exitCode, string outputAndError)
         {
             var text = outputAndError ?? "";
 
+            // Filter out lines that are only timestamp warnings (e.g. "failed to set times on ...: Operation not permitted")
+            // so they don't cause false positive PermissionDenied classification.
+            var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Where(l => !IsFailedToSetTimesError(l));
+            var filteredText = string.Join("\n", lines);
+
             // 1. Permission Denied (File system permissions)
-            if (text.Contains("Permission denied", StringComparison.OrdinalIgnoreCase) ||
-                text.Contains("Operation not permitted", StringComparison.OrdinalIgnoreCase) ||
-                text.Contains("read-only file system", StringComparison.OrdinalIgnoreCase) ||
-                text.Contains("Access is denied", StringComparison.OrdinalIgnoreCase))
+            if (filteredText.Contains("Permission denied", StringComparison.OrdinalIgnoreCase) ||
+                filteredText.Contains("Operation not permitted", StringComparison.OrdinalIgnoreCase) ||
+                filteredText.Contains("read-only file system", StringComparison.OrdinalIgnoreCase) ||
+                filteredText.Contains("Access is denied", StringComparison.OrdinalIgnoreCase))
             {
                 return RsyncFailureReason.PermissionDenied;
             }
@@ -383,7 +395,16 @@ namespace RsyncZilla.Services
                     {
                         var errLine = e.Data.Trim();
                         errorOutput.AppendLine(errLine);
-                        LogMessageReceived?.Invoke($"[rsync stderr] {errLine}", true);
+
+                        var isSetTimes = IsFailedToSetTimesError(errLine);
+                        if (isSetTimes)
+                        {
+                            LogMessageReceived?.Invoke($"[rsync warning] ⚠️ {errLine} (File transferred successfully; remote server did not permit changing modification time).", false);
+                        }
+                        else
+                        {
+                            LogMessageReceived?.Invoke($"[rsync stderr] {errLine}", true);
+                        }
 
                         // Check if error mentions any specific task in the batch
                         foreach (var t in tasks)
@@ -391,8 +412,19 @@ namespace RsyncZilla.Services
                             if (errLine.Contains(t.FileName, StringComparison.OrdinalIgnoreCase) ||
                                 (!string.IsNullOrEmpty(t.SourcePath) && errLine.Contains(Path.GetFileName(t.SourcePath.TrimEnd('/', '\\')), StringComparison.OrdinalIgnoreCase)))
                             {
-                                t.Status = TransferStatus.Failed;
-                                t.ErrorMessage = errLine;
+                                if (isSetTimes)
+                                {
+                                    // Do not mark as failed: the file content transferred successfully!
+                                    if (t.Status != TransferStatus.Failed)
+                                    {
+                                        t.ProgressPercentage = 100;
+                                    }
+                                }
+                                else
+                                {
+                                    t.Status = TransferStatus.Failed;
+                                    t.ErrorMessage = errLine;
+                                }
                                 break;
                             }
                         }
@@ -457,24 +489,55 @@ namespace RsyncZilla.Services
                     // Partial transfer due to error - some files succeeded, some failed
                     foreach (var t in tasks)
                     {
-                        t.ExitCode = process.ExitCode;
                         t.EndTime = DateTime.Now;
                         if (t.Status != TransferStatus.Failed)
                         {
                             t.Status = TransferStatus.Completed;
                             t.ProgressPercentage = 100;
                             t.Eta = "0:00:00";
+                            t.ExitCode = 0; // Completed from the user's perspective
+                        }
+                        else
+                        {
+                            t.ExitCode = process.ExitCode;
                         }
                     }
                     var failedCount = tasks.Count(t => t.Status == TransferStatus.Failed);
                     var successCount = tasks.Count(t => t.Status == TransferStatus.Completed);
-                    LogMessageReceived?.Invoke($"[rsync] ⚠️ Batch completed with partial errors: {successCount} succeeded, {failedCount} failed.", true);
+                    if (failedCount == 0)
+                    {
+                        LogMessageReceived?.Invoke($"[rsync] ✅ Batch completed successfully ({successCount} items). Note: timestamp warnings were logged.", false);
+                    }
+                    else
+                    {
+                        LogMessageReceived?.Invoke($"[rsync] ⚠️ Batch completed with partial errors: {successCount} succeeded, {failedCount} failed.", true);
+                    }
                     return (true, RsyncFailureReason.Other, errorOutput.ToString().Trim());
                 }
                 else
                 {
                     var err = errorOutput.ToString().Trim();
                     var reason = ClassifyError(process.ExitCode, err);
+
+                    // If every task transferred without fatal error and errorOutput only contained timestamp warnings
+                    var nonFailedTasks = tasks.Where(t => t.Status != TransferStatus.Failed).ToList();
+                    var onlySetTimesWarnings = !string.IsNullOrEmpty(err) &&
+                        err.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).All(IsFailedToSetTimesError);
+
+                    if (onlySetTimesWarnings && nonFailedTasks.Count == tasks.Count)
+                    {
+                        foreach (var t in tasks)
+                        {
+                            t.ExitCode = 0;
+                            t.EndTime = DateTime.Now;
+                            t.Status = TransferStatus.Completed;
+                            t.ProgressPercentage = 100;
+                            t.Eta = "0:00:00";
+                        }
+                        LogMessageReceived?.Invoke($"[rsync] ✅ Batch completed successfully ({tasks.Count} items). Note: timestamp warnings were logged.", false);
+                        return (true, RsyncFailureReason.Other, "");
+                    }
+
                     foreach (var t in tasks)
                     {
                         t.ExitCode = process.ExitCode;
