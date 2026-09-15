@@ -3,23 +3,24 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Software Update - RsyncZilla"
         Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
-        Height="420" Width="550"
+        Height="470" Width="580"
         WindowStartupLocation="CenterOwner"
         Background="#F0F2F5" Foreground="#111111"
         FontFamily="Segoe UI, Arial"
-        MinHeight="300" MinWidth="400">
+        MinHeight="350" MinWidth="450">
 
     <Grid Margin="18">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Header -->
-            <RowDefinition Height="*"/>    <!-- Release notes box -->
-            <RowDefinition Height="Auto"/> <!-- Actions -->
+            <RowDefinition Height="Auto"/> <!-- 0. Header -->
+            <RowDefinition Height="*"/>    <!-- 1. Release notes box -->
+            <RowDefinition Height="Auto"/> <!-- 2. Download progress -->
+            <RowDefinition Height="Auto"/> <!-- 3. Actions -->
         </Grid.RowDefinitions>
 
-        <!-- 1. Header -->
+        <!-- 0. Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="🚀" FontSize="24" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                <TextBlock Text="🚀" FontSize="26" Margin="0,0,12,0" VerticalAlignment="Center"/>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock x:Name="TxtTitle" Text="A new version of RsyncZilla is available!" FontSize="16" FontWeight="Bold" Foreground="#005A9E"/>
                     <TextBlock x:Name="TxtVersions" Text="Installed: 1.0.0  |  Latest: 1.1.0" Foreground="#555555" Margin="0,2,0,0"/>
@@ -27,21 +28,33 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- 2. Notes -->
-        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="3" Margin="0,0,0,14" Padding="10">
+        <!-- 1. Release Notes -->
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="3" Margin="0,0,0,12" Padding="10">
             <TextBox x:Name="TxtNotes" IsReadOnly="True" BorderThickness="0" Background="Transparent"
                      TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" AcceptsReturn="True"
                      FontFamily="Consolas, Segoe UI" FontSize="12" Foreground="#222222"/>
         </Border>
 
-        <!-- 3. Buttons -->
-        <Grid Grid.Row="2">
-            <Button Content="View &amp; Download on GitHub" HorizontalAlignment="Left" Padding="14,6"
-                    Background="#2EA44F" Foreground="#FFFFFF" BorderBrush="#22863A"
-                    FontWeight="SemiBold" Cursor="Hand" Click="DownloadButton_Click"/>
+        <!-- 2. Download Progress Panel -->
+        <StackPanel Grid.Row="2" x:Name="DownloadProgressPanel" Visibility="Collapsed" Margin="0,0,0,12">
+            <TextBlock x:Name="TxtDownloadStatus" Text="Downloading installer... 0%" FontSize="12" Foreground="#005A9E" FontWeight="SemiBold" Margin="0,0,0,4"/>
+            <ProgressBar x:Name="DownloadProgressBar" Minimum="0" Maximum="100" Value="0" Height="16" Background="#E0E0E0" Foreground="#0078D7"/>
+        </StackPanel>
 
-            <Button Content="Close" HorizontalAlignment="Right" Padding="18,6"
-                    Background="#F5F5F5" BorderBrush="#CCCCCC" Cursor="Hand" IsCancel="True"
+        <!-- 3. Action Buttons -->
+        <Grid Grid.Row="3">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button x:Name="BtnUpdateNow" Content="⚡ Update Now (Install &amp; Restart)" Padding="14,7"
+                        Background="#0078D7" Foreground="#FFFFFF" BorderBrush="#005A9E" BorderThickness="1"
+                        FontWeight="Bold" Cursor="Hand" Click="UpdateNowButton_Click"/>
+
+                <Button x:Name="BtnViewGitHub" Content="View on GitHub" Margin="8,0,0,0" Padding="12,7"
+                        Background="#FFFFFF" Foreground="#333333" BorderBrush="#CCCCCC" BorderThickness="1"
+                        FontWeight="Normal" Cursor="Hand" Click="ViewGitHubButton_Click"/>
+            </StackPanel>
+
+            <Button x:Name="BtnClose" Content="Close" HorizontalAlignment="Right" Padding="18,7"
+                    Background="#F5F5F5" BorderBrush="#CCCCCC" BorderThickness="1" Cursor="Hand" IsCancel="True"
                     Click="CloseButton_Click"/>
         </Grid>
     </Grid>

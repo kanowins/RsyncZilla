@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using RsyncZilla.ViewModels;
 
@@ -58,6 +60,13 @@ namespace RsyncZilla.Services
             set => SetProperty(ref _releaseUrl, value);
         }
 
+        private string? _installerUrl;
+        public string? InstallerUrl
+        {
+            get => _installerUrl;
+            set => SetProperty(ref _installerUrl, value);
+        }
+
         private bool _isChecking;
         public bool IsChecking
         {
@@ -92,6 +101,26 @@ namespace RsyncZilla.Services
                             LatestVersion = tag.StartsWith("v", StringComparison.OrdinalIgnoreCase) ? tag : $"v{tag}";
                             ReleaseNotes = body ?? "";
                             ReleaseUrl = htmlUrl ?? ReleaseUrl;
+
+                            string? installerUrl = null;
+                            if (root.TryGetProperty("assets", out var assetsElem) && assetsElem.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var asset in assetsElem.EnumerateArray())
+                                {
+                                    if (asset.TryGetProperty("name", out var nameElem) &&
+                                        asset.TryGetProperty("browser_download_url", out var dlElem))
+                                    {
+                                        var name = nameElem.GetString() ?? "";
+                                        if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                                            name.Contains("Setup", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            installerUrl = dlElem.GetString();
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            InstallerUrl = installerUrl ?? $"https://github.com/kanowins/RsyncZilla/releases/download/{LatestVersion}/RsyncZilla-Setup-{LatestVersion}-win-x64.exe";
                             IsUpdateAvailable = true;
 
                             LogMessageReceived?.Invoke($"[Update] New version available: {LatestVersion}!", false);
@@ -121,6 +150,8 @@ namespace RsyncZilla.Services
                             LatestVersion = candidate.StartsWith("v", StringComparison.OrdinalIgnoreCase) ? candidate : $"v{candidate}";
                             ReleaseNotes = $"A new version ({LatestVersion}) is available on GitHub.";
                             ReleaseUrl = relUrl ?? notesUrl ?? ReleaseUrl;
+                            var iUrl = root.TryGetProperty("installer_url", out var instElem) ? instElem.GetString() : null;
+                            InstallerUrl = iUrl ?? $"https://github.com/kanowins/RsyncZilla/releases/download/{LatestVersion}/RsyncZilla-Setup-{LatestVersion}-win-x64.exe";
                             IsUpdateAvailable = true;
 
                             LogMessageReceived?.Invoke($"[Update] New version available: {LatestVersion}!", false);
@@ -164,6 +195,8 @@ namespace RsyncZilla.Services
                                 }
 
                                 ReleaseUrl = relUrl ?? notesUrl ?? ReleaseUrl;
+                                var iUrl = root.TryGetProperty("installer_url", out var instElem) ? instElem.GetString() : null;
+                                InstallerUrl = iUrl ?? $"https://github.com/kanowins/RsyncZilla/releases/download/{LatestVersion}/RsyncZilla-Setup-{LatestVersion}-win-x64.exe";
                                 IsUpdateAvailable = true;
 
                                 LogMessageReceived?.Invoke($"[Update] New version available: {LatestVersion}!", false);
@@ -183,6 +216,67 @@ namespace RsyncZilla.Services
             {
                 IsChecking = false;
             }
+        }
+
+        public async Task<(bool success, string? localPath, string? error)> DownloadInstallerAsync(
+            string downloadUrl,
+            IProgress<double>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var tempDir = Path.Combine(Path.GetTempPath(), "RsyncZillaUpdate");
+                Directory.CreateDirectory(tempDir);
+
+                var fileName = "RsyncZilla-Setup.exe";
+                if (Uri.TryCreate(downloadUrl, UriKind.Absolute, out var uri))
+                {
+                    var seg = Path.GetFileName(uri.LocalPath);
+                    if (!string.IsNullOrWhiteSpace(seg) && seg.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        fileName = seg;
+                    }
+                }
+                var localPath = Path.Combine(tempDir, fileName);
+
+                using var response = await HttpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                response.EnsureSuccessStatusCode();
+
+                var totalBytes = response.Content.Headers.ContentLength ?? -1L;
+                using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var fileStream = new FileStream(localPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
+
+                var buffer = new byte[81920];
+                long totalRead = 0;
+                int read;
+                while ((read = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
+                {
+                    await fileStream.WriteAsync(buffer, 0, read, cancellationToken);
+                    totalRead += read;
+                    if (totalBytes > 0)
+                    {
+                        progress?.Report((double)totalRead / totalBytes * 100.0);
+                    }
+                }
+
+                return (true, localPath, null);
+            }
+            catch (Exception ex)
+            {
+                return (false, null, ex.Message);
+            }
+        }
+
+        public static void LaunchInstallerAndShutdown(string installerPath)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = installerPath,
+                Arguments = "/CLOSEAPPLICATIONS /RESTARTAPPLICATIONS",
+                UseShellExecute = true
+            };
+            Process.Start(psi);
+            System.Windows.Application.Current?.Shutdown();
         }
 
         public static bool IsNewerVersion(string currentVersion, string candidateVersion)

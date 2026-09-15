@@ -45,6 +45,21 @@ namespace RsyncZilla.Tests
             Assert.True(service.IsUpdateAvailable);
             Assert.False(string.IsNullOrWhiteSpace(service.UpdateBannerText));
             Assert.NotEmpty(service.ReleaseNotes);
+            Assert.False(string.IsNullOrWhiteSpace(service.InstallerUrl));
+            Assert.Contains(".exe", service.InstallerUrl);
+        }
+
+        [Fact]
+        public void InstallerUrl_Property_ShouldNotifyChanges()
+        {
+            var service = new UpdateCheckService();
+            string? changedProp = null;
+            service.PropertyChanged += (s, e) => changedProp = e.PropertyName;
+
+            service.InstallerUrl = "https://example.com/Setup.exe";
+
+            Assert.Equal("InstallerUrl", changedProp);
+            Assert.Equal("https://example.com/Setup.exe", service.InstallerUrl);
         }
     }
 }

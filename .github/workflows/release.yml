@@ -52,6 +52,33 @@ jobs:
           echo "tag=$tag" >> $env:GITHUB_OUTPUT
           echo "zip_path=$zipName" >> $env:GITHUB_OUTPUT
 
+      - name: Build Inno Setup Installer
+        id: installer
+        run: |
+          $tag = "${{ steps.package.outputs.tag }}"
+          $cleanVer = $tag.TrimStart('v', 'V')
+          
+          $isccCmd = "iscc"
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) {
+            $defaultIscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+            if (Test-Path $defaultIscc) {
+              $isccCmd = $defaultIscc
+            } else {
+              choco install innosetup --no-progress
+              if (Test-Path $defaultIscc) {
+                $isccCmd = $defaultIscc
+              }
+            }
+          }
+          
+          & $isccCmd /DMyAppVersion=$cleanVer installer/RsyncZilla.iss
+          $installerPath = "dist/installer/RsyncZilla-Setup-$tag-win-x64.exe"
+          if (-not (Test-Path $installerPath)) {
+            $found = Get-ChildItem -Path dist/installer/*.exe | Select-Object -First 1
+            if ($found) { $installerPath = $found.FullName }
+          }
+          echo "installer_path=$installerPath" >> $env:GITHUB_OUTPUT
+
       - name: Extract Release Notes
         run: |
           $tag = "${{ steps.package.outputs.tag }}"
@@ -70,15 +97,16 @@ jobs:
         run: |
           $tag = "${{ steps.package.outputs.tag }}"
           $zip = "${{ steps.package.outputs.zip_path }}"
+          $installer = "${{ steps.installer.outputs.installer_path }}"
           $title = "RsyncZilla $tag"
           
           # Check if release already exists
           $existing = gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
             echo "Updating existing release $tag..."
-            gh release upload $tag $zip --clobber
+            gh release upload $tag $zip $installer --clobber
             gh release edit $tag --title $title --notes-file current_release_notes.md
           } else {
             echo "Creating new release $tag..."
-            gh release create $tag $zip --title $title --notes-file current_release_notes.md
+            gh release create $tag $zip $installer --title $title --notes-file current_release_notes.md
           }

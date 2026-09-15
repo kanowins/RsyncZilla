@@ -155,6 +155,11 @@ if (Test-Path $manifestJson) {
         '"release_name":\s*".*?"',
         "`"release_name`": `"RsyncZilla $newVersion`""
     )
+    $manifestContent = [System.Text.RegularExpressions.Regex]::Replace(
+        $manifestContent,
+        '"installer_url":\s*".*?"',
+        "`"installer_url`": `"https://github.com/kanowins/RsyncZilla/releases/download/v$newVersion/RsyncZilla-Setup-v$newVersion-win-x64.exe`""
+    )
     Set-Content -Path $manifestJson -Value $manifestContent -NoNewline
     Write-Host "  [OK] Updated $manifestJson" -ForegroundColor Green
 }

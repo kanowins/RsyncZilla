@@ -59,11 +59,7 @@ namespace RsyncZilla
 
             _viewModel.ShowUpdateAction = () =>
             {
-                var dlg = new UpdateDialog(
-                    _viewModel.UpdateService.CurrentVersion,
-                    _viewModel.UpdateService.LatestVersion,
-                    _viewModel.UpdateService.ReleaseNotes,
-                    _viewModel.UpdateService.ReleaseUrl)
+                var dlg = new UpdateDialog(_viewModel.UpdateService)
                 {
                     Owner = this
                 };

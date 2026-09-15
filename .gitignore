@@ -17,5 +17,6 @@ TestResults/
 crash.log
 *.tmp
 *.zip
+dist/installer/
 /rsync-win.exe
 /cygwin64/
