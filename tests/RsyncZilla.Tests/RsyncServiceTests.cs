@@ -80,10 +80,36 @@ namespace RsyncZilla.Tests
         [InlineData(12, "rsync: error in rsync protocol data stream (code 12)", RsyncFailureReason.ConnectionError)]
         [InlineData(30, "Timeout in data send/receive (code 30)", RsyncFailureReason.ConnectionError)]
         [InlineData(255, "Connection reset by peer", RsyncFailureReason.ConnectionError)]
+        [InlineData(23, "rsync: failed to set times on \"/var/www/file.txt\": Operation not permitted (1)", RsyncFailureReason.Other)]
         public void ClassifyError_ShouldDistinguishPermissionsAndConnectionErrors(int exitCode, string output, RsyncFailureReason expected)
         {
             var result = RsyncService.ClassifyError(exitCode, output);
             Assert.Equal(expected, result);
+        }
+
+        [Theory]
+        [InlineData("rsync: failed to set times on \"file.txt\": Operation not permitted (1)", true)]
+        [InlineData("rsync: [receiver] failed to set times on \"/var/www/index.html\": Operation not permitted", true)]
+        [InlineData("rsync: [receiver] mkstemp \"file.txt\": Permission denied (13)", false)]
+        [InlineData("Connection refused", false)]
+        [InlineData("", false)]
+        public void IsFailedToSetTimesError_ShouldDetectTimestampWarningsCorrectly(string line, bool expected)
+        {
+            var result = RsyncService.IsFailedToSetTimesError(line);
+            Assert.Equal(expected, result);
+        }
+
+        [Fact]
+        public void LogEntry_ShouldSupportWarningBrush()
+        {
+            var warningEntry = new LogEntry { Message = "Warning text", IsWarning = true };
+            Assert.Equal("#D97706", warningEntry.ColorBrush);
+
+            var errorEntry = new LogEntry { Message = "Error text", IsError = true };
+            Assert.Equal("#C62828", errorEntry.ColorBrush);
+
+            var normalEntry = new LogEntry { Message = "Normal text" };
+            Assert.Equal("#2E7D32", normalEntry.ColorBrush);
         }
     }
 }
