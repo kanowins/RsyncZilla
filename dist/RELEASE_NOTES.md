@@ -1,5 +1,20 @@
 # RsyncZilla Release Notes
 
+## Version 1.1.0 (2026-09-15)
+
+### ✨ New Features & Improvements
+- **Verified rsync Delta Uploads for Live Remote Editing**:
+  - Live remote file editing now uploads saved changes using the robust rsync engine instead of direct SFTP.
+  - Guarantees atomic file replacement and checksum validation on every save.
+  - Resolves permission issues when editing files belonging to different users within shared group directories.
+- **Smart Timestamp Warning Handling (`failed to set times`)**:
+  - Non-fatal attribute errors (`rsync: failed to set times: Operation not permitted`) are now recognized as warnings.
+  - Successfully transferred files are no longer sent to the Failed tab when only timestamp synchronization is restricted by the remote OS.
+- **Enhanced Log Console**:
+  - Added warning level styling (amber/orange) in the Server & rsync log console for clear diagnostic visibility.
+
+---
+
 ## Version 1.0.1 (2026-09-14)
 
 ### ✨ New Features & Improvements

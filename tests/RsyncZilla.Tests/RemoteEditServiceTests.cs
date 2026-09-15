@@ -132,6 +132,14 @@ namespace RsyncZilla.Tests
         }
 
         [Fact]
+        public void Constructor_WithRsyncService_ShouldInitializeCorrectly()
+        {
+            var rsyncService = new RsyncService();
+            var service = new RemoteEditService(rsyncService);
+            Assert.NotNull(service);
+        }
+
+        [Fact]
         public void ShowInExplorerCommand_WhenFileSelected_ShouldLaunchExplorerWithSelectArgument()
         {
             var vm = new MainViewModel();

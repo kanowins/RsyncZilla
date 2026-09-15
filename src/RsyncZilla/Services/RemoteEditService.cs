@@ -39,10 +39,16 @@ namespace RsyncZilla.Services
         }
 
         private readonly ConcurrentDictionary<string, TrackedFile> _trackedFiles = new(StringComparer.OrdinalIgnoreCase);
+        private readonly RsyncService _rsyncService;
 
         public event Action<string, bool>? LogMessageReceived;
         public event Action<RemoteSessionViewModel, string, long, DateTime>? FileUploaded;
         public event Action<RemoteSessionViewModel, string, string, string>? FileUploadFailed; // (session, remotePath, fileName, error)
+
+        public RemoteEditService(RsyncService? rsyncService = null)
+        {
+            _rsyncService = rsyncService ?? new RsyncService();
+        }
 
         public string GetLocalTempPath(string host, int port, string username, string remoteFullPath)
         {
@@ -173,19 +179,35 @@ namespace RsyncZilla.Services
                     return;
                 }
 
-                LogMessageReceived?.Invoke($"[Remote Edit] File '{fileName}' changed locally. Uploading to server...", false);
+                LogMessageReceived?.Invoke($"[Remote Edit] File '{fileName}' changed locally. Uploading to server via rsync...", false);
 
-                var (ok, err) = await tracker.Session.SftpService.UploadFileAsync(tracker.LocalPath, tracker.RemotePath);
-                if (ok)
+                var connection = tracker.Session.CreateConnectionProfile();
+                var remoteDir = tracker.RemotePath.Contains('/') 
+                    ? tracker.RemotePath.Substring(0, tracker.RemotePath.LastIndexOf('/')) 
+                    : "/";
+                if (string.IsNullOrEmpty(remoteDir)) remoteDir = "/";
+
+                var task = new TransferTask
+                {
+                    FileName = fileName,
+                    SourcePath = tracker.LocalPath,
+                    DestinationPath = remoteDir,
+                    Direction = TransferDirection.Upload,
+                    ConnectionProfile = connection,
+                    SessionId = tracker.Session.Id
+                };
+
+                var success = await _rsyncService.ExecuteBatchTransferAsync(new[] { task }, connection);
+                if (success && task.Status == TransferStatus.Completed)
                 {
                     tracker.LastHash = currentHash;
                     var fi = new FileInfo(tracker.LocalPath);
-                    LogMessageReceived?.Invoke($"[Remote Edit] File '{fileName}' uploaded successfully ({FormatBytes(fi.Length)}).", false);
+                    LogMessageReceived?.Invoke($"[Remote Edit] File '{fileName}' uploaded and verified successfully via rsync ({FormatBytes(fi.Length)}).", false);
                     FileUploaded?.Invoke(tracker.Session, tracker.RemotePath, fi.Length, fi.LastWriteTime);
                 }
                 else
                 {
-                    var errMsg = err ?? "Unknown SFTP upload failure.";
+                    var errMsg = !string.IsNullOrEmpty(task.ErrorMessage) ? task.ErrorMessage : "rsync upload failed.";
                     LogMessageReceived?.Invoke($"[Remote Edit] Error uploading '{fileName}': {errMsg}", true);
                     FileUploadFailed?.Invoke(tracker.Session, tracker.RemotePath, fileName, errMsg);
                 }

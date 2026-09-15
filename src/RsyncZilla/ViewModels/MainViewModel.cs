@@ -168,7 +168,7 @@ namespace RsyncZilla.ViewModels
             _rsyncService = rsyncService ?? new RsyncService();
             _connectionManagerService = connectionManagerService ?? new ConnectionManagerService();
             _terminalService = terminalService ?? new TerminalService(_rsyncService);
-            _remoteEditService = remoteEditService ?? new RemoteEditService();
+            _remoteEditService = remoteEditService ?? new RemoteEditService(_rsyncService);
             _remoteEditService.LogMessageReceived += (msg, isErr) => AddLog(msg, isErr);
             _remoteEditService.FileUploaded += (session, path, len, time) => OnRemoteFileUploaded(session, path, len, time);
             _remoteEditService.FileUploadFailed += (session, path, file, err) => OnRemoteFileUploadFailed(session, path, file, err);
