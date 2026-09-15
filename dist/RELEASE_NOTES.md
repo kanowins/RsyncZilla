@@ -1,5 +1,22 @@
 # RsyncZilla Release Notes
 
+## Version 1.2.0 (2026-09-15)
+
+### ✨ New Features & Improvements
+- **Official Windows Installer (`.exe`) via Inno Setup**:
+  - Full Windows setup wizard with Start Menu and Desktop shortcuts, clean Program Files installation, and native uninstaller.
+  - Releases now include both the portable `.zip` and the standalone installer `.exe`.
+- **In-App One-Click Auto-Update**:
+  - The update dialog now features a direct **"⚡ Actualizar Ahora"** button with a real-time download progress bar.
+  - Automatically launches the installer, closes RsyncZilla, applies the update, and relaunches the application seamlessly.
+- **Verified rsync Delta Uploads for Live Remote Editing**:
+  - Live remote file editing uploads saved changes using the robust rsync engine with atomic file replacement.
+  - Solves group-permission conflicts when saving shared remote files.
+- **Smart Attribute Warning Handling**:
+  - Non-fatal attribute errors (`failed to set times: Operation not permitted`) are treated as warnings instead of failing the transfer.
+
+---
+
 ## Version 1.1.0 (2026-09-15)
 
 ### ✨ New Features & Improvements
