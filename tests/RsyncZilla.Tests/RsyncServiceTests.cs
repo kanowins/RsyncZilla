@@ -194,5 +194,12 @@ namespace RsyncZilla.Tests
                 if (File.Exists(tempFile)) File.Delete(tempFile);
             }
         }
+
+        [Fact]
+        public void App_EnsureStandardMenuDropAlignment_ShouldForceLeftAlignment()
+        {
+            App.EnsureStandardMenuDropAlignment();
+            Assert.False(System.Windows.SystemParameters.MenuDropAlignment);
+        }
     }
 }
