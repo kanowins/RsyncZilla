@@ -68,6 +68,7 @@ Engineered to eliminate the classic issue of silent FTP transfer failures, ensur
   - `ViewModels/`: Decoupled MVVM presentation logic.
   - `Views/`: Custom XAML dialogs (Site Manager, InputDialog, SiteEditDialog).
 - `src/RsyncAskPass/`: Secure credential pipe bridge for OpenSSH `SSH_ASKPASS`.
+- `installer/`: Inno Setup configuration (`RsyncZilla.iss`) for building the standalone Windows installer.
 - `tests/RsyncZilla.Tests/`: xUnit test suite (78 tests covering rsync path translation, watchers, explorer integration, multi-selection, update checks, and CLI args).
 - `dist/RsyncZilla/`: Ready-to-run precompiled portable distribution (`RsyncZilla.exe`).
 
@@ -75,12 +76,23 @@ Engineered to eliminate the classic issue of silent FTP transfer failures, ensur
 
 ## 🚀 Installation & Running
 
-### Option 1: Download Latest Release
-Download the ready-to-run portable `.zip` from **[GitHub Releases](https://github.com/kanowins/RsyncZilla/releases/latest)**, extract it anywhere, and launch `RsyncZilla.exe`.
+### Option 1: Download Latest Release (Installer or Portable ZIP)
+Head over to **[GitHub Releases](https://github.com/kanowins/RsyncZilla/releases/latest)** and choose the package that best fits your workflow:
+
+- **📦 Windows Setup Installer (`RsyncZilla-Setup-v*-win-x64.exe`):**
+  - Autoinstaller powered by Inno Setup.
+  - Automatically creates Start Menu shortcuts and an optional Desktop icon.
+  - Includes a clean uninstaller accessible via Windows Settings / Apps.
+  - Ideal for standard daily desktop use.
+
+- **💼 Portable ZIP (`RsyncZilla-v*-win-x64.zip`):**
+  - **100% Portable — Zero installation required.**
+  - Simply extract the `.zip` to any directory or carry it on a USB flash drive.
+  - Does not touch the Windows Registry or system folders; launch `RsyncZilla.exe` directly wherever you extracted it.
 
 > [!NOTE]
 > **Windows Defender SmartScreen Notice:**
-> When launching RsyncZilla for the first time on Windows, Microsoft Defender SmartScreen may display a blue warning screen: *"Windows protected your PC — Microsoft Defender SmartScreen prevented an unrecognized app from starting"*.
+> When launching RsyncZilla or running the installer for the first time on Windows, Microsoft Defender SmartScreen may display a blue warning screen: *"Windows protected your PC — Microsoft Defender SmartScreen prevented an unrecognized app from starting"*.
 >
 > This is standard Windows behavior for open-source software downloaded from the internet that does not carry an expensive paid commercial code-signing certificate. The application is completely open-source, and all release binaries are compiled transparently by [GitHub Actions](https://github.com/kanowins/RsyncZilla/actions).
 >
@@ -88,8 +100,10 @@ Download the ready-to-run portable `.zip` from **[GitHub Releases](https://githu
 > 1. Click **More info** (*Más información*).
 > 2. Click **Run anyway** (*Ejecutar de todas formas*).
 >
-> *Alternatively*, right-click the downloaded `.zip` or `RsyncZilla.exe` → **Properties** → check the **Unblock** box at the bottom → click **OK**. Or run in PowerShell:
+> *Alternatively*, right-click the downloaded `.exe` / `.zip` → **Properties** → check the **Unblock** box at the bottom → click **OK**. Or run in PowerShell:
 > ```powershell
+> Unblock-File .\RsyncZilla-Setup-*.exe
+> # or for portable:
 > Unblock-File .\RsyncZilla.exe
 > ```
 
