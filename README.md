@@ -9,6 +9,12 @@ Engineered to eliminate the classic issue of silent FTP transfer failures, ensur
 
 ---
 
+<p align="center">
+  <img src="assets/rsynczilla.png" alt="RsyncZilla User Interface" width="850" />
+</p>
+
+---
+
 ## 🌟 Key Features
 
 1. **Fluid Navigation via SFTP (SSH.NET):**
