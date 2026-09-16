@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:RsyncZilla.ViewModels"
+        xmlns:models="clr-namespace:RsyncZilla.Models"
         xmlns:converters="clr-namespace:RsyncZilla.Views.Converters"
         mc:Ignorable="d"
         Title="RsyncZilla - SFTP Client with Verified rsync Synchronization"
@@ -423,6 +424,32 @@
                 <MenuItem Header="Refresh _Remote Panel" Command="{Binding RemoteBrowser.RefreshCommand}"/>
                 <Separator/>
                 <MenuItem Header="💻 Open KiTTY _Terminal" Command="{Binding OpenRemoteTerminalCommand}" CommandParameter="{x:Null}"/>
+            </MenuItem>
+
+            <!-- Transfer Menu (FileZilla Style) -->
+            <MenuItem Header="_Transfer">
+                <MenuItem Header="_Overwrite Action">
+                    <MenuItem Header="Overwrite if size or date differ"
+                              IsCheckable="True"
+                              IsChecked="{Binding IsOverwriteIfDifferent, Mode=OneWay}"
+                              Command="{Binding SetFileExistsActionCommand}"
+                              CommandParameter="{x:Static models:FileExistsAction.OverwriteIfDifferent}"/>
+                    <MenuItem Header="Overwrite only if source is newer (--update)"
+                              IsCheckable="True"
+                              IsChecked="{Binding IsOverwriteIfNewer, Mode=OneWay}"
+                              Command="{Binding SetFileExistsActionCommand}"
+                              CommandParameter="{x:Static models:FileExistsAction.OverwriteIfNewer}"/>
+                    <MenuItem Header="Overwrite always (--ignore-times)"
+                              IsCheckable="True"
+                              IsChecked="{Binding IsOverwriteAlways, Mode=OneWay}"
+                              Command="{Binding SetFileExistsActionCommand}"
+                              CommandParameter="{x:Static models:FileExistsAction.OverwriteAlways}"/>
+                    <MenuItem Header="Compare by content checksum (--checksum)"
+                              IsCheckable="True"
+                              IsChecked="{Binding IsCompareChecksum, Mode=OneWay}"
+                              Command="{Binding SetFileExistsActionCommand}"
+                              CommandParameter="{x:Static models:FileExistsAction.CompareChecksum}"/>
+                </MenuItem>
             </MenuItem>
 
             <!-- View Menu -->

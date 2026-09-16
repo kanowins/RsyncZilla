@@ -25,7 +25,7 @@ Engineered to eliminate the classic issue of silent FTP transfer failures, ensur
 2. **Delta Transfers with Portable rsync (v3.3.0):**
    - Bundles a clean, portable suite of `rsync.exe` and `ssh.exe` (Cygwin64) (~6 MB total).
    - **Zero Silent Failures:** If a transfer is interrupted or rejected, rsync returns an unequivocal exit code (`ExitCode != 0`) and the UI immediately reports the exact error log.
-   - **Transfers Deltas Only:** Uses `-avzP --stats --update` to transmit only modified byte blocks and new files.
+   - **Transfers Deltas Only:** Uses `-avzP --stats` by default to transmit only modified byte blocks and new files. Supports configurable file-exists actions (update if size/date differ, update only if newer, always overwrite, or checksum).
    - **Atomic Writes:** rsync writes to hidden temporary files before swapping, preventing corrupt or half-written files on your server.
 
 3. **💻 Integrated Remote SSH Terminal (Portable KiTTY) (`Ctrl + T`):**

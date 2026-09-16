@@ -145,17 +145,52 @@ namespace RsyncZilla.Services
             return RsyncFailureReason.Other;
         }
 
+        public static string BuildRsyncArguments(
+            string sshCommand,
+            string sourcesArg,
+            string destArg,
+            FileExistsAction fileExistsAction = FileExistsAction.OverwriteIfDifferent)
+        {
+            string overwriteFlag = fileExistsAction switch
+            {
+                FileExistsAction.OverwriteIfNewer => "--update ",
+                FileExistsAction.OverwriteAlways => "--ignore-times ",
+                FileExistsAction.CompareChecksum => "--checksum ",
+                _ => "" // Default: OverwriteIfDifferent (standard rsync -avzP without --update)
+            };
+
+            return $"-avzP -s --stats {overwriteFlag}-e \"{sshCommand}\" {sourcesArg} {destArg}";
+        }
+
         public async Task<bool> ExecuteTransferAsync(
             TransferTask task,
             ConnectionProfile connection,
+            CancellationToken cancellationToken)
+        {
+            return await ExecuteTransferAsync(task, connection, FileExistsAction.OverwriteIfDifferent, cancellationToken);
+        }
+
+        public async Task<bool> ExecuteTransferAsync(
+            TransferTask task,
+            ConnectionProfile connection,
+            FileExistsAction fileExistsAction = FileExistsAction.OverwriteIfDifferent,
             CancellationToken cancellationToken = default)
         {
-            return await ExecuteBatchTransferAsync(new[] { task }, connection, cancellationToken);
+            return await ExecuteBatchTransferAsync(new[] { task }, connection, fileExistsAction, cancellationToken);
         }
 
         public async Task<bool> ExecuteBatchTransferAsync(
             IReadOnlyList<TransferTask> tasks,
             ConnectionProfile connection,
+            CancellationToken cancellationToken)
+        {
+            return await ExecuteBatchTransferAsync(tasks, connection, FileExistsAction.OverwriteIfDifferent, cancellationToken);
+        }
+
+        public async Task<bool> ExecuteBatchTransferAsync(
+            IReadOnlyList<TransferTask> tasks,
+            ConnectionProfile connection,
+            FileExistsAction fileExistsAction = FileExistsAction.OverwriteIfDifferent,
             CancellationToken cancellationToken = default)
         {
             if (tasks == null || tasks.Count == 0) return true;
@@ -170,7 +205,7 @@ namespace RsyncZilla.Services
                 attempt++;
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var (success, reason, errorDetail) = await RunSingleBatchAttemptAsync(currentBatch, connection, cancellationToken);
+                var (success, reason, errorDetail) = await RunSingleBatchAttemptAsync(currentBatch, connection, fileExistsAction, cancellationToken);
 
                 // Any files that completed successfully are done
                 var uncompleted = currentBatch.Where(t => t.Status != TransferStatus.Completed).ToList();
@@ -248,6 +283,7 @@ namespace RsyncZilla.Services
         private async Task<(bool success, RsyncFailureReason reason, string errorDetail)> RunSingleBatchAttemptAsync(
             IReadOnlyList<TransferTask> tasks,
             ConnectionProfile connection,
+            FileExistsAction fileExistsAction,
             CancellationToken cancellationToken)
         {
             var rsyncPath = FindRsyncBinary();
@@ -299,7 +335,7 @@ namespace RsyncZilla.Services
                 destArg = $"\"{localDest}\"";
             }
 
-            var args = $"-avzP -s --stats --update -e \"{sshCommand}\" {sourceArgsBuilder.ToString().TrimEnd()} {destArg}";
+            var args = BuildRsyncArguments(sshCommand, sourceArgsBuilder.ToString().TrimEnd(), destArg, fileExistsAction);
 
             var batchDescription = tasks.Count == 1 ? tasks[0].FileName : $"{tasks.Count} files ({tasks[0].FileName}, ...)";
             LogMessageReceived?.Invoke($"[rsync] Transferring batch: {batchDescription}", false);

@@ -27,7 +27,7 @@ If you are a developer, sysadmin, or DevOps engineer managing servers over SSH/S
 
 ### 1. Intelligent Delta-Transfer with rsync
 - **The FileZilla Problem:** When working with large JavaScript bundles (25+ MB), SQLite databases, Docker volumes, SQL dumps, or logs, changing just one line forces FileZilla to re-upload the entire multi-megabyte file across the internet.
-- **The RsyncZilla Advantage:** Powered by the rsync rolling-checksum algorithm (`-avzP --update`), RsyncZilla **only transmits modified byte blocks (deltas)**. If a 100 MB file changed by 2 KB, only those 2 KB are compressed and sent. Your deployments take fractions of a second instead of minutes.
+- **The RsyncZilla Advantage:** Powered by the rsync rolling-checksum algorithm (`-avzP`), RsyncZilla **only transmits modified byte blocks (deltas)**. If a 100 MB file changed by 2 KB, only those 2 KB are compressed and sent. Your deployments take fractions of a second instead of minutes. Offers customizable file-exists actions under the *Transfer* menu.
 
 ### 2. Zero Corrupted Files: Atomic Writes
 - **The FileZilla Problem:** If your Wi-Fi flickers or the remote server drops the connection while FileZilla is uploading a PHP, Python, or configuration file, the target file is left truncated in half—instantly breaking production with a 500 error before you even realize what happened.

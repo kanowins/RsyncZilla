@@ -21,6 +21,32 @@ namespace RsyncZilla.ViewModels
         private readonly ConnectionManagerService _connectionManagerService;
         private readonly TerminalService _terminalService;
         private readonly RemoteEditService _remoteEditService;
+        private readonly SettingsService _settingsService;
+
+        private FileExistsAction _fileExistsAction;
+        public FileExistsAction CurrentFileExistsAction
+        {
+            get => _fileExistsAction;
+            set
+            {
+                if (SetProperty(ref _fileExistsAction, value))
+                {
+                    OnPropertyChanged(nameof(IsOverwriteIfDifferent));
+                    OnPropertyChanged(nameof(IsOverwriteIfNewer));
+                    OnPropertyChanged(nameof(IsOverwriteAlways));
+                    OnPropertyChanged(nameof(IsCompareChecksum));
+                    _settingsService.SaveFileExistsAction(value);
+                    AddLog($"[transfer] Overwrite action set to: {GetFileExistsActionDescription(value)}", false);
+                }
+            }
+        }
+
+        public bool IsOverwriteIfDifferent => CurrentFileExistsAction == FileExistsAction.OverwriteIfDifferent;
+        public bool IsOverwriteIfNewer => CurrentFileExistsAction == FileExistsAction.OverwriteIfNewer;
+        public bool IsOverwriteAlways => CurrentFileExistsAction == FileExistsAction.OverwriteAlways;
+        public bool IsCompareChecksum => CurrentFileExistsAction == FileExistsAction.CompareChecksum;
+
+        public ICommand SetFileExistsActionCommand { get; }
 
         public ObservableCollection<RemoteSessionViewModel> RemoteSessions { get; } = new();
 
@@ -158,17 +184,19 @@ namespace RsyncZilla.ViewModels
         public Action<SavedConnection, string>? ApplySavedConnectionAction { get; set; }
 
 
-        public MainViewModel() : this(null, null, null, null, null)
+        public MainViewModel() : this(null, null, null, null, null, null)
         {
         }
 
-        public MainViewModel(LocalFileService? localService = null, RsyncService? rsyncService = null, ConnectionManagerService? connectionManagerService = null, TerminalService? terminalService = null, RemoteEditService? remoteEditService = null)
+        public MainViewModel(LocalFileService? localService = null, RsyncService? rsyncService = null, ConnectionManagerService? connectionManagerService = null, TerminalService? terminalService = null, RemoteEditService? remoteEditService = null, SettingsService? settingsService = null)
         {
             _localService = localService ?? new LocalFileService();
             _rsyncService = rsyncService ?? new RsyncService();
             _connectionManagerService = connectionManagerService ?? new ConnectionManagerService();
             _terminalService = terminalService ?? new TerminalService(_rsyncService);
             _remoteEditService = remoteEditService ?? new RemoteEditService(_rsyncService);
+            _settingsService = settingsService ?? new SettingsService();
+            _fileExistsAction = _settingsService.Current.FileExistsAction;
             _remoteEditService.LogMessageReceived += (msg, isErr) => AddLog(msg, isErr);
             _remoteEditService.FileUploaded += (session, path, len, time) => OnRemoteFileUploaded(session, path, len, time);
             _remoteEditService.FileUploadFailed += (session, path, file, err) => OnRemoteFileUploadFailed(session, path, file, err);
@@ -202,6 +230,13 @@ namespace RsyncZilla.ViewModels
             EditRemoteFileCommand = new RelayCommand(async (param) => await EditRemoteFileAsync(param), _ => IsConnected);
             ShowInExplorerCommand = new RelayCommand((param) => ShowInExplorer(param));
             OpenLocalFileCommand = new RelayCommand((param) => OpenLocalFile(param));
+            SetFileExistsActionCommand = new RelayCommand((param) =>
+            {
+                if (param is FileExistsAction action)
+                {
+                    CurrentFileExistsAction = action;
+                }
+            });
 
             DisconnectCommand = new RelayCommand(async () => { if (IsConnected) await ToggleConnectionAsync(null); }, () => IsConnected);
             ReconnectCommand = new RelayCommand(async () => { if (IsConnected) await ToggleConnectionAsync(null); await ToggleConnectionAsync(null); }, () => !string.IsNullOrWhiteSpace(Host));
@@ -243,6 +278,7 @@ namespace RsyncZilla.ViewModels
             AddLog($"RsyncZilla v{AppVersion} initialized. Ready to connect.", false);
             var rsyncPath = _rsyncService.FindRsyncBinary();
             AddLog($"rsync engine detected at: {rsyncPath}", false);
+            AddLog($"Transfer mode: {GetFileExistsActionDescription(CurrentFileExistsAction)}", false);
 
             _ = Task.Run(async () =>
             {
@@ -894,7 +930,7 @@ namespace RsyncZilla.ViewModels
 
                     try
                     {
-                        var success = await _rsyncService.ExecuteBatchTransferAsync(batch, connection, _currentTransferCts.Token);
+                        var success = await _rsyncService.ExecuteBatchTransferAsync(batch, connection, CurrentFileExistsAction, _currentTransferCts.Token);
                         RunOnUi(() =>
                         {
                             foreach (var t in batch)
@@ -1071,6 +1107,17 @@ namespace RsyncZilla.ViewModels
             {
                 action();
             }
+        }
+        public static string GetFileExistsActionDescription(FileExistsAction action)
+        {
+            return action switch
+            {
+                FileExistsAction.OverwriteIfDifferent => "Overwrite if size or date differ",
+                FileExistsAction.OverwriteIfNewer => "Overwrite only if source is newer (--update)",
+                FileExistsAction.OverwriteAlways => "Overwrite always (--ignore-times)",
+                FileExistsAction.CompareChecksum => "Compare by content checksum (--checksum)",
+                _ => action.ToString()
+            };
         }
     }
 }

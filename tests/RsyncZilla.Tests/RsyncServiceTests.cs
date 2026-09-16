@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using RsyncZilla.Models;
 using RsyncZilla.Services;
+using RsyncZilla.ViewModels;
 using Xunit;
 
 namespace RsyncZilla.Tests
@@ -110,6 +111,88 @@ namespace RsyncZilla.Tests
 
             var normalEntry = new LogEntry { Message = "Normal text" };
             Assert.Equal("#2E7D32", normalEntry.ColorBrush);
+        }
+
+        [Fact]
+        public void BuildRsyncArguments_Default_ShouldNotContainUpdateFlag()
+        {
+            var args = RsyncService.BuildRsyncArguments("ssh -p 22", "\"/source/file.txt\"", "\"/dest/\"", FileExistsAction.OverwriteIfDifferent);
+
+            Assert.DoesNotContain("--update", args);
+            Assert.DoesNotContain("--ignore-times", args);
+            Assert.DoesNotContain("--checksum", args);
+            Assert.StartsWith("-avzP -s --stats -e", args);
+        }
+
+        [Fact]
+        public void BuildRsyncArguments_OverwriteIfNewer_ShouldContainUpdateFlag()
+        {
+            var args = RsyncService.BuildRsyncArguments("ssh -p 22", "\"/source/file.txt\"", "\"/dest/\"", FileExistsAction.OverwriteIfNewer);
+
+            Assert.Contains("--update", args);
+            Assert.DoesNotContain("--ignore-times", args);
+        }
+
+        [Fact]
+        public void BuildRsyncArguments_OverwriteAlways_ShouldContainIgnoreTimesFlag()
+        {
+            var args = RsyncService.BuildRsyncArguments("ssh -p 22", "\"/source/file.txt\"", "\"/dest/\"", FileExistsAction.OverwriteAlways);
+
+            Assert.Contains("--ignore-times", args);
+            Assert.DoesNotContain("--update", args);
+        }
+
+        [Fact]
+        public void BuildRsyncArguments_CompareChecksum_ShouldContainChecksumFlag()
+        {
+            var args = RsyncService.BuildRsyncArguments("ssh -p 22", "\"/source/file.txt\"", "\"/dest/\"", FileExistsAction.CompareChecksum);
+
+            Assert.Contains("--checksum", args);
+            Assert.DoesNotContain("--update", args);
+        }
+
+        [Fact]
+        public void SettingsService_SaveAndLoad_ShouldPersistFileExistsAction()
+        {
+            var tempFile = Path.Combine(Path.GetTempPath(), $"rsynczilla_settings_{Guid.NewGuid():N}.json");
+            try
+            {
+                var settingsService = new SettingsService(tempFile);
+                Assert.Equal(FileExistsAction.OverwriteIfDifferent, settingsService.Current.FileExistsAction);
+
+                settingsService.SaveFileExistsAction(FileExistsAction.OverwriteAlways);
+
+                var reloaded = new SettingsService(tempFile);
+                Assert.Equal(FileExistsAction.OverwriteAlways, reloaded.Current.FileExistsAction);
+            }
+            finally
+            {
+                if (File.Exists(tempFile)) File.Delete(tempFile);
+            }
+        }
+
+        [Fact]
+        public void MainViewModel_SetFileExistsActionCommand_ShouldUpdateActionAndProperties()
+        {
+            var tempFile = Path.Combine(Path.GetTempPath(), $"rsynczilla_vm_settings_{Guid.NewGuid():N}.json");
+            try
+            {
+                var settingsService = new SettingsService(tempFile);
+                var vm = new MainViewModel(settingsService: settingsService);
+
+                Assert.True(vm.IsOverwriteIfDifferent);
+                Assert.False(vm.IsOverwriteIfNewer);
+
+                vm.SetFileExistsActionCommand.Execute(FileExistsAction.OverwriteIfNewer);
+
+                Assert.False(vm.IsOverwriteIfDifferent);
+                Assert.True(vm.IsOverwriteIfNewer);
+                Assert.Equal(FileExistsAction.OverwriteIfNewer, vm.CurrentFileExistsAction);
+            }
+            finally
+            {
+                if (File.Exists(tempFile)) File.Delete(tempFile);
+            }
         }
     }
 }

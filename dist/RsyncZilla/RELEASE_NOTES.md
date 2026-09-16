@@ -1,5 +1,20 @@
 # RsyncZilla Release Notes
 
+## Version 1.2.1 (2026-09-16)
+
+### ✨ New Features & Improvements
+- **Configurable Transfer Overwrite Action (FileZilla Style)**:
+  - Added new **`Transfer`** menu with a configurable *Overwrite Action* selector.
+  - Supports 4 sync modes:
+    1. **Overwrite if size or date differ**: Standard `rsync -avzP` without `--update`. Updates the destination file whenever its size or modification timestamp differs from the source, resolving issues where files with newer destination timestamps were silently skipped.
+    2. **Overwrite only if source is newer (`--update`)**: Preserves newer remote modifications when desired.
+    3. **Overwrite always (`--ignore-times`)**: Forces rsync delta-block calculation on every selected file.
+    4. **Compare by content checksum (`--checksum`)**: Validates differences by file contents instead of modification times.
+- **Persistent User Settings**:
+  - Automatically remembers the selected file exists action across sessions (`%AppData%\RsyncZilla\settings.json`).
+
+---
+
 ## Version 1.2.0 (2026-09-15)
 
 ### ✨ New Features & Improvements
