@@ -364,15 +364,26 @@ namespace RsyncZilla.Services
             var errorOutput = new StringBuilder();
 
             // Fast lookup table by filename and basename
-            var taskLookup = new Dictionary<string, TransferTask>(StringComparer.OrdinalIgnoreCase);
+            var topFileLookup = new Dictionary<string, TransferTask>(StringComparer.OrdinalIgnoreCase);
+            var dirTasks = new List<TransferTask>();
+
             foreach (var t in tasks)
             {
-                taskLookup[t.FileName] = t;
-                var baseName = Path.GetFileName(t.SourcePath.TrimEnd('/', '\\'));
-                if (!string.IsNullOrEmpty(baseName)) taskLookup[baseName] = t;
+                if (t.IsDirectory)
+                {
+                    dirTasks.Add(t);
+                }
+                else
+                {
+                    topFileLookup[t.FileName] = t;
+                    var baseName = Path.GetFileName(t.SourcePath.TrimEnd('/', '\\'));
+                    if (!string.IsNullOrEmpty(baseName)) topFileLookup[baseName] = t;
+                }
             }
 
-            TransferTask? activeTask = tasks.Count == 1 ? tasks[0] : null;
+            TransferTask? activeTopTask = tasks.Count == 1 ? tasks[0] : null;
+            TransferTask? activeChildTask = null;
+            TransferTask? activeDirTask = tasks.Count == 1 && tasks[0].IsDirectory ? tasks[0] : null;
 
             try
             {
@@ -385,43 +396,176 @@ namespace RsyncZilla.Services
                     var line = e.Data.Trim();
                     LogMessageReceived?.Invoke($"[rsync] {line}", false);
 
-                    // 1. Check if line announces a new file
-                    var candidateName = line;
-                    if (taskLookup.TryGetValue(candidateName, out var foundTask) ||
-                        tasks.FirstOrDefault(t => candidateName.EndsWith("/" + t.FileName, StringComparison.OrdinalIgnoreCase) || candidateName.Equals(t.FileName, StringComparison.OrdinalIgnoreCase)) is { } matchedTask && (foundTask = matchedTask) != null)
-                    {
-                        if (activeTask != null && activeTask != foundTask && activeTask.Status == TransferStatus.Running)
-                        {
-                            activeTask.Status = TransferStatus.Completed;
-                            activeTask.ProgressPercentage = 100;
-                            activeTask.EndTime = DateTime.Now;
-                        }
-
-                        activeTask = foundTask;
-                        if (activeTask.Status != TransferStatus.Completed && activeTask.Status != TransferStatus.Failed)
-                        {
-                            activeTask.Status = TransferStatus.Running;
-                        }
-                        return;
-                    }
-
-                    // 2. Check for progress matching
+                    // 1. Check for progress matching
                     var match = ProgressRegex.Match(line);
-                    if (match.Success && activeTask != null)
+                    if (match.Success)
                     {
                         var bytesStr = match.Groups[1].Value;
                         if (int.TryParse(match.Groups[2].Value, out int percent))
                         {
-                            activeTask.ProgressPercentage = percent;
-                            if (percent == 100 && line.Contains("(xfr#"))
+                            var speed = match.Groups[3].Value;
+                            var eta = match.Groups[4].Value;
+                            var isFileDone = percent == 100 && line.Contains("(xfr#");
+
+                            if (activeChildTask != null && activeDirTask != null)
                             {
-                                activeTask.Status = TransferStatus.Completed;
-                                activeTask.EndTime = DateTime.Now;
+                                activeChildTask.ProgressPercentage = percent;
+                                activeChildTask.Speed = speed;
+                                activeChildTask.Eta = eta;
+                                activeChildTask.TransferredInfo = $"{bytesStr} bytes ({speed}, {eta} remaining)";
+
+                                if (isFileDone)
+                                {
+                                    activeChildTask.Status = TransferStatus.Completed;
+                                    activeChildTask.EndTime = DateTime.Now;
+                                    activeDirTask.CompletedItemsCount++;
+                                }
+
+                                activeDirTask.Speed = speed;
+                                activeDirTask.Eta = eta;
+                                if (activeDirTask.TotalItemsCount > 0)
+                                {
+                                    var totalP = (int)(((activeDirTask.CompletedItemsCount * 100.0) + percent) / activeDirTask.TotalItemsCount);
+                                    activeDirTask.ProgressPercentage = Math.Min(100, Math.Max(0, totalP));
+                                }
+                                activeDirTask.CurrentSubFile = isFileDone ? null : $"{activeChildTask.FileName} ({percent}%)";
+                                activeDirTask.TransferredInfo = $"{activeDirTask.CompletedItemsCount}/{Math.Max(activeDirTask.TotalItemsCount, activeDirTask.ChildrenCount)} files ({speed}, {eta} remaining)";
+                            }
+                            else if (activeTopTask != null)
+                            {
+                                activeTopTask.ProgressPercentage = percent;
+                                activeTopTask.Speed = speed;
+                                activeTopTask.Eta = eta;
+                                activeTopTask.TransferredInfo = $"{bytesStr} bytes ({speed}, {eta} remaining)";
+
+                                if (isFileDone)
+                                {
+                                    activeTopTask.Status = TransferStatus.Completed;
+                                    activeTopTask.EndTime = DateTime.Now;
+                                }
                             }
                         }
-                        activeTask.Speed = match.Groups[3].Value;
-                        activeTask.Eta = match.Groups[4].Value;
-                        activeTask.TransferredInfo = $"{bytesStr} bytes ({activeTask.Speed}, {activeTask.Eta} remaining)";
+                        return;
+                    }
+
+                    // 2. Check if line announces a new file
+                    if (line.StartsWith("sending incremental file list", StringComparison.OrdinalIgnoreCase) ||
+                        line.StartsWith("receiving incremental file list", StringComparison.OrdinalIgnoreCase) ||
+                        line.StartsWith("sent ", StringComparison.OrdinalIgnoreCase) ||
+                        line.StartsWith("received ", StringComparison.OrdinalIgnoreCase) ||
+                        line.StartsWith("total size is ", StringComparison.OrdinalIgnoreCase) ||
+                        line.EndsWith("/"))
+                    {
+                        return;
+                    }
+
+                    var candidateName = line;
+
+                    // Check top-level files
+                    if (topFileLookup.TryGetValue(candidateName, out var foundTopTask) ||
+                        tasks.FirstOrDefault(t => !t.IsDirectory && (candidateName.EndsWith("/" + t.FileName, StringComparison.OrdinalIgnoreCase) || candidateName.Equals(t.FileName, StringComparison.OrdinalIgnoreCase))) is { } matchedTop && (foundTopTask = matchedTop) != null)
+                    {
+                        if (activeTopTask != null && activeTopTask != foundTopTask && activeTopTask.Status == TransferStatus.Running)
+                        {
+                            activeTopTask.Status = TransferStatus.Completed;
+                            activeTopTask.ProgressPercentage = 100;
+                            activeTopTask.EndTime = DateTime.Now;
+                        }
+
+                        activeTopTask = foundTopTask;
+                        activeChildTask = null;
+                        activeDirTask = null;
+                        if (activeTopTask.Status != TransferStatus.Completed && activeTopTask.Status != TransferStatus.Failed)
+                        {
+                            activeTopTask.Status = TransferStatus.Running;
+                        }
+                        return;
+                    }
+
+                    // Check directory tasks
+                    foreach (var dir in dirTasks)
+                    {
+                        if (string.Equals(candidateName, dir.FileName, StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(candidateName, Path.GetFileName(dir.SourcePath.TrimEnd('/', '\\')), StringComparison.OrdinalIgnoreCase))
+                        {
+                            return;
+                        }
+
+                        string prefix1 = dir.FileName.TrimEnd('/', '\\') + "/";
+                        string prefix2 = Path.GetFileName(dir.SourcePath.TrimEnd('/', '\\')) + "/";
+
+                        string? relPath = null;
+                        if (candidateName.StartsWith(prefix1, StringComparison.OrdinalIgnoreCase))
+                        {
+                            relPath = candidateName.Substring(prefix1.Length);
+                        }
+                        else if (candidateName.StartsWith(prefix2, StringComparison.OrdinalIgnoreCase))
+                        {
+                            relPath = candidateName.Substring(prefix2.Length);
+                        }
+                        else if (dirTasks.Count == 1)
+                        {
+                            relPath = candidateName;
+                        }
+
+                        if (relPath != null)
+                        {
+                            activeDirTask = dir;
+                            activeTopTask = dir;
+                            if (activeDirTask.Status != TransferStatus.Completed && activeDirTask.Status != TransferStatus.Failed)
+                            {
+                                activeDirTask.Status = TransferStatus.Running;
+                            }
+
+                            if (activeChildTask != null && activeChildTask.Status == TransferStatus.Running)
+                            {
+                                activeChildTask.Status = TransferStatus.Completed;
+                                activeChildTask.ProgressPercentage = 100;
+                                activeChildTask.EndTime = DateTime.Now;
+                                activeDirTask.CompletedItemsCount++;
+                                if (activeDirTask.TotalItemsCount > 0)
+                                {
+                                    activeDirTask.ProgressPercentage = Math.Min(100, (int)((activeDirTask.CompletedItemsCount * 100.0) / activeDirTask.TotalItemsCount));
+                                }
+                            }
+
+                            var normRelPath = relPath.Replace('\\', '/');
+                            var foundChild = dir.Children.FirstOrDefault(c =>
+                                c.FileName.Equals(normRelPath, StringComparison.OrdinalIgnoreCase) ||
+                                c.FileName.EndsWith("/" + normRelPath, StringComparison.OrdinalIgnoreCase) ||
+                                normRelPath.EndsWith("/" + c.FileName, StringComparison.OrdinalIgnoreCase) ||
+                                Path.GetFileName(c.FileName).Equals(Path.GetFileName(normRelPath), StringComparison.OrdinalIgnoreCase));
+
+                            if (foundChild == null)
+                            {
+                                var childDest = dir.Direction == TransferDirection.Upload
+                                    ? dir.DestinationPath.TrimEnd('/') + "/" + normRelPath
+                                    : Path.Combine(dir.DestinationPath, normRelPath.Replace('/', Path.DirectorySeparatorChar));
+
+                                foundChild = new TransferTask
+                                {
+                                    FileName = normRelPath,
+                                    SourcePath = dir.SourcePath.TrimEnd('/') + "/" + normRelPath,
+                                    DestinationPath = childDest,
+                                    Direction = dir.Direction,
+                                    ConnectionProfile = dir.ConnectionProfile,
+                                    SessionId = dir.SessionId,
+                                    Status = TransferStatus.Running,
+                                    IsChild = true,
+                                    ParentTask = dir
+                                };
+                                SafeUiDispatch(() =>
+                                {
+                                    dir.Children.Add(foundChild);
+                                    dir.TotalItemsCount = dir.Children.Count;
+                                });
+                            }
+
+                            activeChildTask = foundChild;
+                            activeChildTask.Status = TransferStatus.Running;
+                            activeDirTask.CurrentSubFile = activeChildTask.FileName;
+                            break;
+                        }
                     }
                 };
 
@@ -450,7 +594,6 @@ namespace RsyncZilla.Services
                             {
                                 if (isSetTimes)
                                 {
-                                    // Do not mark as failed: the file content transferred successfully!
                                     if (t.Status != TransferStatus.Failed)
                                     {
                                         t.ProgressPercentage = 100;
@@ -461,7 +604,30 @@ namespace RsyncZilla.Services
                                     t.Status = TransferStatus.Failed;
                                     t.ErrorMessage = errLine;
                                 }
-                                break;
+                            }
+
+                            if (t.IsDirectory)
+                            {
+                                foreach (var child in t.Children)
+                                {
+                                    if (errLine.Contains(child.FileName, StringComparison.OrdinalIgnoreCase) ||
+                                        errLine.Contains(Path.GetFileName(child.FileName), StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        if (isSetTimes)
+                                        {
+                                            if (child.Status != TransferStatus.Failed) child.ProgressPercentage = 100;
+                                        }
+                                        else
+                                        {
+                                            child.Status = TransferStatus.Failed;
+                                            child.ErrorMessage = errLine;
+                                            t.Status = TransferStatus.Failed;
+                                            if (string.IsNullOrEmpty(t.ErrorMessage))
+                                                t.ErrorMessage = $"Error on {child.FileName}: {errLine}";
+                                        }
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }
@@ -482,6 +648,14 @@ namespace RsyncZilla.Services
                             {
                                 if (t.Status != TransferStatus.Completed)
                                     t.Status = TransferStatus.Cancelled;
+                                if (t.IsDirectory)
+                                {
+                                    foreach (var child in t.Children)
+                                    {
+                                        if (child.Status != TransferStatus.Completed)
+                                            child.Status = TransferStatus.Cancelled;
+                                    }
+                                }
                             }
                         }
                     }
@@ -500,6 +674,14 @@ namespace RsyncZilla.Services
                             t.Status = TransferStatus.Cancelled;
                             t.ErrorMessage = "Transfer cancelled by user.";
                         }
+                        if (t.IsDirectory)
+                        {
+                            foreach (var child in t.Children)
+                            {
+                                if (child.Status != TransferStatus.Completed)
+                                    child.Status = TransferStatus.Cancelled;
+                            }
+                        }
                     }
                     return (false, RsyncFailureReason.Other, "Cancelled by user");
                 }
@@ -510,11 +692,26 @@ namespace RsyncZilla.Services
                     {
                         t.ExitCode = 0;
                         t.EndTime = DateTime.Now;
+                        t.CurrentSubFile = null;
                         if (t.Status != TransferStatus.Failed)
                         {
                             t.Status = TransferStatus.Completed;
                             t.ProgressPercentage = 100;
                             t.Eta = "0:00:00";
+                        }
+                        if (t.IsDirectory)
+                        {
+                            t.CompletedItemsCount = t.TotalItemsCount > 0 ? t.TotalItemsCount : t.Children.Count;
+                            foreach (var child in t.Children)
+                            {
+                                if (child.Status != TransferStatus.Failed)
+                                {
+                                    child.Status = TransferStatus.Completed;
+                                    child.ProgressPercentage = 100;
+                                    child.EndTime = DateTime.Now;
+                                    child.Eta = "0:00:00";
+                                }
+                            }
                         }
                     }
                     LogMessageReceived?.Invoke($"[rsync] ✅ Batch completed successfully ({tasks.Count} items)", false);
@@ -526,16 +723,50 @@ namespace RsyncZilla.Services
                     foreach (var t in tasks)
                     {
                         t.EndTime = DateTime.Now;
-                        if (t.Status != TransferStatus.Failed)
+                        t.CurrentSubFile = null;
+                        if (t.IsDirectory)
                         {
-                            t.Status = TransferStatus.Completed;
-                            t.ProgressPercentage = 100;
-                            t.Eta = "0:00:00";
-                            t.ExitCode = 0; // Completed from the user's perspective
+                            int childFailures = 0;
+                            foreach (var child in t.Children)
+                            {
+                                if (child.Status != TransferStatus.Failed)
+                                {
+                                    child.Status = TransferStatus.Completed;
+                                    child.ProgressPercentage = 100;
+                                    child.EndTime = DateTime.Now;
+                                }
+                                else
+                                {
+                                    childFailures++;
+                                }
+                            }
+                            if (childFailures == 0 && t.Status != TransferStatus.Failed)
+                            {
+                                t.Status = TransferStatus.Completed;
+                                t.ProgressPercentage = 100;
+                                t.ExitCode = 0;
+                            }
+                            else
+                            {
+                                t.Status = TransferStatus.Failed;
+                                t.ExitCode = process.ExitCode;
+                                if (string.IsNullOrEmpty(t.ErrorMessage))
+                                    t.ErrorMessage = $"{childFailures} file(s) failed in folder.";
+                            }
                         }
                         else
                         {
-                            t.ExitCode = process.ExitCode;
+                            if (t.Status != TransferStatus.Failed)
+                            {
+                                t.Status = TransferStatus.Completed;
+                                t.ProgressPercentage = 100;
+                                t.Eta = "0:00:00";
+                                t.ExitCode = 0;
+                            }
+                            else
+                            {
+                                t.ExitCode = process.ExitCode;
+                            }
                         }
                     }
                     var failedCount = tasks.Count(t => t.Status == TransferStatus.Failed);
@@ -543,47 +774,40 @@ namespace RsyncZilla.Services
                     if (failedCount == 0)
                     {
                         LogMessageReceived?.Invoke($"[rsync] ✅ Batch completed successfully ({successCount} items). Note: timestamp warnings were logged.", false);
+                        return (true, RsyncFailureReason.Other, "");
                     }
                     else
                     {
                         LogMessageReceived?.Invoke($"[rsync] ⚠️ Batch completed with partial errors: {successCount} succeeded, {failedCount} failed.", true);
+                        return (false, RsyncFailureReason.Other, errorOutput.ToString());
                     }
-                    return (true, RsyncFailureReason.Other, errorOutput.ToString().Trim());
                 }
                 else
                 {
                     var err = errorOutput.ToString().Trim();
+                    LogMessageReceived?.Invoke($"[rsync] Process exited with code {process.ExitCode}. {err}", true);
                     var reason = ClassifyError(process.ExitCode, err);
-
-                    // If every task transferred without fatal error and errorOutput only contained timestamp warnings
-                    var nonFailedTasks = tasks.Where(t => t.Status != TransferStatus.Failed).ToList();
-                    var onlySetTimesWarnings = !string.IsNullOrEmpty(err) &&
-                        err.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).All(IsFailedToSetTimesError);
-
-                    if (onlySetTimesWarnings && nonFailedTasks.Count == tasks.Count)
-                    {
-                        foreach (var t in tasks)
-                        {
-                            t.ExitCode = 0;
-                            t.EndTime = DateTime.Now;
-                            t.Status = TransferStatus.Completed;
-                            t.ProgressPercentage = 100;
-                            t.Eta = "0:00:00";
-                        }
-                        LogMessageReceived?.Invoke($"[rsync] ✅ Batch completed successfully ({tasks.Count} items). Note: timestamp warnings were logged.", false);
-                        return (true, RsyncFailureReason.Other, "");
-                    }
-
                     foreach (var t in tasks)
                     {
                         t.ExitCode = process.ExitCode;
                         t.EndTime = DateTime.Now;
+                        t.CurrentSubFile = null;
                         if (t.Status != TransferStatus.Completed)
                         {
                             t.Status = TransferStatus.Failed;
                             if (string.IsNullOrEmpty(t.ErrorMessage))
                             {
                                 t.ErrorMessage = string.IsNullOrEmpty(err) ? $"rsync returned exit code {process.ExitCode}" : err;
+                            }
+                        }
+                        if (t.IsDirectory)
+                        {
+                            foreach (var child in t.Children)
+                            {
+                                if (child.Status != TransferStatus.Completed)
+                                {
+                                    child.Status = TransferStatus.Failed;
+                                }
                             }
                         }
                     }
@@ -599,9 +823,33 @@ namespace RsyncZilla.Services
                         t.Status = TransferStatus.Failed;
                         t.ErrorMessage = ex.Message;
                     }
+                    if (t.IsDirectory)
+                    {
+                        foreach (var child in t.Children)
+                        {
+                            if (child.Status != TransferStatus.Completed)
+                            {
+                                child.Status = TransferStatus.Failed;
+                                child.ErrorMessage = ex.Message;
+                            }
+                        }
+                    }
                 }
                 var reason = ClassifyError(-1, ex.Message);
                 return (false, reason, ex.Message);
+            }
+        }
+
+        private static void SafeUiDispatch(Action action)
+        {
+            var app = System.Windows.Application.Current;
+            if (app?.Dispatcher != null && !app.Dispatcher.CheckAccess())
+            {
+                app.Dispatcher.Invoke(action);
+            }
+            else
+            {
+                action();
             }
         }
     }

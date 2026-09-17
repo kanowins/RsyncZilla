@@ -1,5 +1,23 @@
 # RsyncZilla Release Notes
 
+## Version 1.3.0 (2026-09-17)
+
+### ✨ New Features & Improvements
+- **Integrated Flat-Tree Directory Transfer Queue**:
+  - Folders in transfer queues (`Active`, `Completed`, and `Failed`) are now treated as expandable container tasks.
+  - Expanding a folder inserts individual file items directly into the main table beneath the parent folder, sharing the exact same columns, headers, and main scrollbar.
+  - Sub-files feature a clear visual indentation indicator (`↳`) and shaded background styling.
+  - Folder expand/collapse is accessible via the chevron toggle button or by double-clicking the folder row.
+- **Real-Time Sub-File Progress Tracking**:
+  - Live progress display reflects individual sub-file completion, file size, transfer rate, and container percentage in real time.
+  - Dynamic folder item counter (`📁 folder_name (X/Y)`).
+  - Pre-enumeration of local directory hierarchies prior to transfer for accurate file count and sizing.
+  - Dynamic discovery during remote folder downloads seamlessly adds discovered files to the container.
+- **Dedicated Size Column in Completed Tab**:
+  - Added a `Size` column to the Completed Transfers table for easy visibility into individual file and sub-file transfer sizes.
+
+---
+
 ## Version 1.2.2 (2026-09-16)
 
 ### ✨ New Features & Improvements

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -126,9 +127,9 @@ namespace RsyncZilla.ViewModels
         public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
         public string FooterInfo => $"RsyncZilla v{AppVersion} | Engine: rsync 3.3.0 portable (Cygwin64) + SSH.NET";
 
-        public string ActiveTabHeader => $"🚀 Queue ({ActiveTransfers.Count})";
-        public string FailedTabHeader => $"❌ Failed ({FailedTransfers.Count})";
-        public string CompletedTabHeader => $"✅ Completed ({CompletedTransfers.Count})";
+        public string ActiveTabHeader => $"🚀 Queue ({ActiveTransfers.Count(t => !t.IsChild)})";
+        public string FailedTabHeader => $"❌ Failed ({FailedTransfers.Count(t => !t.IsChild)})";
+        public string CompletedTabHeader => $"✅ Completed ({CompletedTransfers.Count(t => !t.IsChild)})";
 
         public ObservableCollection<TransferTask> ActiveTransfers { get; } = new();
         public ObservableCollection<TransferTask> CompletedTransfers { get; } = new();
@@ -610,13 +611,9 @@ namespace RsyncZilla.ViewModels
             var validItems = items.Where(i => i != null && !i.IsParent).ToList();
             if (!validItems.Any()) return Task.CompletedTask;
 
-            var tasks = validItems.Select(item => new TransferTask
-            {
-                FileName = item.Name,
-                SourcePath = item.FullPath,
-                DestinationPath = destPath,
-                Direction = TransferDirection.Upload
-            }).ToList();
+            var tasks = validItems.Select(item =>
+                CreateLocalUploadTask(item.FullPath, item.Name, item.IsDirectory, destPath)
+            ).ToList();
 
             EnqueueTransfers(tasks);
             return Task.CompletedTask;
@@ -624,7 +621,7 @@ namespace RsyncZilla.ViewModels
 
         public Task UploadPathsAsync(IEnumerable<string> localPaths, string? targetRemotePath = null)
         {
-            if (!IsConnected) return Task.CompletedTask;
+            if (!IsConnected && string.IsNullOrWhiteSpace(targetRemotePath)) return Task.CompletedTask;
             var destPath = string.IsNullOrWhiteSpace(targetRemotePath) ? RemoteBrowser.CurrentPath : targetRemotePath;
 
             var validPaths = localPaths.Where(p => File.Exists(p) || Directory.Exists(p)).ToList();
@@ -632,18 +629,88 @@ namespace RsyncZilla.ViewModels
 
             var tasks = validPaths.Select(path =>
             {
+                var isDir = Directory.Exists(path);
                 var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                return new TransferTask
-                {
-                    FileName = string.IsNullOrEmpty(name) ? path : name,
-                    SourcePath = path,
-                    DestinationPath = destPath,
-                    Direction = TransferDirection.Upload
-                };
+                return CreateLocalUploadTask(path, string.IsNullOrEmpty(name) ? path : name, isDir, destPath);
             }).ToList();
 
             EnqueueTransfers(tasks);
             return Task.CompletedTask;
+        }
+
+        public static TransferTask CreateLocalUploadTask(string path, string name, bool isDirectory, string destPath)
+        {
+            var task = new TransferTask
+            {
+                FileName = string.IsNullOrEmpty(name) ? Path.GetFileName(path.TrimEnd('\\', '/')) : name,
+                SourcePath = path,
+                DestinationPath = destPath,
+                Direction = TransferDirection.Upload,
+                IsDirectory = isDirectory
+            };
+
+            if (isDirectory && Directory.Exists(path))
+            {
+                PopulateLocalDirectoryChildren(task, path, destPath);
+            }
+            else if (!isDirectory && File.Exists(path))
+            {
+                try
+                {
+                    task.FileSize = new FileInfo(path).Length;
+                }
+                catch { }
+            }
+
+            return task;
+        }
+
+        private static void PopulateLocalDirectoryChildren(TransferTask parentTask, string rootDirPath, string remoteDestPath)
+        {
+            try
+            {
+                var dirInfo = new DirectoryInfo(rootDirPath);
+                var options = new EnumerationOptions
+                {
+                    IgnoreInaccessible = true,
+                    RecurseSubdirectories = true,
+                    ReturnSpecialDirectories = false
+                };
+                var files = dirInfo.EnumerateFiles("*", options);
+                long totalBytes = 0;
+                int count = 0;
+
+                foreach (var file in files)
+                {
+                    count++;
+                    long len = 0;
+                    try { len = file.Length; } catch { }
+                    totalBytes += len;
+
+                    var relPath = Path.GetRelativePath(rootDirPath, file.FullName).Replace('\\', '/');
+                    var childDest = remoteDestPath.TrimEnd('/', '\\') + "/" + relPath;
+
+                    var childTask = new TransferTask
+                    {
+                        FileName = relPath,
+                        SourcePath = file.FullName,
+                        DestinationPath = childDest,
+                        Direction = TransferDirection.Upload,
+                        FileSize = len,
+                        Status = TransferStatus.Pending,
+                        IsChild = true,
+                        ParentTask = parentTask
+                    };
+                    parentTask.Children.Add(childTask);
+                }
+
+                parentTask.TotalItemsCount = count;
+                parentTask.TotalBytes = totalBytes;
+            }
+            catch (Exception ex)
+            {
+                parentTask.ErrorMessage = ex.Message;
+            }
         }
 
         public void OpenRemoteTerminal(object? param = null)
@@ -857,7 +924,9 @@ namespace RsyncZilla.ViewModels
                 FileName = item.Name,
                 SourcePath = item.FullPath,
                 DestinationPath = destPath,
-                Direction = TransferDirection.Download
+                Direction = TransferDirection.Download,
+                IsDirectory = item.IsDirectory,
+                FileSize = item.Length
             }).ToList();
 
             EnqueueTransfers(tasks);
@@ -877,6 +946,16 @@ namespace RsyncZilla.ViewModels
                 t.ConnectionProfile ??= profile;
                 t.SessionId ??= sessionId;
                 t.Status = TransferStatus.Pending;
+                foreach (var child in t.Children)
+                {
+                    child.ConnectionProfile ??= profile;
+                    child.SessionId ??= sessionId;
+                    child.Status = TransferStatus.Pending;
+                    child.IsChild = true;
+                    child.ParentTask = t;
+                }
+
+                HookDirectoryTaskChildren(t);
             }
 
             RunOnUi(() =>
@@ -884,6 +963,15 @@ namespace RsyncZilla.ViewModels
                 foreach (var t in list)
                 {
                     ActiveTransfers.Add(t);
+                    if (t.IsExpanded)
+                    {
+                        foreach (var child in t.Children)
+                        {
+                            child.IsChild = true;
+                            child.ParentTask = t;
+                            ActiveTransfers.Add(child);
+                        }
+                    }
                 }
             });
 
@@ -905,7 +993,7 @@ namespace RsyncZilla.ViewModels
                     List<TransferTask> batch = new();
                     RunOnUi(() =>
                     {
-                        var firstPending = ActiveTransfers.FirstOrDefault(t => t.Status == TransferStatus.Pending);
+                        var firstPending = ActiveTransfers.FirstOrDefault(t => !t.IsChild && t.Status == TransferStatus.Pending);
                         if (firstPending != null)
                         {
                             var targetProfile = firstPending.ConnectionProfile ?? CreateConnectionProfile();
@@ -914,7 +1002,8 @@ namespace RsyncZilla.ViewModels
 
                             // Take up to 100 pending tasks sharing the same connection profile, direction, and destination path
                             batch = ActiveTransfers
-                                .Where(t => t.Status == TransferStatus.Pending &&
+                                .Where(t => !t.IsChild &&
+                                            t.Status == TransferStatus.Pending &&
                                             t.Direction == targetDirection &&
                                             string.Equals(t.DestinationPath, targetDest, StringComparison.OrdinalIgnoreCase) &&
                                             AreProfilesEqual(t.ConnectionProfile ?? CreateConnectionProfile(), targetProfile))
@@ -936,13 +1025,39 @@ namespace RsyncZilla.ViewModels
                             foreach (var t in batch)
                             {
                                 ActiveTransfers.Remove(t);
+                                var childrenToRemove = ActiveTransfers.Where(c => c.ParentTask == t).ToList();
+                                foreach (var c in childrenToRemove)
+                                {
+                                    ActiveTransfers.Remove(c);
+                                }
+
                                 if (t.Status == TransferStatus.Completed)
                                 {
                                     CompletedTransfers.Insert(0, t);
+                                    if (t.IsExpanded)
+                                    {
+                                        int insertIdx = 1;
+                                        foreach (var child in t.Children)
+                                        {
+                                            child.IsChild = true;
+                                            child.ParentTask = t;
+                                            CompletedTransfers.Insert(insertIdx++, child);
+                                        }
+                                    }
                                 }
                                 else if (t.Status == TransferStatus.Failed)
                                 {
                                     FailedTransfers.Insert(0, t);
+                                    if (t.IsExpanded)
+                                    {
+                                        int insertIdx = 1;
+                                        foreach (var child in t.Children)
+                                        {
+                                            child.IsChild = true;
+                                            child.ParentTask = t;
+                                            FailedTransfers.Insert(insertIdx++, child);
+                                        }
+                                    }
                                 }
                             }
                         });
@@ -974,7 +1089,22 @@ namespace RsyncZilla.ViewModels
                                 if (string.IsNullOrEmpty(t.ErrorMessage))
                                     t.ErrorMessage = ex.Message;
                                 ActiveTransfers.Remove(t);
+                                var childrenToRemove = ActiveTransfers.Where(c => c.ParentTask == t).ToList();
+                                foreach (var c in childrenToRemove)
+                                {
+                                    ActiveTransfers.Remove(c);
+                                }
                                 FailedTransfers.Insert(0, t);
+                                if (t.IsExpanded)
+                                {
+                                    int insertIdx = 1;
+                                    foreach (var child in t.Children)
+                                    {
+                                        child.IsChild = true;
+                                        child.ParentTask = t;
+                                        FailedTransfers.Insert(insertIdx++, child);
+                                    }
+                                }
                             }
                         });
                     }
@@ -1012,45 +1142,186 @@ namespace RsyncZilla.ViewModels
             // Cancel all pending transfers
             RunOnUi(() =>
             {
-                var pending = ActiveTransfers.Where(t => t.Status == TransferStatus.Pending).ToList();
+                var pending = ActiveTransfers.Where(t => !t.IsChild && t.Status == TransferStatus.Pending).ToList();
                 foreach (var t in pending)
                 {
                     t.Status = TransferStatus.Cancelled;
                     ActiveTransfers.Remove(t);
+                    var childrenToRemove = ActiveTransfers.Where(c => c.ParentTask == t).ToList();
+                    foreach (var c in childrenToRemove)
+                    {
+                        ActiveTransfers.Remove(c);
+                    }
                     FailedTransfers.Insert(0, t);
+                    if (t.IsExpanded)
+                    {
+                        int insertIdx = 1;
+                        foreach (var child in t.Children)
+                        {
+                            child.IsChild = true;
+                            child.ParentTask = t;
+                            FailedTransfers.Insert(insertIdx++, child);
+                        }
+                    }
                 }
             });
         }
 
-        public void RetrySelectedFailed(TransferTask? task)
+        private static void ResetTaskForRetry(TransferTask task)
         {
-            if (task == null) return;
-            RunOnUi(() => FailedTransfers.Remove(task));
             task.ProgressPercentage = 0;
             task.Speed = "";
             task.Eta = "";
             task.TransferredInfo = "";
             task.ErrorMessage = "";
             task.ExitCode = null;
-            EnqueueTransfers(new[] { task });
+            task.CurrentSubFile = null;
+            task.CompletedItemsCount = 0;
+            foreach (var child in task.Children)
+            {
+                child.ProgressPercentage = 0;
+                child.Speed = "";
+                child.Eta = "";
+                child.TransferredInfo = "";
+                child.ErrorMessage = "";
+                child.ExitCode = null;
+                child.Status = TransferStatus.Pending;
+            }
+        }
+
+        public void RetrySelectedFailed(TransferTask? task)
+        {
+            if (task == null) return;
+            var target = task.IsChild && task.ParentTask != null ? task.ParentTask : task;
+
+            RunOnUi(() =>
+            {
+                FailedTransfers.Remove(target);
+                var children = FailedTransfers.Where(c => c.ParentTask == target).ToList();
+                foreach (var c in children)
+                {
+                    FailedTransfers.Remove(c);
+                }
+            });
+
+            ResetTaskForRetry(target);
+            EnqueueTransfers(new[] { target });
         }
 
         public void RetryAllFailed()
         {
-            var list = FailedTransfers.ToList();
+            var list = FailedTransfers.Where(t => !t.IsChild).ToList();
             if (!list.Any()) return;
 
             RunOnUi(() => FailedTransfers.Clear());
             foreach (var task in list)
             {
-                task.ProgressPercentage = 0;
-                task.Speed = "";
-                task.Eta = "";
-                task.TransferredInfo = "";
-                task.ErrorMessage = "";
-                task.ExitCode = null;
+                ResetTaskForRetry(task);
             }
             EnqueueTransfers(list);
+        }
+
+        public void ToggleDirectoryTask(TransferTask task, ObservableCollection<TransferTask> collection)
+        {
+            if (task == null || !task.IsDirectory || task.IsChild) return;
+            if (task.IsExpanded)
+            {
+                CollapseDirectoryTask(task, collection);
+            }
+            else
+            {
+                ExpandDirectoryTask(task, collection);
+            }
+        }
+
+        public void ExpandDirectoryTask(TransferTask task, ObservableCollection<TransferTask> collection)
+        {
+            if (task == null || !task.IsDirectory || task.IsChild) return;
+            task.IsExpanded = true;
+
+            int parentIndex = collection.IndexOf(task);
+            if (parentIndex < 0) return;
+
+            var existing = collection.Where(c => c.ParentTask == task).ToList();
+            foreach (var c in existing)
+            {
+                collection.Remove(c);
+            }
+
+            int insertIdx = collection.IndexOf(task) + 1;
+            foreach (var child in task.Children)
+            {
+                child.IsChild = true;
+                child.ParentTask = task;
+                collection.Insert(insertIdx++, child);
+            }
+        }
+
+        public void CollapseDirectoryTask(TransferTask task, ObservableCollection<TransferTask> collection)
+        {
+            if (task == null || !task.IsDirectory || task.IsChild) return;
+            task.IsExpanded = false;
+
+            var childrenToRemove = collection.Where(c => c.ParentTask == task).ToList();
+            foreach (var child in childrenToRemove)
+            {
+                collection.Remove(child);
+            }
+        }
+
+        private void HookDirectoryTaskChildren(TransferTask task)
+        {
+            if (!task.IsDirectory) return;
+            task.Children.CollectionChanged -= DirectoryTask_ChildrenChanged;
+            task.Children.CollectionChanged += DirectoryTask_ChildrenChanged;
+        }
+
+        private void DirectoryTask_ChildrenChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
+            {
+                TransferTask? parentTask = null;
+                foreach (TransferTask item in e.NewItems)
+                {
+                    if (item.ParentTask != null)
+                    {
+                        parentTask = item.ParentTask;
+                        break;
+                    }
+                }
+
+                if (parentTask != null && parentTask.IsExpanded)
+                {
+                    RunOnUi(() =>
+                    {
+                        var collection = ActiveTransfers.Contains(parentTask) ? ActiveTransfers :
+                                         CompletedTransfers.Contains(parentTask) ? CompletedTransfers :
+                                         FailedTransfers.Contains(parentTask) ? FailedTransfers : null;
+
+                        if (collection != null)
+                        {
+                            int parentIdx = collection.IndexOf(parentTask);
+                            if (parentIdx >= 0)
+                            {
+                                int lastIdx = parentIdx;
+                                while (lastIdx + 1 < collection.Count && collection[lastIdx + 1].ParentTask == parentTask)
+                                {
+                                    lastIdx++;
+                                }
+                                foreach (TransferTask newItem in e.NewItems)
+                                {
+                                    newItem.IsChild = true;
+                                    newItem.ParentTask = parentTask;
+                                    if (!collection.Contains(newItem))
+                                    {
+                                        collection.Insert(++lastIdx, newItem);
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
         }
 
         private ConnectionProfile CreateConnectionProfile()

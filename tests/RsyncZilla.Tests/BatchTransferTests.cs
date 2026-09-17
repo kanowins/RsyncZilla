@@ -140,5 +140,179 @@ namespace RsyncZilla.Tests
             Assert.Equal("userA@hostA.com:/remote1", vm.ActiveTransfers[0].DisplayDestination);
             Assert.Equal("userB@hostB.com:/remote2", vm.ActiveTransfers[1].DisplayDestination);
         }
+
+        [Fact]
+        public void DirectoryTransferTask_PropertiesAndExpandability_ShouldWorkCorrectly()
+        {
+            var dirTask = new TransferTask
+            {
+                FileName = "my_project",
+                SourcePath = @"C:\my_project",
+                DestinationPath = "/var/www/my_project",
+                Direction = TransferDirection.Upload,
+                IsDirectory = true,
+                TotalItemsCount = 3,
+                CompletedItemsCount = 1,
+                ProgressPercentage = 33
+            };
+
+            Assert.True(dirTask.IsExpandable); // Directory tasks are always expandable
+            Assert.Equal("📁 my_project (1/3)", dirTask.DisplayName);
+            Assert.Equal("1/3 files (33%)", dirTask.ProgressSummary);
+
+            var child1 = new TransferTask { FileName = "index.html", Status = TransferStatus.Completed };
+            var child2 = new TransferTask { FileName = "style.css", Status = TransferStatus.Running };
+            var child3 = new TransferTask { FileName = "sub/app.js", Status = TransferStatus.Pending };
+
+            dirTask.Children.Add(child1);
+            dirTask.Children.Add(child2);
+            dirTask.Children.Add(child3);
+
+            Assert.True(dirTask.IsExpandable);
+            Assert.Equal(3, dirTask.ChildrenCount);
+
+            dirTask.CurrentSubFile = "style.css (50%)";
+            dirTask.TransferredInfo = "10 KB/s";
+            Assert.Equal("📄 style.css (50%) | 10 KB/s", dirTask.LiveStatusDetail);
+        }
+
+        [Fact]
+        public async Task UploadPathsAsync_Directory_ShouldPreEnumerateChildren()
+        {
+            var tempDir = Path.Combine(Path.GetTempPath(), "rsynczilla_test_" + Guid.NewGuid().ToString("N"));
+            var subDir = Path.Combine(tempDir, "assets");
+            Directory.CreateDirectory(subDir);
+
+            var file1 = Path.Combine(tempDir, "test1.txt");
+            var file2 = Path.Combine(subDir, "test2.css");
+            File.WriteAllText(file1, "hello");
+            File.WriteAllText(file2, "body { color: red; }");
+
+            try
+            {
+                var vm = new MainViewModel();
+                vm.ActiveSession!.Host = "srv.com";
+                vm.ActiveSession!.Username = "root";
+
+                await vm.UploadPathsAsync(new[] { tempDir }, "/remote/target");
+
+                Assert.Single(vm.ActiveTransfers);
+                var dirTask = vm.ActiveTransfers[0];
+                Assert.True(dirTask.IsDirectory);
+                Assert.Equal(2, dirTask.Children.Count);
+                Assert.Equal(2, dirTask.TotalItemsCount);
+                Assert.True(dirTask.IsExpandable);
+
+                var relNames = dirTask.Children.Select(c => c.FileName).OrderBy(n => n).ToList();
+                Assert.Contains(relNames, n => n.Equals("test1.txt", StringComparison.OrdinalIgnoreCase));
+                Assert.Contains(relNames, n => n.Replace('\\', '/').Equals("assets/test2.css", StringComparison.OrdinalIgnoreCase));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    try { Directory.Delete(tempDir, true); } catch { }
+                }
+            }
+        }
+
+        [Fact]
+        public void RetrySelectedFailed_DirectoryTask_ShouldResetChildrenStatuses()
+        {
+            var vm = new MainViewModel();
+            var dirTask = new TransferTask
+            {
+                FileName = "failed_folder",
+                SourcePath = @"C:\failed_folder",
+                DestinationPath = "/remote",
+                Direction = TransferDirection.Upload,
+                IsDirectory = true,
+                Status = TransferStatus.Failed,
+                ErrorMessage = "Some error",
+                CompletedItemsCount = 2,
+                TotalItemsCount = 2,
+                ConnectionProfile = new ConnectionProfile { Host = "host.com", Username = "user" }
+            };
+
+            var child1 = new TransferTask
+            {
+                FileName = "f1.txt",
+                Status = TransferStatus.Failed,
+                ErrorMessage = "Permission denied",
+                ProgressPercentage = 50
+            };
+            var child2 = new TransferTask
+            {
+                FileName = "f2.txt",
+                Status = TransferStatus.Failed,
+                ErrorMessage = "Timeout",
+                ProgressPercentage = 80
+            };
+
+            dirTask.Children.Add(child1);
+            dirTask.Children.Add(child2);
+            vm.FailedTransfers.Add(dirTask);
+
+            vm.RetrySelectedFailed(dirTask);
+
+            Assert.Empty(vm.FailedTransfers);
+            Assert.Single(vm.ActiveTransfers);
+
+            var retriedDir = vm.ActiveTransfers[0];
+            Assert.Contains(retriedDir.Status, new[] { TransferStatus.Pending, TransferStatus.Running });
+            Assert.Equal(0, retriedDir.CompletedItemsCount);
+            Assert.Empty(retriedDir.ErrorMessage);
+
+            Assert.All(retriedDir.Children, c =>
+            {
+                Assert.Contains(c.Status, new[] { TransferStatus.Pending, TransferStatus.Running });
+                Assert.Equal(0, c.ProgressPercentage);
+                Assert.Empty(c.ErrorMessage);
+            });
+        }
+
+        [Fact]
+        public void DirectoryTask_IntegratedTree_ExpandCollapse_ShouldInsertAndRemoveChildren()
+        {
+            var vm = new MainViewModel();
+            var dirTask = new TransferTask
+            {
+                FileName = "my_folder",
+                SourcePath = @"C:\my_folder",
+                DestinationPath = "/remote",
+                Direction = TransferDirection.Upload,
+                IsDirectory = true,
+                Status = TransferStatus.Pending
+            };
+
+            var child1 = new TransferTask { FileName = "a.txt", Status = TransferStatus.Pending };
+            var child2 = new TransferTask { FileName = "b.txt", Status = TransferStatus.Pending };
+            dirTask.Children.Add(child1);
+            dirTask.Children.Add(child2);
+
+            vm.ActiveTransfers.Add(dirTask);
+            Assert.Single(vm.ActiveTransfers);
+            Assert.Contains("(1)", vm.ActiveTabHeader);
+
+            // 1. Expand
+            vm.ToggleDirectoryTask(dirTask, vm.ActiveTransfers);
+            Assert.True(dirTask.IsExpanded);
+            Assert.Equal(3, vm.ActiveTransfers.Count);
+            Assert.Equal(dirTask, vm.ActiveTransfers[0]);
+            Assert.Equal(child1, vm.ActiveTransfers[1]);
+            Assert.Equal(child2, vm.ActiveTransfers[2]);
+            Assert.True(vm.ActiveTransfers[1].IsChild);
+            Assert.True(vm.ActiveTransfers[2].IsChild);
+            Assert.Equal(dirTask, vm.ActiveTransfers[1].ParentTask);
+            // Header count should still reflect 1 primary task
+            Assert.Contains("(1)", vm.ActiveTabHeader);
+
+            // 2. Collapse
+            vm.ToggleDirectoryTask(dirTask, vm.ActiveTransfers);
+            Assert.False(dirTask.IsExpanded);
+            Assert.Single(vm.ActiveTransfers);
+            Assert.Equal(dirTask, vm.ActiveTransfers[0]);
+            Assert.Contains("(1)", vm.ActiveTabHeader);
+        }
     }
 }

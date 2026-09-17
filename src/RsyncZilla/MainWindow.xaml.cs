@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
@@ -1098,6 +1099,54 @@ namespace RsyncZilla
             {
                 await _viewModel.RemoteBrowser.DeleteItemsAsync(selected);
             }
+        }
+
+        // ==========================================
+        // TRANSFER QUEUE INTEGRATED TREE EXPAND / COLLAPSE
+        // ==========================================
+
+        private void ToggleExpandFolder_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is ToggleButton tb && tb.DataContext is TransferTask task && task.IsDirectory && !task.IsChild)
+            {
+                var grid = FindVisualParent<DataGrid>(tb);
+                if (grid?.ItemsSource is ObservableCollection<TransferTask> collection)
+                {
+                    if (tb.IsChecked == true)
+                    {
+                        _viewModel.ExpandDirectoryTask(task, collection);
+                    }
+                    else
+                    {
+                        _viewModel.CollapseDirectoryTask(task, collection);
+                    }
+                }
+            }
+        }
+
+        private void DataGridRow_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (e.Handled) return;
+
+            if (sender is DataGridRow row && row.Item is TransferTask task && task.IsDirectory && !task.IsChild)
+            {
+                var grid = FindVisualParent<DataGrid>(row);
+                if (grid?.ItemsSource is ObservableCollection<TransferTask> collection)
+                {
+                    _viewModel.ToggleDirectoryTask(task, collection);
+                    e.Handled = true;
+                }
+            }
+        }
+
+        private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+        {
+            while (child != null)
+            {
+                if (child is T parent) return parent;
+                child = VisualTreeHelper.GetParent(child);
+            }
+            return null;
         }
     }
 

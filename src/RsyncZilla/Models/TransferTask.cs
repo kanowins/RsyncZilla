@@ -1,4 +1,5 @@
 using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -23,11 +24,27 @@ namespace RsyncZilla.Models
     {
         public Guid Id { get; } = Guid.NewGuid();
 
+        public TransferTask()
+        {
+            Children.CollectionChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(IsExpandable));
+                OnPropertyChanged(nameof(ChildrenCount));
+                OnPropertyChanged(nameof(HasChildren));
+            };
+        }
+
         private string _fileName = string.Empty;
         public string FileName
         {
             get => _fileName;
-            set => SetProperty(ref _fileName, value);
+            set
+            {
+                if (SetProperty(ref _fileName, value))
+                {
+                    OnPropertyChanged(nameof(DisplayName));
+                }
+            }
         }
 
         private string _sourcePath = string.Empty;
@@ -81,6 +98,7 @@ namespace RsyncZilla.Models
                 {
                     OnPropertyChanged(nameof(StatusBadge));
                     OnPropertyChanged(nameof(IsRunning));
+                    OnPropertyChanged(nameof(IsExpandable));
                 }
             }
         }
@@ -103,7 +121,199 @@ namespace RsyncZilla.Models
         public string TransferredInfo
         {
             get => _transferredInfo;
-            set => SetProperty(ref _transferredInfo, value);
+            set
+            {
+                if (SetProperty(ref _transferredInfo, value))
+                {
+                    OnPropertyChanged(nameof(LiveStatusDetail));
+                }
+            }
+        }
+
+        private bool _isDirectory;
+        public bool IsDirectory
+        {
+            get => _isDirectory;
+            set
+            {
+                if (SetProperty(ref _isDirectory, value))
+                {
+                    OnPropertyChanged(nameof(DisplayName));
+                    OnPropertyChanged(nameof(IsExpandable));
+                    OnPropertyChanged(nameof(DisplaySize));
+                }
+            }
+        }
+
+        private bool _isExpanded;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set => SetProperty(ref _isExpanded, value);
+        }
+
+        private string? _currentSubFile;
+        public string? CurrentSubFile
+        {
+            get => _currentSubFile;
+            set
+            {
+                if (SetProperty(ref _currentSubFile, value))
+                {
+                    OnPropertyChanged(nameof(LiveStatusDetail));
+                }
+            }
+        }
+
+        private int _totalItemsCount;
+        public int TotalItemsCount
+        {
+            get => _totalItemsCount;
+            set
+            {
+                if (SetProperty(ref _totalItemsCount, value))
+                {
+                    OnPropertyChanged(nameof(DisplayName));
+                    OnPropertyChanged(nameof(ProgressSummary));
+                }
+            }
+        }
+
+        private int _completedItemsCount;
+        public int CompletedItemsCount
+        {
+            get => _completedItemsCount;
+            set
+            {
+                if (SetProperty(ref _completedItemsCount, value))
+                {
+                    OnPropertyChanged(nameof(DisplayName));
+                    OnPropertyChanged(nameof(ProgressSummary));
+                }
+            }
+        }
+
+        private long _totalBytes;
+        public long TotalBytes
+        {
+            get => _totalBytes;
+            set
+            {
+                if (SetProperty(ref _totalBytes, value))
+                {
+                    OnPropertyChanged(nameof(DisplaySize));
+                }
+            }
+        }
+
+        private long _transferredBytes;
+        public long TransferredBytes
+        {
+            get => _transferredBytes;
+            set => SetProperty(ref _transferredBytes, value);
+        }
+
+        private long _fileSize;
+        public long FileSize
+        {
+            get => _fileSize;
+            set
+            {
+                if (SetProperty(ref _fileSize, value))
+                {
+                    OnPropertyChanged(nameof(DisplaySize));
+                }
+            }
+        }
+
+        private bool _isChild;
+        public bool IsChild
+        {
+            get => _isChild;
+            set
+            {
+                if (SetProperty(ref _isChild, value))
+                {
+                    OnPropertyChanged(nameof(IsExpandable));
+                    OnPropertyChanged(nameof(DisplayName));
+                    OnPropertyChanged(nameof(ProgressSummary));
+                    OnPropertyChanged(nameof(LiveStatusDetail));
+                    OnPropertyChanged(nameof(DisplaySize));
+                }
+            }
+        }
+
+        public TransferTask? ParentTask { get; set; }
+
+        public ObservableCollection<TransferTask> Children { get; } = new();
+        public int ChildrenCount => Children.Count;
+        public bool HasChildren => Children.Count > 0;
+        public bool IsExpandable => IsDirectory && !IsChild && (Status == TransferStatus.Pending || Status == TransferStatus.Running || Children.Count > 0);
+
+        public string DisplayName
+        {
+            get
+            {
+                if (IsDirectory && !IsChild)
+                {
+                    if (TotalItemsCount > 0)
+                    {
+                        return $"📁 {FileName} ({CompletedItemsCount}/{TotalItemsCount})";
+                    }
+                    return $"📁 {FileName}";
+                }
+                return FileName;
+            }
+        }
+
+        public string ProgressSummary
+        {
+            get
+            {
+                if (IsDirectory && !IsChild && TotalItemsCount > 0)
+                {
+                    return $"{CompletedItemsCount}/{TotalItemsCount} files ({ProgressPercentage}%)";
+                }
+                return $"{ProgressPercentage}%";
+            }
+        }
+
+        public string LiveStatusDetail
+        {
+            get
+            {
+                if (IsDirectory && !IsChild && !string.IsNullOrWhiteSpace(CurrentSubFile))
+                {
+                    if (!string.IsNullOrWhiteSpace(TransferredInfo))
+                        return $"📄 {CurrentSubFile} | {TransferredInfo}";
+                    return $"📄 {CurrentSubFile}";
+                }
+                return TransferredInfo;
+            }
+        }
+
+        public string DisplaySize
+        {
+            get
+            {
+                if (IsDirectory && !IsChild && TotalBytes > 0) return FormatBytes(TotalBytes);
+                if (FileSize > 0) return FormatBytes(FileSize);
+                return string.Empty;
+            }
+        }
+
+        public static string FormatBytes(long bytes)
+        {
+            if (bytes <= 0) return "0 B";
+            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+            double len = bytes;
+            int order = 0;
+            while (len >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                len /= 1024;
+            }
+            return $"{len:0.##} {sizes[order]}";
         }
 
         private string _eta = string.Empty;

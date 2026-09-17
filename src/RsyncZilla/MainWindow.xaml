@@ -23,6 +23,34 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
         <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisConverter"/>
 
+        <!-- Expand/Collapse ToggleButton Style -->
+        <Style x:Key="ExpandCollapseToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="Transparent" SnapsToDevicePixels="True">
+                            <TextBlock x:Name="Arrow" Text="▶" FontSize="10" Foreground="#555555"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Arrow" Property="Text" Value="▼"/>
+                                <Setter TargetName="Arrow" Property="Foreground" Value="#0078D7"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Arrow" Property="Foreground" Value="#005A9E"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Vector Icon: Folder with Arrow Up inside -->
         <DataTemplate x:Key="FolderUpIconTemplate">
             <Viewbox Width="19" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -847,17 +875,51 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <DataGrid Grid.Row="0" ItemsSource="{Binding ActiveTransfers}">
+                    <DataGrid Grid.Row="0" ItemsSource="{Binding ActiveTransfers}"
+                              AutoGenerateColumns="False" CanUserAddRows="False"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <EventSetter Event="MouseDoubleClick" Handler="DataGridRow_MouseDoubleClick"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsChild}" Value="True">
+                                        <Setter Property="Background" Value="#F8FAFC"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
+                            <DataGridTemplateColumn Width="28">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                                      Click="ToggleExpandFolder_Click"
+                                                      Visibility="{Binding IsExpandable, Converter={StaticResource BoolToVisConverter}}"
+                                                      Style="{StaticResource ExpandCollapseToggleStyle}"
+                                                      Cursor="Hand"
+                                                      ToolTip="Expand / Collapse folder files"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110"/>
                             <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90"/>
-                            <DataGridTextColumn Header="File / Folder" Binding="{Binding FileName}" Width="200"/>
+                            <DataGridTemplateColumn Header="File / Folder" Width="260">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="      ↳ " Foreground="#7F8C8D" FontWeight="Normal" FontSize="11"
+                                                       Visibility="{Binding IsChild, Converter={StaticResource BoolToVisConverter}}"/>
+                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTemplateColumn Header="Progress" Width="220">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Grid Margin="4">
                                             <ProgressBar Value="{Binding ProgressPercentage}" Minimum="0" Maximum="100" Height="16" Foreground="#0078D7" Background="#EAEAEA"/>
-                                            <TextBlock Text="{Binding ProgressPercentage, StringFormat='{}{0}%'}" 
+                                            <TextBlock Text="{Binding ProgressSummary}" 
                                                        HorizontalAlignment="Center" VerticalAlignment="Center" 
                                                        FontSize="11" FontWeight="Bold" Foreground="#111111"/>
                                         </Grid>
@@ -866,7 +928,7 @@
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Speed" Binding="{Binding Speed}" Width="95"/>
                             <DataGridTextColumn Header="ETA" Binding="{Binding Eta}" Width="75"/>
-                            <DataGridTextColumn Header="Details" Binding="{Binding TransferredInfo}" Width="*"/>
+                            <DataGridTextColumn Header="Details" Binding="{Binding LiveStatusDetail}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -890,11 +952,45 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <DataGrid Grid.Row="0" ItemsSource="{Binding FailedTransfers}" SelectedItem="{Binding SelectedFailedTransfer, Mode=TwoWay}">
+                    <DataGrid Grid.Row="0" ItemsSource="{Binding FailedTransfers}" SelectedItem="{Binding SelectedFailedTransfer, Mode=TwoWay}"
+                              AutoGenerateColumns="False" CanUserAddRows="False"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <EventSetter Event="MouseDoubleClick" Handler="DataGridRow_MouseDoubleClick"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsChild}" Value="True">
+                                        <Setter Property="Background" Value="#FFF8F8"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
+                            <DataGridTemplateColumn Width="28">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                                      Click="ToggleExpandFolder_Click"
+                                                      Visibility="{Binding IsExpandable, Converter={StaticResource BoolToVisConverter}}"
+                                                      Style="{StaticResource ExpandCollapseToggleStyle}"
+                                                      Cursor="Hand"
+                                                      ToolTip="Expand / Collapse folder files"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110"/>
                             <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90"/>
-                            <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="190"/>
+                            <DataGridTemplateColumn Header="File" Width="240">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="      ↳ " Foreground="#7F8C8D" FontWeight="Normal" FontSize="11"
+                                                       Visibility="{Binding IsChild, Converter={StaticResource BoolToVisConverter}}"/>
+                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Error / Cause" Binding="{Binding ErrorMessage}" Width="280"/>
                             <DataGridTextColumn Header="Exit Code" Binding="{Binding ExitCode}" Width="70"/>
                             <DataGridTextColumn Header="Source" Binding="{Binding DisplaySource}" Width="*"/>
@@ -931,11 +1027,46 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <DataGrid Grid.Row="0" ItemsSource="{Binding CompletedTransfers}">
+                    <DataGrid Grid.Row="0" ItemsSource="{Binding CompletedTransfers}"
+                              AutoGenerateColumns="False" CanUserAddRows="False"
+                              GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <EventSetter Event="MouseDoubleClick" Handler="DataGridRow_MouseDoubleClick"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsChild}" Value="True">
+                                        <Setter Property="Background" Value="#F8FAFC"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
+                            <DataGridTemplateColumn Width="28">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                                      Click="ToggleExpandFolder_Click"
+                                                      Visibility="{Binding IsExpandable, Converter={StaticResource BoolToVisConverter}}"
+                                                      Style="{StaticResource ExpandCollapseToggleStyle}"
+                                                      Cursor="Hand"
+                                                      ToolTip="Expand / Collapse folder files"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110"/>
                             <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90"/>
-                            <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="220"/>
+                            <DataGridTemplateColumn Header="File" Width="240">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="      ↳ " Foreground="#7F8C8D" FontWeight="Normal" FontSize="11"
+                                                       Visibility="{Binding IsChild, Converter={StaticResource BoolToVisConverter}}"/>
+                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="90"/>
                             <DataGridTextColumn Header="Exit Code" Binding="{Binding ExitCode}" Width="70"/>
                             <DataGridTextColumn Header="Source" Binding="{Binding DisplaySource}" Width="*"/>
                             <DataGridTextColumn Header="Destination" Binding="{Binding DisplayDestination}" Width="*"/>
