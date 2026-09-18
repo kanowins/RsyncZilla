@@ -73,6 +73,62 @@ namespace RsyncZilla.Tests
             Assert.Contains("Completed", task.StatusBadge);
         }
 
+        [Fact]
+        public void TransferTask_ProgressPercentage_ShouldNotifyProgressSummary()
+        {
+            var task = new TransferTask
+            {
+                FileName = "demo.mp4",
+                ProgressPercentage = 0
+            };
+
+            Assert.Equal("0%", task.ProgressSummary);
+
+            var notifiedProperties = new List<string>();
+            task.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName != null) notifiedProperties.Add(e.PropertyName);
+            };
+
+            task.ProgressPercentage = 35;
+            Assert.Contains(nameof(TransferTask.ProgressPercentage), notifiedProperties);
+            Assert.Contains(nameof(TransferTask.ProgressSummary), notifiedProperties);
+            Assert.Equal("35%", task.ProgressSummary);
+
+            notifiedProperties.Clear();
+            task.ProgressPercentage = 100;
+            Assert.Contains(nameof(TransferTask.ProgressSummary), notifiedProperties);
+            Assert.Equal("100%", task.ProgressSummary);
+        }
+
+        [Fact]
+        public void DirectoryTransferTask_ProgressSummary_ShouldFormatFilesAndPercentage()
+        {
+            var dirTask = new TransferTask
+            {
+                FileName = "myfolder",
+                IsDirectory = true,
+                TotalItemsCount = 10,
+                CompletedItemsCount = 3,
+                ProgressPercentage = 30
+            };
+
+            Assert.Equal("3/10 files (30%)", dirTask.ProgressSummary);
+
+            var notifiedProperties = new List<string>();
+            dirTask.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName != null) notifiedProperties.Add(e.PropertyName);
+            };
+
+            dirTask.ProgressPercentage = 40;
+            Assert.Contains(nameof(TransferTask.ProgressSummary), notifiedProperties);
+            Assert.Equal("3/10 files (40%)", dirTask.ProgressSummary);
+
+            dirTask.CompletedItemsCount = 4;
+            Assert.Equal("4/10 files (40%)", dirTask.ProgressSummary);
+        }
+
         [Theory]
         [InlineData(23, "rsync: [receiver] mkstemp: Permission denied (13)", RsyncFailureReason.PermissionDenied)]
         [InlineData(1, "Operation not permitted on destination", RsyncFailureReason.PermissionDenied)]

@@ -99,6 +99,7 @@ namespace RsyncZilla.Models
                     OnPropertyChanged(nameof(StatusBadge));
                     OnPropertyChanged(nameof(IsRunning));
                     OnPropertyChanged(nameof(IsExpandable));
+                    OnPropertyChanged(nameof(ProgressSummary));
                 }
             }
         }
@@ -107,7 +108,13 @@ namespace RsyncZilla.Models
         public int ProgressPercentage
         {
             get => _progressPercentage;
-            set => SetProperty(ref _progressPercentage, value);
+            set
+            {
+                if (SetProperty(ref _progressPercentage, value))
+                {
+                    OnPropertyChanged(nameof(ProgressSummary));
+                }
+            }
         }
 
         private string _speed = string.Empty;
@@ -141,6 +148,7 @@ namespace RsyncZilla.Models
                     OnPropertyChanged(nameof(DisplayName));
                     OnPropertyChanged(nameof(IsExpandable));
                     OnPropertyChanged(nameof(DisplaySize));
+                    OnPropertyChanged(nameof(ProgressSummary));
                 }
             }
         }

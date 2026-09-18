@@ -1,5 +1,15 @@
 # RsyncZilla Release Notes
 
+## Version 1.3.1 (2026-09-18)
+
+### ✨ Bug Fixes & UI Polishing
+- **Fixed Progress Percentage Text Display**:
+  - Resolved an issue where the text percentage label displayed over the progress bar remained stuck at `0%` throughout and after file transfers due to missing property change notifications on the calculated progress summary.
+- **Vertical Alignment in DataGrid Tables**:
+  - Fixed vertical alignment of rows and cells across transfer queues (Queue, Failed, Completed) and file browsers, ensuring text, icons, progress bars, and action buttons are consistently and cleanly centered in height.
+
+---
+
 ## Version 1.3.0 (2026-09-17)
 
 ### ✨ New Features & Improvements

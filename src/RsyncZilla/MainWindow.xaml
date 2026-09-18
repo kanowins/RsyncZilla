@@ -250,6 +250,7 @@
             <Setter Property="IsReadOnly" Value="True"/>
             <Setter Property="SelectionMode" Value="Extended"/>
             <Setter Property="SelectionUnit" Value="FullRow"/>
+            <Setter Property="MinRowHeight" Value="24"/>
         </Style>
 
         <Style TargetType="DataGridColumnHeader">
@@ -280,9 +281,29 @@
             </Style.Triggers>
         </Style>
 
+        <!-- ElementStyle for DataGridTextColumn to ensure vertical centering and standard horizontal margin -->
+        <Style x:Key="DataGridTextCellElementStyle" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="4,0"/>
+        </Style>
+
         <Style TargetType="DataGridCell">
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="#0078D7"/>
@@ -727,9 +748,9 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="90"/>
-                                <DataGridTextColumn Header="Type" Binding="{Binding DisplayType}" Width="110"/>
-                                <DataGridTextColumn Header="Modified" Binding="{Binding LastWriteTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="130"/>
+                                <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="90" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                                <DataGridTextColumn Header="Type" Binding="{Binding DisplayType}" Width="110" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                                <DataGridTextColumn Header="Modified" Binding="{Binding LastWriteTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="130" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
@@ -852,9 +873,9 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="90"/>
-                                <DataGridTextColumn Header="Permissions" Binding="{Binding Permissions}" Width="95"/>
-                                <DataGridTextColumn Header="Modified" Binding="{Binding LastWriteTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="130"/>
+                                <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="90" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                                <DataGridTextColumn Header="Permissions" Binding="{Binding Permissions}" Width="95" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                                <DataGridTextColumn Header="Modified" Binding="{Binding LastWriteTime, StringFormat='dd/MM/yyyy HH:mm'}" Width="130" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
@@ -879,7 +900,7 @@
                               AutoGenerateColumns="False" CanUserAddRows="False"
                               GridLinesVisibility="Horizontal" HeadersVisibility="Column">
                         <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow">
+                            <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                                 <EventSetter Event="MouseDoubleClick" Handler="DataGridRow_MouseDoubleClick"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsChild}" Value="True">
@@ -896,18 +917,20 @@
                                                       Click="ToggleExpandFolder_Click"
                                                       Visibility="{Binding IsExpandable, Converter={StaticResource BoolToVisConverter}}"
                                                       Style="{StaticResource ExpandCollapseToggleStyle}"
+                                                      VerticalAlignment="Center" HorizontalAlignment="Center"
                                                       Cursor="Hand"
                                                       ToolTip="Expand / Collapse folder files"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110"/>
-                            <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
                             <DataGridTemplateColumn Header="File / Folder" Width="260">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
                                             <TextBlock Text="      ↳ " Foreground="#7F8C8D" FontWeight="Normal" FontSize="11"
+                                                       VerticalAlignment="Center"
                                                        Visibility="{Binding IsChild, Converter={StaticResource BoolToVisConverter}}"/>
                                             <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
@@ -917,7 +940,7 @@
                             <DataGridTemplateColumn Header="Progress" Width="220">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Grid Margin="4">
+                                        <Grid Margin="4,2" VerticalAlignment="Center">
                                             <ProgressBar Value="{Binding ProgressPercentage}" Minimum="0" Maximum="100" Height="16" Foreground="#0078D7" Background="#EAEAEA"/>
                                             <TextBlock Text="{Binding ProgressSummary}" 
                                                        HorizontalAlignment="Center" VerticalAlignment="Center" 
@@ -926,9 +949,9 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Speed" Binding="{Binding Speed}" Width="95"/>
-                            <DataGridTextColumn Header="ETA" Binding="{Binding Eta}" Width="75"/>
-                            <DataGridTextColumn Header="Details" Binding="{Binding LiveStatusDetail}" Width="*"/>
+                            <DataGridTextColumn Header="Speed" Binding="{Binding Speed}" Width="95" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTextColumn Header="ETA" Binding="{Binding Eta}" Width="75" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTextColumn Header="Details" Binding="{Binding LiveStatusDetail}" Width="*" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -956,7 +979,7 @@
                               AutoGenerateColumns="False" CanUserAddRows="False"
                               GridLinesVisibility="Horizontal" HeadersVisibility="Column">
                         <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow">
+                            <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                                 <EventSetter Event="MouseDoubleClick" Handler="DataGridRow_MouseDoubleClick"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsChild}" Value="True">
@@ -973,28 +996,30 @@
                                                       Click="ToggleExpandFolder_Click"
                                                       Visibility="{Binding IsExpandable, Converter={StaticResource BoolToVisConverter}}"
                                                       Style="{StaticResource ExpandCollapseToggleStyle}"
+                                                      VerticalAlignment="Center" HorizontalAlignment="Center"
                                                       Cursor="Hand"
                                                       ToolTip="Expand / Collapse folder files"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110"/>
-                            <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
                             <DataGridTemplateColumn Header="File" Width="240">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
                                             <TextBlock Text="      ↳ " Foreground="#7F8C8D" FontWeight="Normal" FontSize="11"
+                                                       VerticalAlignment="Center"
                                                        Visibility="{Binding IsChild, Converter={StaticResource BoolToVisConverter}}"/>
                                             <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Error / Cause" Binding="{Binding ErrorMessage}" Width="280"/>
-                            <DataGridTextColumn Header="Exit Code" Binding="{Binding ExitCode}" Width="70"/>
-                            <DataGridTextColumn Header="Source" Binding="{Binding DisplaySource}" Width="*"/>
-                            <DataGridTextColumn Header="Destination" Binding="{Binding DisplayDestination}" Width="*"/>
+                            <DataGridTextColumn Header="Error / Cause" Binding="{Binding ErrorMessage}" Width="280" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTextColumn Header="Exit Code" Binding="{Binding ExitCode}" Width="70" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTextColumn Header="Source" Binding="{Binding DisplaySource}" Width="*" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTextColumn Header="Destination" Binding="{Binding DisplayDestination}" Width="*" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -1031,7 +1056,7 @@
                               AutoGenerateColumns="False" CanUserAddRows="False"
                               GridLinesVisibility="Horizontal" HeadersVisibility="Column">
                         <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow">
+                            <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                                 <EventSetter Event="MouseDoubleClick" Handler="DataGridRow_MouseDoubleClick"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsChild}" Value="True">
@@ -1048,29 +1073,31 @@
                                                       Click="ToggleExpandFolder_Click"
                                                       Visibility="{Binding IsExpandable, Converter={StaticResource BoolToVisConverter}}"
                                                       Style="{StaticResource ExpandCollapseToggleStyle}"
+                                                      VerticalAlignment="Center" HorizontalAlignment="Center"
                                                       Cursor="Hand"
                                                       ToolTip="Expand / Collapse folder files"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110"/>
-                            <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90"/>
+                            <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
                             <DataGridTemplateColumn Header="File" Width="240">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
                                             <TextBlock Text="      ↳ " Foreground="#7F8C8D" FontWeight="Normal" FontSize="11"
+                                                       VerticalAlignment="Center"
                                                        Visibility="{Binding IsChild, Converter={StaticResource BoolToVisConverter}}"/>
                                             <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="90"/>
-                            <DataGridTextColumn Header="Exit Code" Binding="{Binding ExitCode}" Width="70"/>
-                            <DataGridTextColumn Header="Source" Binding="{Binding DisplaySource}" Width="*"/>
-                            <DataGridTextColumn Header="Destination" Binding="{Binding DisplayDestination}" Width="*"/>
-                            <DataGridTextColumn Header="Completed At" Binding="{Binding EndTime, StringFormat='HH:mm:ss'}" Width="95"/>
+                            <DataGridTextColumn Header="Size" Binding="{Binding DisplaySize}" Width="90" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTextColumn Header="Exit Code" Binding="{Binding ExitCode}" Width="70" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTextColumn Header="Source" Binding="{Binding DisplaySource}" Width="*" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTextColumn Header="Destination" Binding="{Binding DisplayDestination}" Width="*" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTextColumn Header="Completed At" Binding="{Binding EndTime, StringFormat='HH:mm:ss'}" Width="95" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
