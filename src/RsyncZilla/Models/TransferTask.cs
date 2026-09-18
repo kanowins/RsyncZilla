@@ -372,7 +372,7 @@ namespace RsyncZilla.Models
             _ => Status.ToString()
         };
 
-        public string DirectionIcon => Direction == TransferDirection.Upload ? "⬆️ Upload" : "⬇️ Download";
+        public string DirectionIcon => Direction == TransferDirection.Upload ? "➡️ Upload" : "⬅️ Download";
         public bool IsUpload => Direction == TransferDirection.Upload;
         public string DirectionText => IsUpload ? "Upload" : "Download";
 

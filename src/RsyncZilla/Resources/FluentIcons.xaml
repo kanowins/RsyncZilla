@@ -60,82 +60,52 @@
         </DrawingImage.Drawing>
     </DrawingImage>
 
-    <!-- 2. Upload (Rocket) -->
+    <!-- 2. Upload / Transfer Right (Local ➔ Remote) -->
     <DrawingImage x:Key="FluentUploadIcon">
         <DrawingImage.Drawing>
             <DrawingGroup>
-                <!-- Rocket Thrust Flame -->
+                <!-- Soft background circle -->
+                <GeometryDrawing Brush="#ECFDF5">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="12,12" RadiusX="11" RadiusY="11"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Emerald Right Arrow -->
                 <GeometryDrawing>
                     <GeometryDrawing.Brush>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                            <GradientStop Color="#FBBF24" Offset="0"/>
-                            <GradientStop Color="#EF4444" Offset="1"/>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#059669" Offset="0"/>
+                            <GradientStop Color="#10B981" Offset="1"/>
                         </LinearGradientBrush>
                     </GeometryDrawing.Brush>
                     <GeometryDrawing.Geometry>
-                        <PathGeometry Figures="M 12,16 Q 10,20 12,23 Q 14,20 12,16 Z"/>
-                    </GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <!-- Rocket Wings -->
-                <GeometryDrawing Brush="#1D4ED8">
-                    <GeometryDrawing.Geometry>
-                        <PathGeometry Figures="M 7,13 L 5,17 L 8,16 Z M 17,13 L 19,17 L 16,16 Z"/>
-                    </GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <!-- Rocket Fuselage -->
-                <GeometryDrawing>
-                    <GeometryDrawing.Brush>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#38BDF8" Offset="0"/>
-                            <GradientStop Color="#0284C7" Offset="0.6"/>
-                            <GradientStop Color="#0369A1" Offset="1"/>
-                        </LinearGradientBrush>
-                    </GeometryDrawing.Brush>
-                    <GeometryDrawing.Geometry>
-                        <PathGeometry Figures="M 12,1 C 8,6 8,14 9,17 L 15,17 C 16,14 16,6 12,1 Z"/>
-                    </GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <!-- Window Porthole -->
-                <GeometryDrawing Brush="#F0F9FF">
-                    <GeometryDrawing.Geometry>
-                        <EllipseGeometry Center="12,8" RadiusX="2.2" RadiusY="2.2"/>
-                    </GeometryDrawing.Geometry>
-                </GeometryDrawing>
-                <GeometryDrawing Brush="#0284C7">
-                    <GeometryDrawing.Geometry>
-                        <EllipseGeometry Center="12,8" RadiusX="1.3" RadiusY="1.3"/>
+                        <PathGeometry Figures="M 20,12 L 13,5 L 13,9 L 5,9 L 5,15 L 13,15 L 13,19 Z"/>
                     </GeometryDrawing.Geometry>
                 </GeometryDrawing>
             </DrawingGroup>
         </DrawingImage.Drawing>
     </DrawingImage>
 
-    <!-- 3. Download -->
+    <!-- 3. Download / Transfer Left (Remote ➔ Local) -->
     <DrawingImage x:Key="FluentDownloadIcon">
         <DrawingImage.Drawing>
             <DrawingGroup>
-                <!-- Tray / Cloud base -->
-                <GeometryDrawing>
-                    <GeometryDrawing.Brush>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                            <GradientStop Color="#0284C7" Offset="0"/>
-                            <GradientStop Color="#0369A1" Offset="1"/>
-                        </LinearGradientBrush>
-                    </GeometryDrawing.Brush>
+                <!-- Soft background circle -->
+                <GeometryDrawing Brush="#EFF6FF">
                     <GeometryDrawing.Geometry>
-                        <PathGeometry Figures="M 3,16 L 3,20 C 3,21.1 3.9,22 5,22 L 19,22 C 20.1,22 21,21.1 21,20 L 21,16 L 18,16 L 18,19 L 6,19 L 6,16 Z"/>
+                        <EllipseGeometry Center="12,12" RadiusX="11" RadiusY="11"/>
                     </GeometryDrawing.Geometry>
                 </GeometryDrawing>
-                <!-- Down Arrow -->
+                <!-- Royal Blue Left Arrow -->
                 <GeometryDrawing>
                     <GeometryDrawing.Brush>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                            <GradientStop Color="#38BDF8" Offset="0"/>
-                            <GradientStop Color="#2563EB" Offset="1"/>
+                        <LinearGradientBrush StartPoint="1,0" EndPoint="0,0">
+                            <GradientStop Color="#1D4ED8" Offset="0"/>
+                            <GradientStop Color="#0284C7" Offset="1"/>
                         </LinearGradientBrush>
                     </GeometryDrawing.Brush>
                     <GeometryDrawing.Geometry>
-                        <PathGeometry Figures="M 10,2 L 14,2 L 14,10 L 17.5,10 L 12,16 L 6.5,10 L 10,10 Z"/>
+                        <PathGeometry Figures="M 4,12 L 11,5 L 11,9 L 19,9 L 19,15 L 11,15 L 11,19 Z"/>
                     </GeometryDrawing.Geometry>
                 </GeometryDrawing>
             </DrawingGroup>
