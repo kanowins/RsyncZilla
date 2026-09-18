@@ -1,0 +1,766 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ============================================================== -->
+    <!-- MICROSOFT FLUENT UI COLOR - VECTOR ICON PACK (HIGH DPI READY) -->
+    <!-- ============================================================== -->
+
+    <!-- 1. Sites / Server Manager -->
+    <DrawingImage x:Key="FluentSitesIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Server chassis -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#0078D4" Offset="0"/>
+                            <GradientStop Color="#106EBE" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="2,2,20,8" RadiusX="2" RadiusY="2"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#0078D4" Offset="0"/>
+                            <GradientStop Color="#005A9E" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="2,12,20,8" RadiusX="2" RadiusY="2"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Drive bay slots -->
+                <GeometryDrawing Brush="#E0F2FE">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="5,5,10,2" RadiusX="0.5" RadiusY="0.5"/>
+                            <RectangleGeometry Rect="5,15,10,2" RadiusX="0.5" RadiusY="0.5"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Green LEDs -->
+                <GeometryDrawing Brush="#10B981">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <EllipseGeometry Center="18,6" RadiusX="1.2" RadiusY="1.2"/>
+                            <EllipseGeometry Center="18,16" RadiusX="1.2" RadiusY="1.2"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Gold link node -->
+                <GeometryDrawing Brush="#F59E0B">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="20,16" RadiusX="1" RadiusY="1"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 2. Upload (Rocket) -->
+    <DrawingImage x:Key="FluentUploadIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Rocket Thrust Flame -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#FBBF24" Offset="0"/>
+                            <GradientStop Color="#EF4444" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 12,16 Q 10,20 12,23 Q 14,20 12,16 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Rocket Wings -->
+                <GeometryDrawing Brush="#1D4ED8">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 7,13 L 5,17 L 8,16 Z M 17,13 L 19,17 L 16,16 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Rocket Fuselage -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#38BDF8" Offset="0"/>
+                            <GradientStop Color="#0284C7" Offset="0.6"/>
+                            <GradientStop Color="#0369A1" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 12,1 C 8,6 8,14 9,17 L 15,17 C 16,14 16,6 12,1 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Window Porthole -->
+                <GeometryDrawing Brush="#F0F9FF">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="12,8" RadiusX="2.2" RadiusY="2.2"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#0284C7">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="12,8" RadiusX="1.3" RadiusY="1.3"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 3. Download -->
+    <DrawingImage x:Key="FluentDownloadIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Tray / Cloud base -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#0284C7" Offset="0"/>
+                            <GradientStop Color="#0369A1" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 3,16 L 3,20 C 3,21.1 3.9,22 5,22 L 19,22 C 20.1,22 21,21.1 21,20 L 21,16 L 18,16 L 18,19 L 6,19 L 6,16 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Down Arrow -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#38BDF8" Offset="0"/>
+                            <GradientStop Color="#2563EB" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 10,2 L 14,2 L 14,10 L 17.5,10 L 12,16 L 6.5,10 L 10,10 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 4. New Folder -->
+    <DrawingImage x:Key="FluentNewFolderIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Folder Back Tab -->
+                <GeometryDrawing Brush="#D97706">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 2,5 C 2,3.9 2.9,3 4,3 L 9,3 L 11,5 L 18,5 C 19.1,5 20,5.9 20,7 L 20,10 L 2,10 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Folder Front Body -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#FBBF24" Offset="0"/>
+                            <GradientStop Color="#F59E0B" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="2,8,18,12" RadiusX="2" RadiusY="2"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Plus Badge (Emerald Green Circle with White Plus) -->
+                <GeometryDrawing Brush="#10B981">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="17,17" RadiusX="5" RadiusY="5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 16,14 L 18,14 L 18,16 L 20,16 L 20,18 L 18,18 L 18,20 L 16,20 L 16,18 L 14,18 L 14,16 L 16,16 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 5. Rename -->
+    <DrawingImage x:Key="FluentRenameIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Tag / Document Base -->
+                <GeometryDrawing Brush="#CBD5E1">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="3,4,13,16" RadiusX="2" RadiusY="2"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="4,5,11,14" RadiusX="1" RadiusY="1"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Text lines -->
+                <GeometryDrawing Brush="#94A3B8">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="6,8,7,1.5"/>
+                            <RectangleGeometry Rect="6,11,5,1.5"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Diagonal Pencil -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#F59E0B" Offset="0"/>
+                            <GradientStop Color="#D97706" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 19,5 L 21,7 L 13,18 L 10,18 L 10,15 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Pencil Tip -->
+                <GeometryDrawing Brush="#1E293B">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 10,18 L 11.5,17 L 10,15.5 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 6. Delete / Trash -->
+    <DrawingImage x:Key="FluentDeleteIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Trash Can Body -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#EF4444" Offset="0"/>
+                            <GradientStop Color="#DC2626" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 6,8 L 18,8 L 16.5,21 C 16.5,21.6 16,22 15.4,22 L 8.6,22 C 8,22 7.5,21.6 7.5,21 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Fluted detail lines -->
+                <GeometryDrawing Brush="#B91C1C">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="9.5,11,1.2,8" RadiusX="0.5" RadiusY="0.5"/>
+                            <RectangleGeometry Rect="13.3,11,1.2,8" RadiusX="0.5" RadiusY="0.5"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Trash Lid & Handle -->
+                <GeometryDrawing Brush="#B91C1C">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="4,6,16,2" RadiusX="1" RadiusY="1"/>
+                            <RectangleGeometry Rect="10,3.5,4,2.5" RadiusX="1" RadiusY="1"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 7. View / Edit -->
+    <DrawingImage x:Key="FluentEditIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Document Base -->
+                <GeometryDrawing Brush="#E2E8F0">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 4,2 L 14,2 L 19,7 L 19,21 C 19,21.6 18.6,22 18,22 L 4,22 C 3.4,22 3,21.6 3,21 L 3,3 C 3,2.4 3.4,2 4,2 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Folded Corner -->
+                <GeometryDrawing Brush="#94A3B8">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 14,2 L 14,7 L 19,7 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Text lines -->
+                <GeometryDrawing Brush="#0284C7">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="6,10,7,1.5"/>
+                            <RectangleGeometry Rect="6,13,8,1.5"/>
+                            <RectangleGeometry Rect="6,16,5,1.5"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Edit Pencil Accent -->
+                <GeometryDrawing Brush="#F59E0B">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 18,12 L 21,15 L 14,22 L 11,22 L 11,19 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 8. Explorer / Show in Explorer -->
+    <DrawingImage x:Key="FluentExplorerIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Windows Explorer Folder -->
+                <GeometryDrawing Brush="#0284C7">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 3,4 C 3,3.4 3.4,3 4,3 L 10,3 L 12,5 L 20,5 C 20.6,5 21,5.4 21,6 L 21,8 L 3,8 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#FDE047" Offset="0"/>
+                            <GradientStop Color="#EAB308" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="2,7,20,14" RadiusX="2" RadiusY="2"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Document Peeking Out -->
+                <GeometryDrawing Brush="#F0F9FF">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="7,4,10,6" RadiusX="1" RadiusY="1"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 9. Refresh -->
+    <DrawingImage x:Key="FluentRefreshIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#06B6D4" Offset="0"/>
+                            <GradientStop Color="#2563EB" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 12,3 C 16.5,3 20.1,6.3 20.9,10.6 L 18.9,11 C 18.2,7.7 15.4,5.2 12,5.2 C 8.6,5.2 5.8,7.7 5.1,11 L 3.1,10.6 C 3.9,6.3 7.5,3 12,3 Z M 12,21 C 7.5,21 3.9,17.7 3.1,13.4 L 5.1,13 C 5.8,16.3 8.6,18.8 12,18.8 C 15.4,18.8 18.2,16.3 18.9,13 L 20.9,13.4 C 20.1,17.7 16.5,21 12,21 Z M 19,4 L 22,8 L 17,8 Z M 5,20 L 2,16 L 7,16 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 10. Terminal (KiTTY) -->
+    <DrawingImage x:Key="FluentTerminalIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Slate Screen -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#1E293B" Offset="0"/>
+                            <GradientStop Color="#0F172A" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="2,3,20,18" RadiusX="2.5" RadiusY="2.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Title Bar Top Dots -->
+                <GeometryDrawing Brush="#EF4444">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="5,6" RadiusX="1" RadiusY="1"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#F59E0B">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="8,6" RadiusX="1" RadiusY="1"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#10B981">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="11,6" RadiusX="1" RadiusY="1"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Terminal Prompt >_ -->
+                <GeometryDrawing Brush="#06B6D4">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 6,11 L 9,14 L 6,17 L 7.5,17 L 10.5,14 L 7.5,11 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Cursor _ -->
+                <GeometryDrawing Brush="#10B981">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="12,15,4,2"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 11. Queue Badge (Blue Rocket Queue) -->
+    <DrawingImage x:Key="FluentQueueIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#0284C7" Offset="0"/>
+                            <GradientStop Color="#1D4ED8" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="12,12" RadiusX="10" RadiusY="10"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Rocket inside -->
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 12,5 C 10,8 10,12 11,14 L 13,14 C 14,12 14,8 12,5 Z M 9,12 L 8,14 L 10,14 Z M 15,12 L 16,14 L 14,14 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#FBBF24">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 12,14 Q 11,17 12,19 Q 13,17 12,14 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 12. Failed Badge (Red Cross) -->
+    <DrawingImage x:Key="FluentFailedIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#EF4444" Offset="0"/>
+                            <GradientStop Color="#B91C1C" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="12,12" RadiusX="10" RadiusY="10"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- White Cross -->
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 8,6.5 L 12,10.5 L 16,6.5 L 17.5,8 L 13.5,12 L 17.5,16 L 16,17.5 L 12,13.5 L 8,17.5 L 6.5,16 L 10.5,12 L 6.5,8 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 13. Completed Badge (Green Checkmark) -->
+    <DrawingImage x:Key="FluentCompletedIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#10B981" Offset="0"/>
+                            <GradientStop Color="#047857" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="12,12" RadiusX="10" RadiusY="10"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- White Checkmark -->
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 9.5,16.5 L 5.5,12.5 L 7,11 L 9.5,13.5 L 16.5,6.5 L 18,8 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 14. Direction: Upload Arrow (Emerald Green) -->
+    <DrawingImage x:Key="FluentArrowUpIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#ECFDF5">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="12,12" RadiusX="11" RadiusY="11"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
+                            <GradientStop Color="#059669" Offset="0"/>
+                            <GradientStop Color="#10B981" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 12,4 L 19,11 L 15,11 L 15,19 L 9,19 L 9,11 L 5,11 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 15. Direction: Download Arrow (Royal Blue) -->
+    <DrawingImage x:Key="FluentArrowDownIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#EFF6FF">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="12,12" RadiusX="11" RadiusY="11"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#0284C7" Offset="0"/>
+                            <GradientStop Color="#2563EB" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 12,20 L 5,13 L 9,13 L 9,5 L 15,5 L 15,13 L 19,13 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 16. GitHub Icon -->
+    <DrawingImage x:Key="FluentGitHubIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#1E293B">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 12,2 C 6.5,2 2,6.5 2,12 C 2,16.4 4.9,20.1 8.8,21.4 C 9.3,21.5 9.5,21.2 9.5,20.9 L 9.5,19.2 C 6.7,19.8 6.1,17.9 6.1,17.9 C 5.7,16.8 5,16.5 5,16.5 C 4.1,15.9 5.1,15.9 5.1,15.9 C 6.1,16 6.6,17 6.6,17 C 7.5,18.5 8.9,18.1 9.5,17.8 C 9.6,17.2 9.8,16.7 10.1,16.4 C 7.9,16.1 5.5,15.3 5.5,11.5 C 5.5,10.4 5.9,9.5 6.5,8.8 C 6.4,8.5 6.1,7.5 6.6,6.2 C 6.6,6.2 7.5,5.9 9.5,7.3 C 10.3,7.1 11.2,7 12,7 C 12.8,7 13.7,7.1 14.5,7.3 C 16.5,5.9 17.4,6.2 17.4,6.2 C 17.9,7.5 17.6,8.5 17.5,8.8 C 18.1,9.5 18.5,10.4 18.5,11.5 C 18.5,15.3 16.1,16.1 13.9,16.4 C 14.3,16.7 14.6,17.4 14.6,18.4 L 14.6,20.9 C 14.6,21.2 14.8,21.5 15.3,21.4 C 19.2,20.1 22,16.4 22,12 C 22,6.5 17.5,2 12,2 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 17. Web / Globe -->
+    <DrawingImage x:Key="FluentWebIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#38BDF8" Offset="0"/>
+                            <GradientStop Color="#0284C7" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="12,12" RadiusX="10" RadiusY="10"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing>
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#F0F9FF" Thickness="1.2"/>
+                    </GeometryDrawing.Pen>
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <LineGeometry StartPoint="2,12" EndPoint="22,12"/>
+                            <EllipseGeometry Center="12,12" RadiusX="5" RadiusY="10"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 18. Info / About -->
+    <DrawingImage x:Key="FluentInfoIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#0284C7" Offset="0"/>
+                            <GradientStop Color="#0369A1" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="12,12" RadiusX="10" RadiusY="10"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- i text -->
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <EllipseGeometry Center="12,7" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="10.8,10,2.4,7" RadiusX="1" RadiusY="1"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 19. Disconnect -->
+    <DrawingImage x:Key="FluentDisconnectIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Power / Disconnect in Crimson -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#EF4444" Offset="0"/>
+                            <GradientStop Color="#DC2626" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 11,2 L 13,2 L 13,11 L 11,11 Z M 7.05,5.65 L 8.45,7.05 C 6.95,8.25 6,10.05 6,12 C 6,15.3 8.7,18 12,18 C 15.3,18 18,15.3 18,12 C 18,10.05 17.05,8.25 15.55,7.05 L 16.95,5.65 C 18.85,7.25 20,9.5 20,12 C 20,16.4 16.4,20 12,20 C 7.6,20 4,16.4 4,12 C 4,9.5 5.15,7.25 7.05,5.65 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 20. Reconnect / Sync -->
+    <DrawingImage x:Key="FluentReconnectIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#10B981" Offset="0"/>
+                            <GradientStop Color="#0284C7" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 12,4 C 16.4,4 20,7.6 20,12 L 17.5,12 C 17.5,9 15,6.5 12,6.5 C 9,6.5 6.5,9 6.5,12 L 9,12 L 5.5,16 L 2,12 L 4.5,12 C 4.5,7.6 8.1,4 12,4 Z M 12,20 C 7.6,20 4,16.4 4,12 L 6.5,12 C 6.5,15 9,17.5 12,17.5 C 15,17.5 17.5,15 17.5,12 L 15,12 L 18.5,8 L 22,12 L 19.5,12 C 19.5,16.4 15.9,20 12,20 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 21. Check for Updates -->
+    <DrawingImage x:Key="FluentUpdateIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Cloud -->
+                <GeometryDrawing Brush="#38BDF8">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 19,10.5 C 19,7.5 16.5,5 13.5,5 C 11.2,5 9.2,6.4 8.4,8.5 C 5.9,9 4,11.2 4,14 C 4,17.3 6.7,20 10,20 L 19,20 C 21.2,20 23,18.2 23,16 C 23,13.9 21.3,12.1 19,12.1 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Arrow pointing up/update -->
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 13.5,9 L 17.5,13 L 15,13 L 15,17 L 12,17 L 12,13 L 9.5,13 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 22. Computer / Local Machine -->
+    <DrawingImage x:Key="FluentComputerIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Monitor Screen Bezel -->
+                <GeometryDrawing Brush="#1E293B">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="2,2,20,14" RadiusX="2" RadiusY="2"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Monitor Display Surface -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#38BDF8" Offset="0"/>
+                            <GradientStop Color="#0284C7" Offset="0.7"/>
+                            <GradientStop Color="#0369A1" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="3.5,3.5,17,11" RadiusX="1" RadiusY="1"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Stand Neck -->
+                <GeometryDrawing Brush="#64748B">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="10.5,16,3,4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Stand Base -->
+                <GeometryDrawing Brush="#475569">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="7,20,10,2" RadiusX="1" RadiusY="1"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 23. Save Disk -->
+    <DrawingImage x:Key="FluentSaveIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#0284C7" Offset="0"/>
+                            <GradientStop Color="#0369A1" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 3,2 L 18,2 L 21,5 L 21,21 C 21,21.6 20.6,22 20,22 L 4,22 C 3.4,22 3,21.6 3,21 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- White Label -->
+                <GeometryDrawing Brush="#F8FAFC">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="6,12,12,8" RadiusX="1" RadiusY="1"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#CBD5E1">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="8,14,8,1"/>
+                            <RectangleGeometry Rect="8,17,8,1"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Silver Shutter -->
+                <GeometryDrawing Brush="#E2E8F0">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="7,2,10,6" RadiusX="0.5" RadiusY="0.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#0369A1">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="12,3,3,4"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 24. Connect / Plug -->
+    <DrawingImage x:Key="FluentConnectIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#10B981" Offset="0"/>
+                            <GradientStop Color="#059669" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="12,12" RadiusX="10" RadiusY="10"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- White Plug & Lightning -->
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 13,3 L 7,13 L 12,13 L 11,21 L 17,11 L 12,11 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+</ResourceDictionary>

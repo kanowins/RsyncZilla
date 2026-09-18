@@ -86,7 +86,7 @@
                     Background="#0078D7" Foreground="#FFFFFF" BorderBrush="#005A9E"
                     Padding="16,5" FontWeight="SemiBold" Cursor="Hand">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="💾" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="12"/>
+                    <Image Source="{StaticResource FluentSaveIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
                     <TextBlock Text="Save Site" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>

@@ -44,7 +44,7 @@ namespace RsyncZilla.Services
             }
         }
 
-        public string UpdateBannerText => string.IsNullOrWhiteSpace(LatestVersion) ? "🚀 Update Available!" : $"🚀 Update Available ({LatestVersion})";
+        public string UpdateBannerText => string.IsNullOrWhiteSpace(LatestVersion) ? "Update Available!" : $"Update Available ({LatestVersion})";
 
         private string _releaseNotes = string.Empty;
         public string ReleaseNotes

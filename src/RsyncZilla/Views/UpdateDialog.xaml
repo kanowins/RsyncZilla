@@ -20,7 +20,7 @@
         <!-- 0. Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="🚀" FontSize="26" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                <Image Source="{StaticResource FluentUpdateIcon}" Width="36" Height="36" Margin="0,0,14,0" VerticalAlignment="Center"/>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock x:Name="TxtTitle" Text="A new version of RsyncZilla is available!" FontSize="16" FontWeight="Bold" Foreground="#005A9E"/>
                     <TextBlock x:Name="TxtVersions" Text="Installed: 1.0.0  |  Latest: 1.1.0" Foreground="#555555" Margin="0,2,0,0"/>
@@ -44,9 +44,14 @@
         <!-- 3. Action Buttons -->
         <Grid Grid.Row="3">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <Button x:Name="BtnUpdateNow" Content="⚡ Update Now (Install &amp; Restart)" Padding="14,7"
+                <Button x:Name="BtnUpdateNow" Padding="14,7"
                         Background="#0078D7" Foreground="#FFFFFF" BorderBrush="#005A9E" BorderThickness="1"
-                        FontWeight="Bold" Cursor="Hand" Click="UpdateNowButton_Click"/>
+                        FontWeight="Bold" Cursor="Hand" Click="UpdateNowButton_Click">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="{StaticResource FluentUpdateIcon}" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Update Now (Install &amp; Restart)" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
                 <Button x:Name="BtnViewGitHub" Content="View on GitHub" Margin="8,0,0,0" Padding="12,7"
                         Background="#FFFFFF" Foreground="#333333" BorderBrush="#CCCCCC" BorderThickness="1"

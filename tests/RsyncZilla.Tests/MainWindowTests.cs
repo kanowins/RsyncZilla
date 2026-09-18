@@ -20,6 +20,13 @@ namespace RsyncZilla.Tests
                 try
                 {
                     var app = System.Windows.Application.Current ?? new System.Windows.Application();
+                    if (!app.Resources.MergedDictionaries.Any(d => d.Source?.OriginalString?.Contains("FluentIcons.xaml") == true))
+                    {
+                        app.Resources.MergedDictionaries.Add(new System.Windows.ResourceDictionary
+                        {
+                            Source = new Uri("pack://application:,,,/RsyncZilla;component/Resources/FluentIcons.xaml", UriKind.Absolute)
+                        });
+                    }
 
                     var window = new MainWindow();
                     Assert.NotNull(window);

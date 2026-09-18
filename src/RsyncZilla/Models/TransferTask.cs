@@ -82,6 +82,8 @@ namespace RsyncZilla.Models
                 if (SetProperty(ref _direction, value))
                 {
                     OnPropertyChanged(nameof(DirectionIcon));
+                    OnPropertyChanged(nameof(IsUpload));
+                    OnPropertyChanged(nameof(DirectionText));
                     OnPropertyChanged(nameof(DisplaySource));
                     OnPropertyChanged(nameof(DisplayDestination));
                 }
@@ -371,6 +373,8 @@ namespace RsyncZilla.Models
         };
 
         public string DirectionIcon => Direction == TransferDirection.Upload ? "⬆️ Upload" : "⬇️ Download";
+        public bool IsUpload => Direction == TransferDirection.Upload;
+        public string DirectionText => IsUpload ? "Upload" : "Download";
 
         public string DisplaySource
         {

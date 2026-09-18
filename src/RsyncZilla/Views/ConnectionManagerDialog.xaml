@@ -46,7 +46,7 @@
                         Background="#0078D7" Foreground="#FFFFFF" BorderBrush="#005A9E"
                         Padding="12,5" FontWeight="SemiBold" Cursor="Hand" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="➕" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
+                        <Image Source="{StaticResource FluentNewFolderIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock Text="New Site" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -55,7 +55,7 @@
                         Background="#F5F5F5" Foreground="#C62828" BorderBrush="#CCCCCC"
                         Padding="12,5" FontWeight="SemiBold" Cursor="Hand">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="🗑️" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="12"/>
+                        <Image Source="{StaticResource FluentDeleteIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Delete" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -69,7 +69,7 @@
                         Background="#0078D7" Foreground="#FFFFFF" BorderBrush="#005A9E"
                         Padding="16,5" FontWeight="SemiBold" Cursor="Hand">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="🔌" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="12"/>
+                        <Image Source="{StaticResource FluentConnectIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Connect" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>

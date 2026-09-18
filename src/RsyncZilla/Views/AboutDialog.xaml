@@ -98,7 +98,7 @@
                 </GroupBox>
 
                 <!-- Sumalab Games Group -->
-                <GroupBox Header="Created by Sumalab 🎮" Padding="10,8" 
+                <GroupBox Header="Created by Sumalab" Padding="10,8" 
                           Background="#FFFFFF" BorderBrush="#D0D0D0" FontWeight="SemiBold">
                     <StackPanel TextElement.FontWeight="Normal" TextElement.FontSize="12">
                         <TextBlock Text="Support the development of RsyncZilla by checking out our games:" 

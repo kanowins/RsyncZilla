@@ -473,33 +473,84 @@
         <Menu Grid.Row="0" Background="#F8F9FA" BorderBrush="#D0D4DC" BorderThickness="0,0,0,1" Padding="4,2">
             <!-- File Menu -->
             <MenuItem Header="_File">
-                <MenuItem Header="_New Connection / Tab" Command="{Binding NewTabCommand}" InputGestureText="Ctrl+T"/>
-                <MenuItem Header="_Site Manager..." Command="{Binding OpenSiteManagerCommand}" InputGestureText="Ctrl+S"/>
+                <MenuItem Header="_New Connection / Tab" Command="{Binding NewTabCommand}" InputGestureText="Ctrl+T">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentNewFolderIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Site Manager..." Command="{Binding OpenSiteManagerCommand}" InputGestureText="Ctrl+S">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentSitesIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
-                <MenuItem Header="_Disconnect" Command="{Binding DisconnectCommand}" InputGestureText="Ctrl+D"/>
-                <MenuItem Header="_Reconnect" Command="{Binding ReconnectCommand}" InputGestureText="Ctrl+R"/>
+                <MenuItem Header="_Disconnect" Command="{Binding DisconnectCommand}" InputGestureText="Ctrl+D">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentDisconnectIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Reconnect" Command="{Binding ReconnectCommand}" InputGestureText="Ctrl+R">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentReconnectIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
                 <MenuItem Header="E_xit" Command="{Binding ExitCommand}" InputGestureText="Alt+F4"/>
             </MenuItem>
 
             <!-- Actions / Transfers Menu -->
             <MenuItem Header="_Actions">
-                <MenuItem Header="_Upload Selected" Command="{Binding UploadSelectedCommand}"/>
-                <MenuItem Header="_Download Selected" Command="{Binding DownloadSelectedCommand}"/>
+                <MenuItem Header="_Upload Selected" Command="{Binding UploadSelectedCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentUploadIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Download Selected" Command="{Binding DownloadSelectedCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentDownloadIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
-                <MenuItem Header="New _Local Directory..." Command="{Binding LocalBrowser.CreateDirectoryCommand}"/>
-                <MenuItem Header="New _Remote Directory..." Command="{Binding RemoteBrowser.CreateDirectoryCommand}"/>
+                <MenuItem Header="New _Local Directory..." Command="{Binding LocalBrowser.CreateDirectoryCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentNewFolderIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="New _Remote Directory..." Command="{Binding RemoteBrowser.CreateDirectoryCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentNewFolderIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
-                <MenuItem Header="🔄 _Refresh All Panels" Command="{Binding RefreshAllCommand}" InputGestureText="F5"/>
-                <MenuItem Header="Refresh _Local Panel" Command="{Binding LocalBrowser.RefreshCommand}"/>
-                <MenuItem Header="Refresh _Remote Panel" Command="{Binding RemoteBrowser.RefreshCommand}"/>
+                <MenuItem Header="_Refresh All Panels" Command="{Binding RefreshAllCommand}" InputGestureText="F5">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentRefreshIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Refresh _Local Panel" Command="{Binding LocalBrowser.RefreshCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentRefreshIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Refresh _Remote Panel" Command="{Binding RemoteBrowser.RefreshCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentRefreshIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
-                <MenuItem Header="💻 Open KiTTY _Terminal" Command="{Binding OpenRemoteTerminalCommand}" CommandParameter="{x:Null}"/>
+                <MenuItem Header="Open KiTTY _Terminal" Command="{Binding OpenRemoteTerminalCommand}" CommandParameter="{x:Null}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentTerminalIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
 
             <!-- Transfer Menu (FileZilla Style) -->
             <MenuItem Header="_Transfer">
                 <MenuItem Header="_Overwrite Action">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentReconnectIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
                     <MenuItem Header="Overwrite if size or date differ"
                               IsCheckable="True"
                               IsChecked="{Binding IsOverwriteIfDifferent, Mode=OneWay}"
@@ -525,21 +576,53 @@
 
             <!-- View Menu -->
             <MenuItem Header="_View">
-                <MenuItem Header="Clear _Completed Transfers" Command="{Binding ClearCompletedCommand}"/>
-                <MenuItem Header="Clear _Failed Transfers" Command="{Binding ClearFailedCommand}"/>
-                <MenuItem Header="Retry _All Failed Transfers" Command="{Binding RetryAllFailedCommand}"/>
+                <MenuItem Header="Clear _Completed Transfers" Command="{Binding ClearCompletedCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentCompletedIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Clear _Failed Transfers" Command="{Binding ClearFailedCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentFailedIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Retry _All Failed Transfers" Command="{Binding RetryAllFailedCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentRefreshIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
-                <MenuItem Header="Clear Server &amp; rsync _Log" Command="{Binding ClearLogsCommand}"/>
+                <MenuItem Header="Clear Server &amp; rsync _Log" Command="{Binding ClearLogsCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentDeleteIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
 
             <!-- Help Menu -->
             <MenuItem Header="_Help">
-                <MenuItem Header="Check for _Updates..." Command="{Binding CheckForUpdatesCommand}"/>
+                <MenuItem Header="Check for _Updates..." Command="{Binding CheckForUpdatesCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentUpdateIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
-                <MenuItem Header="🌐 RsyncZilla on GitHub..." Command="{Binding OpenUrlCommand}" CommandParameter="https://github.com/kanowins/RsyncZilla"/>
-                <MenuItem Header="🎮 Developed by Sumalab..." Command="{Binding OpenUrlCommand}" CommandParameter="https://sumalab.com"/>
+                <MenuItem Header="RsyncZilla on GitHub..." Command="{Binding OpenUrlCommand}" CommandParameter="https://github.com/kanowins/RsyncZilla">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentGitHubIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Developed by Sumalab..." Command="{Binding OpenUrlCommand}" CommandParameter="https://sumalab.com">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentWebIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
-                <MenuItem Header="_About RsyncZilla..." Command="{Binding ShowAboutCommand}"/>
+                <MenuItem Header="_About RsyncZilla..." Command="{Binding ShowAboutCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentInfoIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
 
             <!-- DYNAMIC UPDATE NOTIFICATION ITEM (Appears automatically when GitHub release is newer) -->
@@ -548,7 +631,11 @@
                       Visibility="{Binding UpdateService.IsUpdateAvailable, Converter={StaticResource BoolToVisConverter}}"
                       Background="#FFF3CD" Foreground="#856404" BorderBrush="#FFEEBA" BorderThickness="1"
                       FontWeight="Bold" Margin="12,0,0,0" Cursor="Hand"
-                      ToolTip="A new version of RsyncZilla is available! Click to view release notes."/>
+                      ToolTip="A new version of RsyncZilla is available! Click to view release notes.">
+                <MenuItem.Icon>
+                    <Image Source="{StaticResource FluentUpdateIcon}" Width="16" Height="16"/>
+                </MenuItem.Icon>
+            </MenuItem>
         </Menu>
 
         <!-- 1. QUICK CONNECT BAR (WINDOWS LIGHT) -->
@@ -609,7 +696,7 @@
                             Style="{StaticResource SecondaryButtonStyle}"
                             Padding="8,3" Height="28">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="📂" Margin="0,0,4,0" VerticalAlignment="Center" FontSize="12"/>
+                            <Image Source="{StaticResource FluentSitesIcon}" Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Sites" VerticalAlignment="Center" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Button>
@@ -697,8 +784,8 @@
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
-                                <TextBlock Text="💻" FontSize="13" Margin="0,0,3,0"/>
-                                <TextBlock Text="Local:" FontWeight="Bold" Foreground="#0066CC"/>
+                                <Image Source="{StaticResource FluentComputerIcon}" Width="15" Height="15" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Local:" FontWeight="Bold" Foreground="#0066CC" VerticalAlignment="Center"/>
                             </StackPanel>
 
                             <TextBox Grid.Column="1" x:Name="LocalPathTextBox" 
@@ -714,13 +801,13 @@
                             <Button Grid.Column="3" ToolTip="Refresh directory" 
                                     Command="{Binding LocalBrowser.RefreshCommand}"
                                     Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0" Margin="0,0,4,0">
-                                <ContentControl ContentTemplate="{StaticResource RefreshIconTemplate}" Focusable="False"/>
+                                <Image Source="{StaticResource FluentRefreshIcon}" Width="15" Height="15"/>
                             </Button>
 
                             <Button Grid.Column="4" ToolTip="Show in Windows Explorer" 
                                     Command="{Binding ShowInExplorerCommand}" CommandParameter="{Binding LocalBrowser.SelectedItem}"
                                     Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0">
-                                <TextBlock Text="📂" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Image Source="{StaticResource FluentExplorerIcon}" Width="15" Height="15"/>
                             </Button>
                         </Grid>
 
@@ -741,16 +828,44 @@
                                   Drop="LocalDataGrid_Drop">
                             <DataGrid.ContextMenu>
                                 <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
-                                    <MenuItem Header="🚀 Upload to server with rsync" Command="{Binding UploadSelectedCommand}"/>
+                                    <MenuItem Header="Upload to server with rsync" Command="{Binding UploadSelectedCommand}">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentUploadIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
                                     <Separator Background="#E0E0E0"/>
-                                    <MenuItem Header="📝 Open / Edit (F4)" Command="{Binding OpenLocalFileCommand}" CommandParameter="{Binding LocalBrowser.SelectedItem}"/>
-                                    <MenuItem Header="📂 Show in Explorer" Command="{Binding ShowInExplorerCommand}" CommandParameter="{Binding LocalBrowser.SelectedItem}"/>
+                                    <MenuItem Header="Open / Edit (F4)" Command="{Binding OpenLocalFileCommand}" CommandParameter="{Binding LocalBrowser.SelectedItem}">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentEditIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Show in Explorer" Command="{Binding ShowInExplorerCommand}" CommandParameter="{Binding LocalBrowser.SelectedItem}">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentExplorerIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
                                     <Separator Background="#E0E0E0"/>
-                                    <MenuItem Header="📁 New local folder..." Click="NewLocalFolder_Click"/>
-                                    <MenuItem Header="✏️ Rename..." Click="RenameLocalItem_Click"/>
-                                    <MenuItem Header="🗑️ Delete file/folder" Click="DeleteLocalItem_Click"/>
+                                    <MenuItem Header="New local folder..." Click="NewLocalFolder_Click">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentNewFolderIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Rename..." Click="RenameLocalItem_Click">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentRenameIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Delete file/folder" Click="DeleteLocalItem_Click">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentDeleteIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
                                     <Separator Background="#E0E0E0"/>
-                                    <MenuItem Header="🔄 Refresh list" Command="{Binding LocalBrowser.RefreshCommand}"/>
+                                    <MenuItem Header="Refresh list" Command="{Binding LocalBrowser.RefreshCommand}">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentRefreshIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                             <DataGrid.Columns>
@@ -787,14 +902,14 @@
                             Command="{Binding UploadSelectedCommand}"
                             Style="{StaticResource SecondaryButtonStyle}"
                             Width="44" Height="36" Padding="0" Margin="0,0,0,8">
-                        <TextBlock Text="⏩" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Image Source="{StaticResource FluentUploadIcon}" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
 
                     <Button ToolTip="Download selected items from server using rsync (Remote ➔ Local)"
                             Command="{Binding DownloadSelectedCommand}"
                             Style="{StaticResource SecondaryButtonStyle}"
                             Width="44" Height="36" Padding="0">
-                        <TextBlock Text="⏪" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Image Source="{StaticResource FluentDownloadIcon}" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                 </StackPanel>
 
@@ -819,8 +934,8 @@
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
-                                <TextBlock Text="🌐" FontSize="13" Margin="0,0,3,0"/>
-                                <TextBlock Text="Remote (SFTP):" FontWeight="Bold" Foreground="#0E7036"/>
+                                <Image Source="{StaticResource FluentWebIcon}" Width="15" Height="15" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Remote (SFTP):" FontWeight="Bold" Foreground="#0E7036" VerticalAlignment="Center"/>
                             </StackPanel>
 
                             <TextBox Grid.Column="1" x:Name="RemotePathTextBox"
@@ -830,24 +945,24 @@
                                      Margin="0,0,4,0"/>
 
                             <Button Grid.Column="2" ToolTip="Up one level"
-                                    Command="{Binding RemoteBrowser.NavigateUpCommand}"
-                                    IsEnabled="{Binding IsConnected}"
-                                    Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0" Margin="0,0,4,0">
+                                     Command="{Binding RemoteBrowser.NavigateUpCommand}"
+                                     IsEnabled="{Binding IsConnected}"
+                                     Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0" Margin="0,0,4,0">
                                 <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"/>
                             </Button>
 
                             <Button Grid.Column="3" ToolTip="Refresh remote directory"
-                                    Command="{Binding RemoteBrowser.RefreshCommand}"
-                                    IsEnabled="{Binding IsConnected}"
-                                    Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0" Margin="0,0,4,0">
-                                <ContentControl ContentTemplate="{StaticResource RefreshIconTemplate}" Focusable="False"/>
+                                     Command="{Binding RemoteBrowser.RefreshCommand}"
+                                     IsEnabled="{Binding IsConnected}"
+                                     Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0" Margin="0,0,4,0">
+                                <Image Source="{StaticResource FluentRefreshIcon}" Width="15" Height="15"/>
                             </Button>
 
                             <Button Grid.Column="4" ToolTip="Open remote terminal at this directory (Ctrl+T)"
-                                    Command="{Binding OpenRemoteTerminalCommand}"
-                                    IsEnabled="{Binding IsConnected}"
-                                    Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0">
-                                <ContentControl ContentTemplate="{StaticResource TerminalIconTemplate}" Focusable="False"/>
+                                     Command="{Binding OpenRemoteTerminalCommand}"
+                                     IsEnabled="{Binding IsConnected}"
+                                     Style="{StaticResource SecondaryButtonStyle}" Width="34" Height="26" Padding="0">
+                                <Image Source="{StaticResource FluentTerminalIcon}" Width="15" Height="15"/>
                             </Button>
                         </Grid>
 
@@ -868,16 +983,44 @@
                                   Drop="RemoteDataGrid_Drop">
                             <DataGrid.ContextMenu>
                                 <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
-                                    <MenuItem Header="🚀 Download to local with rsync" Command="{Binding DownloadSelectedCommand}"/>
+                                    <MenuItem Header="Download to local with rsync" Command="{Binding DownloadSelectedCommand}">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentDownloadIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
                                     <Separator Background="#E0E0E0"/>
-                                    <MenuItem Header="📝 View / Edit (F4)" Command="{Binding EditRemoteFileCommand}" CommandParameter="{Binding RemoteBrowser.SelectedItem}"/>
-                                    <MenuItem Header="💻 Open terminal here (Ctrl+T)" Command="{Binding OpenRemoteTerminalCommand}" CommandParameter="{Binding RemoteBrowser.SelectedItem}"/>
+                                    <MenuItem Header="View / Edit (F4)" Command="{Binding EditRemoteFileCommand}" CommandParameter="{Binding RemoteBrowser.SelectedItem}">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentEditIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Open terminal here (Ctrl+T)" Command="{Binding OpenRemoteTerminalCommand}" CommandParameter="{Binding RemoteBrowser.SelectedItem}">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentTerminalIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
                                     <Separator Background="#E0E0E0"/>
-                                    <MenuItem Header="📁 New remote folder..." Click="NewRemoteFolder_Click"/>
-                                    <MenuItem Header="✏️ Rename..." Click="RenameRemoteItem_Click"/>
-                                    <MenuItem Header="🗑️ Delete remote item" Click="DeleteRemoteItem_Click"/>
+                                    <MenuItem Header="New remote folder..." Click="NewRemoteFolder_Click">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentNewFolderIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Rename..." Click="RenameRemoteItem_Click">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentRenameIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Delete remote item" Click="DeleteRemoteItem_Click">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentDeleteIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
                                     <Separator Background="#E0E0E0"/>
-                                    <MenuItem Header="🔄 Refresh list" Command="{Binding RemoteBrowser.RefreshCommand}"/>
+                                    <MenuItem Header="Refresh list" Command="{Binding RemoteBrowser.RefreshCommand}">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentRefreshIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                             <DataGrid.Columns>
@@ -916,7 +1059,13 @@
         <!-- 4. BOTTOM TABS: TRANSFERS, FAILED, COMPLETED & LOGS -->
         <TabControl Grid.Row="4" Margin="8,4,8,4">
             <!-- TAB 1: ACTIVE & PENDING TRANSFERS QUEUE -->
-            <TabItem Header="{Binding ActiveTabHeader}">
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="{StaticResource FluentQueueIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ActiveTabHeader}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <Grid Background="#FFFFFF">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -951,7 +1100,19 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
-                            <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTemplateColumn Header="Direction" Width="105">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
+                                            <Image Source="{StaticResource FluentArrowUpIcon}" Width="14" Height="14" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsUpload, Converter={StaticResource BoolToVisConverter}}"/>
+                                            <Image Source="{StaticResource FluentArrowDownIcon}" Width="14" Height="14" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsUpload, Converter={StaticResource InverseBoolToVisConverter}}"/>
+                                            <TextBlock Text="{Binding DirectionText}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTemplateColumn Header="File / Folder" Width="260">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -986,7 +1147,7 @@
                         <Button Command="{Binding CancelAllTransfersCommand}" 
                                 Style="{StaticResource SecondaryButtonStyle}" Foreground="#C62828" FontWeight="SemiBold" Padding="10,4">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="⏹" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
+                                <Image Source="{StaticResource FluentDeleteIcon}" Width="14" Height="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Cancel all (active &amp; pending)" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -995,7 +1156,13 @@
             </TabItem>
 
             <!-- TAB 2: FAILED TRANSFERS WITH RETRY -->
-            <TabItem Header="{Binding FailedTabHeader}">
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="{StaticResource FluentFailedIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding FailedTabHeader}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <Grid Background="#FFFFFF">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -1030,7 +1197,19 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
-                            <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTemplateColumn Header="Direction" Width="105">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
+                                            <Image Source="{StaticResource FluentArrowUpIcon}" Width="14" Height="14" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsUpload, Converter={StaticResource BoolToVisConverter}}"/>
+                                            <Image Source="{StaticResource FluentArrowDownIcon}" Width="14" Height="14" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsUpload, Converter={StaticResource InverseBoolToVisConverter}}"/>
+                                            <TextBlock Text="{Binding DirectionText}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTemplateColumn Header="File" Width="240">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -1054,14 +1233,14 @@
                         <Button Command="{Binding RetrySelectedFailedCommand}" 
                                 Style="{StaticResource SecondaryButtonStyle}" Padding="10,4" Margin="0,0,6,0">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="🔄" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
+                                <Image Source="{StaticResource FluentRefreshIcon}" Width="13" Height="13" Margin="0,0,5,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Retry selected" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Command="{Binding RetryAllFailedCommand}" 
                                 Style="{StaticResource SecondaryButtonStyle}" Padding="10,4" Margin="0,0,6,0">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="🔄" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
+                                <Image Source="{StaticResource FluentRefreshIcon}" Width="13" Height="13" Margin="0,0,5,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Retry all failed" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -1072,7 +1251,13 @@
             </TabItem>
 
             <!-- TAB 3: COMPLETED TRANSFERS -->
-            <TabItem Header="{Binding CompletedTabHeader}">
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="{StaticResource FluentCompletedIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding CompletedTabHeader}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <Grid Background="#FFFFFF">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -1107,7 +1292,19 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
-                            <DataGridTextColumn Header="Direction" Binding="{Binding DirectionIcon}" Width="90" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTemplateColumn Header="Direction" Width="105">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
+                                            <Image Source="{StaticResource FluentArrowUpIcon}" Width="14" Height="14" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsUpload, Converter={StaticResource BoolToVisConverter}}"/>
+                                            <Image Source="{StaticResource FluentArrowDownIcon}" Width="14" Height="14" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsUpload, Converter={StaticResource InverseBoolToVisConverter}}"/>
+                                            <TextBlock Text="{Binding DirectionText}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTemplateColumn Header="File" Width="240">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -1136,7 +1333,13 @@
             </TabItem>
 
             <!-- TAB 4: SERVER & RSYNC CONSOLE LOG -->
-            <TabItem Header="📜 Server &amp; rsync Log">
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="{StaticResource FluentTerminalIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Server &amp; rsync Log" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <Grid Background="#FAFAFA">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>

@@ -128,9 +128,9 @@ namespace RsyncZilla.ViewModels
         public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
         public string FooterInfo => $"RsyncZilla v{AppVersion} | Engine: rsync 3.3.0 portable (Cygwin64) + SSH.NET";
 
-        public string ActiveTabHeader => $"🚀 Queue ({ActiveTransfers.Count(t => !t.IsChild)})";
-        public string FailedTabHeader => $"❌ Failed ({FailedTransfers.Count(t => !t.IsChild)})";
-        public string CompletedTabHeader => $"✅ Completed ({CompletedTransfers.Count(t => !t.IsChild)})";
+        public string ActiveTabHeader => $"Queue ({ActiveTransfers.Count(t => !t.IsChild)})";
+        public string FailedTabHeader => $"Failed ({FailedTransfers.Count(t => !t.IsChild)})";
+        public string CompletedTabHeader => $"Completed ({CompletedTransfers.Count(t => !t.IsChild)})";
 
         public ObservableCollection<TransferTask> ActiveTransfers { get; } = new();
         public ObservableCollection<TransferTask> CompletedTransfers { get; } = new();
