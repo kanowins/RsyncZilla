@@ -51,21 +51,56 @@
             <Setter Property="Height" Value="20"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border Background="Transparent" SnapsToDevicePixels="True">
-                            <TextBlock x:Name="Arrow" Text="▶" FontSize="10" Foreground="#555555"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="4" 
+                                Width="20" Height="20" SnapsToDevicePixels="True"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Path x:Name="Chevron" 
+                                  Data="M 7,4 L 13,10 L 7,16" 
+                                  Stroke="#64748B" 
+                                  StrokeThickness="2" 
+                                  StrokeStartLineCap="Round" 
+                                  StrokeEndLineCap="Round" 
+                                  StrokeLineJoin="Round" 
+                                  HorizontalAlignment="Center" 
+                                  VerticalAlignment="Center"
+                                  SnapsToDevicePixels="True"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Arrow" Property="Text" Value="▼"/>
-                                <Setter TargetName="Arrow" Property="Foreground" Value="#0078D7"/>
+                                <Setter TargetName="Chevron" Property="Data" Value="M 4,7 L 10,13 L 16,7"/>
+                                <Setter TargetName="Chevron" Property="Stroke" Value="#0078D4"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Arrow" Property="Foreground" Value="#005A9E"/>
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#E2E8F0"/>
+                                <Setter TargetName="Chevron" Property="Stroke" Value="#0078D4"/>
                             </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsChecked" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#DBEAFE"/>
+                                <Setter TargetName="Chevron" Property="Stroke" Value="#005A9E"/>
+                            </MultiTrigger>
+
+                            <!-- Selected row: Arrow is white so it is clearly visible against the blue selection background -->
+                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                <Setter TargetName="Chevron" Property="Stroke" Value="#FFFFFF"/>
+                            </DataTrigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True"/>
+                                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                </MultiDataTrigger.Conditions>
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#40FFFFFF"/>
+                                <Setter TargetName="Chevron" Property="Stroke" Value="#FFFFFF"/>
+                            </MultiDataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -309,9 +344,38 @@
             <Setter Property="Margin" Value="4,0"/>
         </Style>
 
+        <!-- Status Column Template with Fluent UI Color Icons -->
+        <DataTemplate x:Key="TransferStatusCellTemplate">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0">
+                <Image x:Name="StatusIcon" Source="{StaticResource FluentPendingIcon}" 
+                       Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                <TextBlock x:Name="StatusLabel" Text="{Binding StatusText}" 
+                           FontWeight="Medium" VerticalAlignment="Center"/>
+            </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static models:TransferStatus.Pending}">
+                    <Setter TargetName="StatusIcon" Property="Source" Value="{StaticResource FluentPendingIcon}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static models:TransferStatus.Running}">
+                    <Setter TargetName="StatusIcon" Property="Source" Value="{StaticResource FluentRunningIcon}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static models:TransferStatus.Completed}">
+                    <Setter TargetName="StatusIcon" Property="Source" Value="{StaticResource FluentCompletedIcon}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static models:TransferStatus.Failed}">
+                    <Setter TargetName="StatusIcon" Property="Source" Value="{StaticResource FluentFailedIcon}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static models:TransferStatus.Cancelled}">
+                    <Setter TargetName="StatusIcon" Property="Source" Value="{StaticResource FluentDisconnectIcon}"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
         <Style TargetType="DataGridCell">
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -321,7 +385,9 @@
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 Padding="{TemplateBinding Padding}"
                                 SnapsToDevicePixels="True">
-                            <ContentPresenter VerticalAlignment="Center" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                         </Border>
                     </ControlTemplate>
                 </Setter.Value>
@@ -1086,20 +1152,28 @@
                             </Style>
                         </DataGrid.RowStyle>
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Width="28">
+                            <DataGridTemplateColumn Width="32">
+                                <DataGridTemplateColumn.CellStyle>
+                                    <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                    </Style>
+                                </DataGridTemplateColumn.CellStyle>
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay}"
-                                                      Click="ToggleExpandFolder_Click"
-                                                      Visibility="{Binding IsExpandable, Converter={StaticResource BoolToVisConverter}}"
-                                                      Style="{StaticResource ExpandCollapseToggleStyle}"
-                                                      VerticalAlignment="Center" HorizontalAlignment="Center"
-                                                      Cursor="Hand"
-                                                      ToolTip="Expand / Collapse folder files"/>
+                                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                                          Click="ToggleExpandFolder_Click"
+                                                          Visibility="{Binding IsExpandable, Converter={StaticResource BoolToVisConverter}}"
+                                                          Style="{StaticResource ExpandCollapseToggleStyle}"
+                                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                          Cursor="Hand"
+                                                          ToolTip="Expand / Collapse folder files"/>
+                                        </Grid>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTemplateColumn Header="Status" Width="120" CellTemplate="{StaticResource TransferStatusCellTemplate}"/>
                             <DataGridTemplateColumn Header="Direction" Width="105">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -1120,7 +1194,10 @@
                                             <TextBlock Text="      ↳ " Foreground="#7F8C8D" FontWeight="Normal" FontSize="11"
                                                        VerticalAlignment="Center"
                                                        Visibility="{Binding IsChild, Converter={StaticResource BoolToVisConverter}}"/>
-                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <Image Source="{StaticResource FluentExplorerIcon}" Width="15" Height="15" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                                   Visibility="{Binding IsDirectory, Converter={StaticResource BoolToVisConverter}}"/>
+                                            <TextBlock Text="{Binding CleanDisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -1139,7 +1216,7 @@
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Speed" Binding="{Binding Speed}" Width="95" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
                             <DataGridTextColumn Header="ETA" Binding="{Binding Eta}" Width="75" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
-                            <DataGridTextColumn Header="Details" Binding="{Binding LiveStatusDetail}" Width="*" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTextColumn Header="Details" Binding="{Binding CleanLiveStatusDetail}" Width="*" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -1183,20 +1260,28 @@
                             </Style>
                         </DataGrid.RowStyle>
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Width="28">
+                            <DataGridTemplateColumn Width="32">
+                                <DataGridTemplateColumn.CellStyle>
+                                    <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                    </Style>
+                                </DataGridTemplateColumn.CellStyle>
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay}"
-                                                      Click="ToggleExpandFolder_Click"
-                                                      Visibility="{Binding IsExpandable, Converter={StaticResource BoolToVisConverter}}"
-                                                      Style="{StaticResource ExpandCollapseToggleStyle}"
-                                                      VerticalAlignment="Center" HorizontalAlignment="Center"
-                                                      Cursor="Hand"
-                                                      ToolTip="Expand / Collapse folder files"/>
+                                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                                          Click="ToggleExpandFolder_Click"
+                                                          Visibility="{Binding IsExpandable, Converter={StaticResource BoolToVisConverter}}"
+                                                          Style="{StaticResource ExpandCollapseToggleStyle}"
+                                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                          Cursor="Hand"
+                                                          ToolTip="Expand / Collapse folder files"/>
+                                        </Grid>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTemplateColumn Header="Status" Width="120" CellTemplate="{StaticResource TransferStatusCellTemplate}"/>
                             <DataGridTemplateColumn Header="Direction" Width="105">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -1217,7 +1302,10 @@
                                             <TextBlock Text="      ↳ " Foreground="#7F8C8D" FontWeight="Normal" FontSize="11"
                                                        VerticalAlignment="Center"
                                                        Visibility="{Binding IsChild, Converter={StaticResource BoolToVisConverter}}"/>
-                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <Image Source="{StaticResource FluentExplorerIcon}" Width="15" Height="15" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                                   Visibility="{Binding IsDirectory, Converter={StaticResource BoolToVisConverter}}"/>
+                                            <TextBlock Text="{Binding CleanDisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -1278,20 +1366,28 @@
                             </Style>
                         </DataGrid.RowStyle>
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Width="28">
+                            <DataGridTemplateColumn Width="32">
+                                <DataGridTemplateColumn.CellStyle>
+                                    <Style TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                    </Style>
+                                </DataGridTemplateColumn.CellStyle>
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay}"
-                                                      Click="ToggleExpandFolder_Click"
-                                                      Visibility="{Binding IsExpandable, Converter={StaticResource BoolToVisConverter}}"
-                                                      Style="{StaticResource ExpandCollapseToggleStyle}"
-                                                      VerticalAlignment="Center" HorizontalAlignment="Center"
-                                                      Cursor="Hand"
-                                                      ToolTip="Expand / Collapse folder files"/>
+                                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                                          Click="ToggleExpandFolder_Click"
+                                                          Visibility="{Binding IsExpandable, Converter={StaticResource BoolToVisConverter}}"
+                                                          Style="{StaticResource ExpandCollapseToggleStyle}"
+                                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                          Cursor="Hand"
+                                                          ToolTip="Expand / Collapse folder files"/>
+                                        </Grid>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Status" Binding="{Binding StatusBadge}" Width="110" ElementStyle="{StaticResource DataGridTextCellElementStyle}"/>
+                            <DataGridTemplateColumn Header="Status" Width="120" CellTemplate="{StaticResource TransferStatusCellTemplate}"/>
                             <DataGridTemplateColumn Header="Direction" Width="105">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -1312,7 +1408,10 @@
                                             <TextBlock Text="      ↳ " Foreground="#7F8C8D" FontWeight="Normal" FontSize="11"
                                                        VerticalAlignment="Center"
                                                        Visibility="{Binding IsChild, Converter={StaticResource BoolToVisConverter}}"/>
-                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <Image Source="{StaticResource FluentExplorerIcon}" Width="15" Height="15" Margin="0,0,5,0" VerticalAlignment="Center"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                                   Visibility="{Binding IsDirectory, Converter={StaticResource BoolToVisConverter}}"/>
+                                            <TextBlock Text="{Binding CleanDisplayName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>

@@ -145,6 +145,79 @@ namespace RsyncZilla.Services
             return RsyncFailureReason.Other;
         }
 
+        public static bool IsRsyncMetaOrStatsLine(string? line)
+        {
+            if (string.IsNullOrWhiteSpace(line)) return true;
+            line = line.Trim();
+
+            // Directory paths in rsync output always end with /
+            if (line.EndsWith("/")) return true;
+
+            // Common rsync progress/summary headers
+            if (line.StartsWith("sending incremental file list", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("receiving incremental file list", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("building file list", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("sending ", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("receiving ", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Transfer completion summary lines
+            if (line.StartsWith("sent ", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("received ", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("total size is ", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("speedup is ", StringComparison.OrdinalIgnoreCase) ||
+                line.Contains("bytes/sec", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // rsync --stats statistics output lines
+            if (line.StartsWith("Number of ", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("Total file size", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("Total transferred file size", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("Total bytes sent", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("Total bytes received", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("Literal data", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("Matched data", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("File list size", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("File list generation time", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("File list transfer time", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Any line starting with "Total " or "File list "
+            if (line.StartsWith("Total ", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("File list ", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // rsync daemon / process diagnostics
+            if (line.StartsWith("rsync:", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("rsync error:", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("skipping ", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("created directory ", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("deleting ", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("*deleting ", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("IO error", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("file has vanished", StringComparison.OrdinalIgnoreCase) ||
+                line.StartsWith("cannot delete", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Log / stats key-value outputs (contains ': ') are never valid transferred file paths
+            if (line.Contains(": "))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         public static string BuildRsyncArguments(
             string sshCommand,
             string sourcesArg,
@@ -448,13 +521,8 @@ namespace RsyncZilla.Services
                         return;
                     }
 
-                    // 2. Check if line announces a new file
-                    if (line.StartsWith("sending incremental file list", StringComparison.OrdinalIgnoreCase) ||
-                        line.StartsWith("receiving incremental file list", StringComparison.OrdinalIgnoreCase) ||
-                        line.StartsWith("sent ", StringComparison.OrdinalIgnoreCase) ||
-                        line.StartsWith("received ", StringComparison.OrdinalIgnoreCase) ||
-                        line.StartsWith("total size is ", StringComparison.OrdinalIgnoreCase) ||
-                        line.EndsWith("/"))
+                    // 2. Check if line announces a new file or is rsync metadata/summary/stats
+                    if (IsRsyncMetaOrStatsLine(line))
                     {
                         return;
                     }
@@ -503,13 +571,18 @@ namespace RsyncZilla.Services
                         {
                             relPath = candidateName.Substring(prefix2.Length);
                         }
-                        else if (dirTasks.Count == 1)
+                        else if (dirTasks.Count == 1 && !candidateName.Contains(": "))
                         {
                             relPath = candidateName;
                         }
 
                         if (relPath != null)
                         {
+                            var normRelPath = relPath.Replace('\\', '/').TrimStart('/');
+                            if (string.IsNullOrWhiteSpace(normRelPath) || normRelPath.EndsWith("/"))
+                            {
+                                return;
+                            }
                             activeDirTask = dir;
                             activeTopTask = dir;
                             if (activeDirTask.Status != TransferStatus.Completed && activeDirTask.Status != TransferStatus.Failed)
@@ -529,7 +602,6 @@ namespace RsyncZilla.Services
                                 }
                             }
 
-                            var normRelPath = relPath.Replace('\\', '/');
                             var foundChild = dir.Children.FirstOrDefault(c =>
                                 c.FileName.Equals(normRelPath, StringComparison.OrdinalIgnoreCase) ||
                                 c.FileName.EndsWith("/" + normRelPath, StringComparison.OrdinalIgnoreCase) ||

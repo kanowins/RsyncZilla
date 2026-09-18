@@ -180,6 +180,36 @@ namespace RsyncZilla.Tests
             Assert.Equal(expected, result);
         }
 
+        [Theory]
+        [InlineData("link.xml", false)]
+        [InlineData("images/banner.png", false)]
+        [InlineData("deep/nested/subfolder/file.json", false)]
+        [InlineData("sending incremental file list", true)]
+        [InlineData("receiving incremental file list", true)]
+        [InlineData("AddressablesLink/", true)]
+        [InlineData("Number of files: 2 (reg: 1, dir: 1)", true)]
+        [InlineData("Number of created files: 2 (reg: 1, dir: 1)", true)]
+        [InlineData("Number of deleted files: 0", true)]
+        [InlineData("Number of regular files transferred: 1", true)]
+        [InlineData("Total file size: 46,940 bytes", true)]
+        [InlineData("Total transferred file size: 46,940 bytes", true)]
+        [InlineData("Literal data: 46,940 bytes", true)]
+        [InlineData("Matched data: 0 bytes", true)]
+        [InlineData("File list size: 0", true)]
+        [InlineData("File list generation time: 0.001 seconds", true)]
+        [InlineData("File list transfer time: 0.000 seconds", true)]
+        [InlineData("Total bytes sent: 5,900", true)]
+        [InlineData("Total bytes received: 39", true)]
+        [InlineData("sent 5,900 bytes  received 39 bytes  11,878.00 bytes/sec", true)]
+        [InlineData("total size is 46,940  speedup is 7.90", true)]
+        [InlineData("", true)]
+        [InlineData("   ", true)]
+        public void IsRsyncMetaOrStatsLine_ShouldIdentifyMetadataAndStatisticsCorrectly(string line, bool expected)
+        {
+            var result = RsyncService.IsRsyncMetaOrStatsLine(line);
+            Assert.Equal(expected, result);
+        }
+
         [Fact]
         public void LogEntry_ShouldSupportWarningBrush()
         {

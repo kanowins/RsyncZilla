@@ -43,6 +43,7 @@ namespace RsyncZilla.Models
                 if (SetProperty(ref _fileName, value))
                 {
                     OnPropertyChanged(nameof(DisplayName));
+                    OnPropertyChanged(nameof(CleanDisplayName));
                 }
             }
         }
@@ -99,6 +100,7 @@ namespace RsyncZilla.Models
                 if (SetProperty(ref _status, value))
                 {
                     OnPropertyChanged(nameof(StatusBadge));
+                    OnPropertyChanged(nameof(StatusText));
                     OnPropertyChanged(nameof(IsRunning));
                     OnPropertyChanged(nameof(IsExpandable));
                     OnPropertyChanged(nameof(ProgressSummary));
@@ -135,6 +137,7 @@ namespace RsyncZilla.Models
                 if (SetProperty(ref _transferredInfo, value))
                 {
                     OnPropertyChanged(nameof(LiveStatusDetail));
+                    OnPropertyChanged(nameof(CleanLiveStatusDetail));
                 }
             }
         }
@@ -148,6 +151,7 @@ namespace RsyncZilla.Models
                 if (SetProperty(ref _isDirectory, value))
                 {
                     OnPropertyChanged(nameof(DisplayName));
+                    OnPropertyChanged(nameof(CleanDisplayName));
                     OnPropertyChanged(nameof(IsExpandable));
                     OnPropertyChanged(nameof(DisplaySize));
                     OnPropertyChanged(nameof(ProgressSummary));
@@ -171,6 +175,7 @@ namespace RsyncZilla.Models
                 if (SetProperty(ref _currentSubFile, value))
                 {
                     OnPropertyChanged(nameof(LiveStatusDetail));
+                    OnPropertyChanged(nameof(CleanLiveStatusDetail));
                 }
             }
         }
@@ -184,6 +189,7 @@ namespace RsyncZilla.Models
                 if (SetProperty(ref _totalItemsCount, value))
                 {
                     OnPropertyChanged(nameof(DisplayName));
+                    OnPropertyChanged(nameof(CleanDisplayName));
                     OnPropertyChanged(nameof(ProgressSummary));
                 }
             }
@@ -198,6 +204,7 @@ namespace RsyncZilla.Models
                 if (SetProperty(ref _completedItemsCount, value))
                 {
                     OnPropertyChanged(nameof(DisplayName));
+                    OnPropertyChanged(nameof(CleanDisplayName));
                     OnPropertyChanged(nameof(ProgressSummary));
                 }
             }
@@ -246,8 +253,10 @@ namespace RsyncZilla.Models
                 {
                     OnPropertyChanged(nameof(IsExpandable));
                     OnPropertyChanged(nameof(DisplayName));
+                    OnPropertyChanged(nameof(CleanDisplayName));
                     OnPropertyChanged(nameof(ProgressSummary));
                     OnPropertyChanged(nameof(LiveStatusDetail));
+                    OnPropertyChanged(nameof(CleanLiveStatusDetail));
                     OnPropertyChanged(nameof(DisplaySize));
                 }
             }
@@ -276,6 +285,22 @@ namespace RsyncZilla.Models
             }
         }
 
+        public string CleanDisplayName
+        {
+            get
+            {
+                if (IsDirectory && !IsChild)
+                {
+                    if (TotalItemsCount > 0)
+                    {
+                        return $"{FileName} ({CompletedItemsCount}/{TotalItemsCount})";
+                    }
+                    return FileName;
+                }
+                return FileName;
+            }
+        }
+
         public string ProgressSummary
         {
             get
@@ -297,6 +322,20 @@ namespace RsyncZilla.Models
                     if (!string.IsNullOrWhiteSpace(TransferredInfo))
                         return $"📄 {CurrentSubFile} | {TransferredInfo}";
                     return $"📄 {CurrentSubFile}";
+                }
+                return TransferredInfo;
+            }
+        }
+
+        public string CleanLiveStatusDetail
+        {
+            get
+            {
+                if (IsDirectory && !IsChild && !string.IsNullOrWhiteSpace(CurrentSubFile))
+                {
+                    if (!string.IsNullOrWhiteSpace(TransferredInfo))
+                        return $"{CurrentSubFile} | {TransferredInfo}";
+                    return CurrentSubFile;
                 }
                 return TransferredInfo;
             }
@@ -369,6 +408,16 @@ namespace RsyncZilla.Models
             TransferStatus.Completed => "✅ Completed",
             TransferStatus.Failed => "❌ Failed",
             TransferStatus.Cancelled => "⏹ Cancelled",
+            _ => Status.ToString()
+        };
+
+        public string StatusText => Status switch
+        {
+            TransferStatus.Pending => "Pending",
+            TransferStatus.Running => "Transferring",
+            TransferStatus.Completed => "Completed",
+            TransferStatus.Failed => "Failed",
+            TransferStatus.Cancelled => "Cancelled",
             _ => Status.ToString()
         };
 

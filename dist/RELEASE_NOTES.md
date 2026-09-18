@@ -1,5 +1,21 @@
 # RsyncZilla Release Notes
 
+## Version 1.3.2 (2026-09-18)
+
+### ✨ New Features & UI Polishing
+- **Microsoft Fluent UI Color Icon Pack**:
+  - Replaced legacy monochrome and flat symbols with the vibrant, modern Microsoft Fluent UI Color icon pack across the application.
+  - Updated icons for file browsing, drive types, navigation buttons, folder up-level, and transfer direction indicators.
+  - Enhanced transfer direction icons: clear right arrow for local-to-remote uploads and left arrow for remote-to-local downloads.
+  - Updated status indicators: vibrant green badge for connected sessions, and modern colored completed/failed transfer queue icons.
+- **Improved Directory Transfer Tree Alignment**:
+  - Centered expand/collapse vector chevron toggles horizontally within transfer queue tables.
+  - Upgraded chevron stroke to high-contrast crisp white on selected table rows, ensuring optimal readability over the system selection highlight.
+- **Cleaned Transfer Queue Output**:
+  - Filtered out rsync `--stats` calculation summaries and transfer log metadata lines from the directory file tree, keeping only actual transferred files in the container view.
+
+---
+
 ## Version 1.3.1 (2026-09-18)
 
 ### ✨ Bug Fixes & UI Polishing

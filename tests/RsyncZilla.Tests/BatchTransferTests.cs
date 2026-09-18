@@ -158,11 +158,16 @@ namespace RsyncZilla.Tests
 
             Assert.True(dirTask.IsExpandable); // Directory tasks are always expandable
             Assert.Equal("📁 my_project (1/3)", dirTask.DisplayName);
+            Assert.Equal("my_project (1/3)", dirTask.CleanDisplayName);
             Assert.Equal("1/3 files (33%)", dirTask.ProgressSummary);
 
             var child1 = new TransferTask { FileName = "index.html", Status = TransferStatus.Completed };
             var child2 = new TransferTask { FileName = "style.css", Status = TransferStatus.Running };
             var child3 = new TransferTask { FileName = "sub/app.js", Status = TransferStatus.Pending };
+
+            Assert.Equal("Completed", child1.StatusText);
+            Assert.Equal("Transferring", child2.StatusText);
+            Assert.Equal("Pending", child3.StatusText);
 
             dirTask.Children.Add(child1);
             dirTask.Children.Add(child2);
@@ -174,6 +179,12 @@ namespace RsyncZilla.Tests
             dirTask.CurrentSubFile = "style.css (50%)";
             dirTask.TransferredInfo = "10 KB/s";
             Assert.Equal("📄 style.css (50%) | 10 KB/s", dirTask.LiveStatusDetail);
+            Assert.Equal("style.css (50%) | 10 KB/s", dirTask.CleanLiveStatusDetail);
+
+            dirTask.Status = TransferStatus.Failed;
+            Assert.Equal("Failed", dirTask.StatusText);
+            dirTask.Status = TransferStatus.Cancelled;
+            Assert.Equal("Cancelled", dirTask.StatusText);
         }
 
         [Fact]
