@@ -161,6 +161,7 @@ namespace RsyncZilla.ViewModels
         public void NotifyConnectionChanged()
         {
             OnPropertyChanged(nameof(IsConnected));
+            OnPropertyChanged(nameof(IsConnecting));
             OnPropertyChanged(nameof(StatusIndicator));
             OnPropertyChanged(nameof(Title));
             OnPropertyChanged(nameof(DisplayHost));

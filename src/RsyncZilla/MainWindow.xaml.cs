@@ -40,12 +40,20 @@ namespace RsyncZilla
 
         private SelectionAdorner? _selectionAdorner;
         private List<FileItem>? _activeRemoteDragItems;
+        private DataGrid? _lastActiveFileGrid;
 
         public MainWindow()
         {
             InitializeComponent();
             _viewModel = new MainViewModel();
             DataContext = _viewModel;
+
+            _lastActiveFileGrid = RemoteDataGrid;
+
+            LocalDataGrid.GotKeyboardFocus += (s, e) => _lastActiveFileGrid = LocalDataGrid;
+            RemoteDataGrid.GotKeyboardFocus += (s, e) => _lastActiveFileGrid = RemoteDataGrid;
+            LocalDataGrid.SelectionChanged += (s, e) => { if (LocalDataGrid.SelectedItems.Count > 0) _lastActiveFileGrid = LocalDataGrid; };
+            RemoteDataGrid.SelectionChanged += (s, e) => { if (RemoteDataGrid.SelectedItems.Count > 0) _lastActiveFileGrid = RemoteDataGrid; };
 
             // Link multiple selection extractors
             _viewModel.GetLocalSelectedItemsFunc = () => LocalDataGrid.SelectedItems.Cast<FileItem>().ToList();
@@ -115,6 +123,31 @@ namespace RsyncZilla
         // UNIFIED MOUSE SELECTION (LEFT & RIGHT BUTTON RUBBER-BAND) & DRAG-AND-DROP
         // =========================================================================
 
+        private void FocusGridCellOrGrid(DataGrid grid, DataGridCell? cell)
+        {
+            _lastActiveFileGrid = grid;
+            if (cell != null && cell.Focusable)
+            {
+                cell.Focus();
+                Keyboard.Focus(cell);
+            }
+            else
+            {
+                grid.Focus();
+                Keyboard.Focus(grid);
+            }
+        }
+
+        private void LocalPanel_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            _lastActiveFileGrid = LocalDataGrid;
+        }
+
+        private void RemotePanel_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            _lastActiveFileGrid = RemoteDataGrid;
+        }
+
         private void DataGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is not DataGrid grid) return;
@@ -136,17 +169,22 @@ namespace RsyncZilla
             _isRightDragCandidate = true;
             _isRightDragSelecting = false;
 
-            while (dep != null && dep is not DataGridRow)
+            DataGridRow? row = null;
+            DataGridCell? cell = null;
+            var curr = dep;
+            while (curr != null && curr != grid)
             {
-                dep = VisualTreeHelper.GetParent(dep);
+                if (curr is DataGridCell c && cell == null) cell = c;
+                if (curr is DataGridRow r) { row = r; break; }
+                curr = VisualTreeHelper.GetParent(curr);
             }
 
-            if (dep is DataGridRow row)
+            if (row != null)
             {
                 if (row.IsSelected)
                 {
                     // Row is already selected as part of a multi-selection: preserve selection
-                    row.Focus();
+                    FocusGridCellOrGrid(grid, cell);
                     e.Handled = true;
                 }
                 else
@@ -156,7 +194,7 @@ namespace RsyncZilla
                         grid.SelectedItems.Clear();
                     }
                     row.IsSelected = true;
-                    row.Focus();
+                    FocusGridCellOrGrid(grid, cell);
                 }
             }
             else
@@ -166,6 +204,7 @@ namespace RsyncZilla
                 {
                     grid.SelectedItems.Clear();
                 }
+                FocusGridCellOrGrid(grid, null);
             }
         }
 
@@ -214,7 +253,7 @@ namespace RsyncZilla
                 _isDragDropCandidate = false;
                 _isLeftDragCandidate = true;
                 _draggedRow = null;
-                grid.Focus();
+                FocusGridCellOrGrid(grid, null);
                 e.Handled = true;
             }
             else
@@ -229,7 +268,7 @@ namespace RsyncZilla
                     _isDragDropCandidate = true;
                     row.IsSelected = !row.IsSelected;
                     grid.CurrentItem = row.Item;
-                    row.Focus();
+                    FocusGridCellOrGrid(grid, cell);
                     e.Handled = true;
                 }
                 else if (isShift)
@@ -261,7 +300,7 @@ namespace RsyncZilla
                         row.IsSelected = true;
                     }
 
-                    row.Focus();
+                    FocusGridCellOrGrid(grid, cell);
                     e.Handled = true;
                 }
                 else
@@ -273,7 +312,7 @@ namespace RsyncZilla
                         // Do NOT clear selection yet (wait for mouse move to drag, or mouse up to isolate single row)
                         _isDragDropCandidate = true;
                         grid.CurrentItem = row.Item;
-                        row.Focus();
+                        FocusGridCellOrGrid(grid, cell);
                         e.Handled = true;
                     }
                     else
@@ -282,7 +321,7 @@ namespace RsyncZilla
                         grid.SelectedItems.Clear();
                         row.IsSelected = true;
                         grid.CurrentItem = row.Item;
-                        row.Focus();
+                        FocusGridCellOrGrid(grid, cell);
                         _isDragDropCandidate = true;
                         e.Handled = true;
                     }
@@ -489,10 +528,16 @@ namespace RsyncZilla
                     _selectionAdorner = null;
                 }
 
+                var targetGrid = _rightDragGrid;
                 _rightDragGrid?.ReleaseMouseCapture();
                 _isRightDragSelecting = false;
                 _isRightDragCandidate = false;
                 _rightDragGrid = null;
+
+                if (targetGrid != null)
+                {
+                    FocusGridCellOrGrid(targetGrid, null);
+                }
 
                 // Suppress context menu after rubber-band dragging!
                 e.Handled = true;
@@ -514,10 +559,17 @@ namespace RsyncZilla
                     _selectionAdorner = null;
                 }
 
+                var targetGrid = _leftDragGrid;
                 _leftDragGrid?.ReleaseMouseCapture();
                 _isLeftDragSelecting = false;
                 _isLeftDragCandidate = false;
                 _leftDragGrid = null;
+
+                if (targetGrid != null)
+                {
+                    FocusGridCellOrGrid(targetGrid, null);
+                }
+
                 e.Handled = true;
                 return;
             }
@@ -531,7 +583,7 @@ namespace RsyncZilla
                 {
                     _leftDragGrid.SelectedItems.Clear();
                     _draggedRow.IsSelected = true;
-                    _draggedRow.Focus();
+                    FocusGridCellOrGrid(_leftDragGrid, null);
                 }
                 _isDragDropCandidate = false;
                 _draggedRow = null;
@@ -847,6 +899,27 @@ namespace RsyncZilla
             }
         }
 
+        private DataGrid? GetTargetFileGridForAction()
+        {
+            if (RemoteDataGrid.IsKeyboardFocusWithin) return RemoteDataGrid;
+            if (LocalDataGrid.IsKeyboardFocusWithin) return LocalDataGrid;
+            if (RemotePathTextBox.IsKeyboardFocusWithin) return RemoteDataGrid;
+            if (LocalPathTextBox.IsKeyboardFocusWithin) return LocalDataGrid;
+
+            if (_lastActiveFileGrid == RemoteDataGrid && RemoteDataGrid.SelectedItems.Count > 0) return RemoteDataGrid;
+            if (_lastActiveFileGrid == LocalDataGrid && LocalDataGrid.SelectedItems.Count > 0) return LocalDataGrid;
+
+            if (RemoteDataGrid.SelectedItems.Count > 0 && LocalDataGrid.SelectedItems.Count == 0) return RemoteDataGrid;
+            if (LocalDataGrid.SelectedItems.Count > 0 && RemoteDataGrid.SelectedItems.Count == 0) return LocalDataGrid;
+
+            if (_lastActiveFileGrid != null && _lastActiveFileGrid.SelectedItems.Count > 0) return _lastActiveFileGrid;
+
+            if (RemoteDataGrid.SelectedItems.Count > 0) return RemoteDataGrid;
+            if (LocalDataGrid.SelectedItems.Count > 0) return LocalDataGrid;
+
+            return _lastActiveFileGrid;
+        }
+
         private async void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Delete)
@@ -857,22 +930,13 @@ namespace RsyncZilla
                     return;
                 }
 
-                if (RemoteDataGrid.IsKeyboardFocusWithin)
+                var targetGrid = GetTargetFileGridForAction();
+                if (targetGrid == RemoteDataGrid && RemoteDataGrid.SelectedItems.Count > 0)
                 {
                     e.Handled = true;
                     await DeleteRemoteSelectedItemsAsync();
                 }
-                else if (LocalDataGrid.IsKeyboardFocusWithin)
-                {
-                    e.Handled = true;
-                    await DeleteLocalSelectedItemsAsync();
-                }
-                else if (RemoteDataGrid.SelectedItems.Count > 0 && LocalDataGrid.SelectedItems.Count == 0)
-                {
-                    e.Handled = true;
-                    await DeleteRemoteSelectedItemsAsync();
-                }
-                else if (LocalDataGrid.SelectedItems.Count > 0 && RemoteDataGrid.SelectedItems.Count == 0)
+                else if (targetGrid == LocalDataGrid && LocalDataGrid.SelectedItems.Count > 0)
                 {
                     e.Handled = true;
                     await DeleteLocalSelectedItemsAsync();
@@ -886,22 +950,13 @@ namespace RsyncZilla
                     return;
                 }
 
-                if (RemoteDataGrid.IsKeyboardFocusWithin)
+                var targetGrid = GetTargetFileGridForAction();
+                if (targetGrid == RemoteDataGrid && RemoteDataGrid.SelectedItem != null)
                 {
                     e.Handled = true;
                     await RenameRemoteSelectedItemAsync();
                 }
-                else if (LocalDataGrid.IsKeyboardFocusWithin)
-                {
-                    e.Handled = true;
-                    await RenameLocalSelectedItemAsync();
-                }
-                else if (RemoteDataGrid.SelectedItems.Count > 0 && LocalDataGrid.SelectedItems.Count == 0)
-                {
-                    e.Handled = true;
-                    await RenameRemoteSelectedItemAsync();
-                }
-                else if (LocalDataGrid.SelectedItems.Count > 0 && RemoteDataGrid.SelectedItems.Count == 0)
+                else if (targetGrid == LocalDataGrid && LocalDataGrid.SelectedItem != null)
                 {
                     e.Handled = true;
                     await RenameLocalSelectedItemAsync();
@@ -909,7 +964,8 @@ namespace RsyncZilla
             }
             else if (e.Key == Key.F5)
             {
-                if (RemoteDataGrid.IsKeyboardFocusWithin || RemotePathTextBox.IsKeyboardFocusWithin)
+                var targetGrid = GetTargetFileGridForAction();
+                if (targetGrid == RemoteDataGrid)
                 {
                     e.Handled = true;
                     if (_viewModel.IsConnected)
@@ -917,7 +973,7 @@ namespace RsyncZilla
                         await _viewModel.RemoteBrowser.RefreshAsync();
                     }
                 }
-                else if (LocalDataGrid.IsKeyboardFocusWithin || LocalPathTextBox.IsKeyboardFocusWithin)
+                else if (targetGrid == LocalDataGrid)
                 {
                     e.Handled = true;
                     await _viewModel.LocalBrowser.RefreshAsync();
@@ -942,7 +998,8 @@ namespace RsyncZilla
             }
             else if (e.Key == Key.F4)
             {
-                if (LocalDataGrid.IsKeyboardFocusWithin || (LocalDataGrid.SelectedItems.Count > 0 && RemoteDataGrid.SelectedItems.Count == 0))
+                var targetGrid = GetTargetFileGridForAction();
+                if (targetGrid == LocalDataGrid)
                 {
                     var item = LocalDataGrid.SelectedItem as FileItem;
                     if (item != null && !item.IsDirectory && !item.IsParent && !item.IsDrive)
@@ -951,7 +1008,7 @@ namespace RsyncZilla
                         _viewModel.OpenLocalFile(item);
                     }
                 }
-                else
+                else if (targetGrid == RemoteDataGrid)
                 {
                     var item = RemoteDataGrid.SelectedItem as FileItem;
                     if (item != null && !item.IsDirectory && !item.IsParent)
@@ -971,7 +1028,8 @@ namespace RsyncZilla
                     return;
                 }
 
-                if (LocalDataGrid.IsKeyboardFocusWithin && LocalDataGrid.SelectedItem is FileItem localItem)
+                var targetGrid = GetTargetFileGridForAction();
+                if (targetGrid == LocalDataGrid && LocalDataGrid.SelectedItem is FileItem localItem)
                 {
                     e.Handled = true;
                     if (localItem.IsDirectory)
@@ -983,7 +1041,7 @@ namespace RsyncZilla
                         _viewModel.OpenLocalFile(localItem);
                     }
                 }
-                else if (RemoteDataGrid.IsKeyboardFocusWithin && RemoteDataGrid.SelectedItem is FileItem remoteItem)
+                else if (targetGrid == RemoteDataGrid && RemoteDataGrid.SelectedItem is FileItem remoteItem)
                 {
                     e.Handled = true;
                     if (remoteItem.IsDirectory)
@@ -1026,6 +1084,7 @@ namespace RsyncZilla
                     await _viewModel.LocalBrowser.RenameItemAsync(item, newName);
                 }
             }
+            FocusGridCellOrGrid(LocalDataGrid, null);
         }
 
         private async void RenameRemoteItem_Click(object sender, RoutedEventArgs e)
@@ -1053,6 +1112,7 @@ namespace RsyncZilla
                     await _viewModel.RemoteBrowser.RenameItemAsync(item, newName);
                 }
             }
+            FocusGridCellOrGrid(RemoteDataGrid, null);
         }
 
         private async void DeleteLocalItem_Click(object sender, RoutedEventArgs e)
@@ -1076,6 +1136,7 @@ namespace RsyncZilla
             {
                 await _viewModel.LocalBrowser.DeleteItemsAsync(selected);
             }
+            FocusGridCellOrGrid(LocalDataGrid, null);
         }
 
         private async void DeleteRemoteItem_Click(object sender, RoutedEventArgs e)
@@ -1099,6 +1160,7 @@ namespace RsyncZilla
             {
                 await _viewModel.RemoteBrowser.DeleteItemsAsync(selected);
             }
+            FocusGridCellOrGrid(RemoteDataGrid, null);
         }
 
         // ==========================================

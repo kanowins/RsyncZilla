@@ -23,6 +23,27 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
         <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisConverter"/>
 
+        <!-- Connection Status Dot Style (Green when connected, Amber when connecting, Gray when disconnected) -->
+        <Style x:Key="ConnectionDotStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Height" Value="8"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Fill" Value="#9CA3AF"/>
+            <Setter Property="Stroke" Value="#6B7280"/>
+            <Setter Property="StrokeThickness" Value="1"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                    <Setter Property="Fill" Value="#10B981"/>
+                    <Setter Property="Stroke" Value="#059669"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsConnecting}" Value="True">
+                    <Setter Property="Fill" Value="#F59E0B"/>
+                    <Setter Property="Stroke" Value="#D97706"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- Expand/Collapse ToggleButton Style -->
         <Style x:Key="ExpandCollapseToggleStyle" TargetType="ToggleButton">
             <Setter Property="Focusable" Value="False"/>
@@ -270,6 +291,7 @@
 
         <Style TargetType="DataGridRow">
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="True"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="#E5F3FF"/>
@@ -595,7 +617,8 @@
 
                 <!-- Connection Indicator -->
                 <StackPanel Grid.Column="9" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding ConnectionStatusIndicator}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" Foreground="#333333"/>
+                    <Ellipse Style="{StaticResource ConnectionDotStyle}" Width="9" Height="9" Margin="0,0,6,0"/>
+                    <TextBlock Text="{Binding ConnectionStatusText}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" Foreground="#333333"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -629,7 +652,7 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" ToolTip="{Binding Title}">
-                                    <TextBlock Text="{Binding StatusIndicator}" Margin="0,0,5,0" VerticalAlignment="Center" FontSize="11"/>
+                                    <Ellipse Style="{StaticResource ConnectionDotStyle}" Width="8" Height="8" Margin="0,0,6,0"/>
                                     <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" MaxWidth="280" TextTrimming="CharacterEllipsis"/>
                                     <Button Command="{Binding CloseCommand}" ToolTip="Close connection" Margin="8,0,0,0" Style="{StaticResource TabCloseButtonStyle}">
                                         <TextBlock Text="✕" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
@@ -655,6 +678,7 @@
 
                 <!-- LEFT PANEL: LOCAL MACHINE -->
                 <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6"
+                        PreviewMouseDown="LocalPanel_PreviewMouseDown"
                         AllowDrop="True" DragOver="LocalDataGrid_DragOver" DragEnter="LocalDataGrid_DragEnter" Drop="LocalDataGrid_Drop">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -739,9 +763,10 @@
                                                                 Margin="0,0,6,0" VerticalAlignment="Center"
                                                                 Visibility="{Binding IsParent, Converter={StaticResource BoolToVisConverter}}"/>
 
-                                                <!-- Regular icon for files and folders -->
-                                                <TextBlock Text="{Binding IconEmoji}" Margin="0,0,6,0" VerticalAlignment="Center"
-                                                           Visibility="{Binding IsParent, Converter={StaticResource InverseBoolToVisConverter}}"/>
+                                                <!-- Native Windows Shell Icon for files, folders, and drives -->
+                                                <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                       Visibility="{Binding IsParent, Converter={StaticResource InverseBoolToVisConverter}}"/>
 
                                                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
                                             </StackPanel>
@@ -775,6 +800,7 @@
 
                 <!-- RIGHT PANEL: REMOTE SFTP SERVER -->
                 <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6"
+                        PreviewMouseDown="RemotePanel_PreviewMouseDown"
                         AllowDrop="True" DragOver="RemoteDataGrid_DragOver" DragEnter="RemoteDataGrid_DragEnter" Drop="RemoteDataGrid_Drop">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -864,9 +890,10 @@
                                                                 Margin="0,0,6,0" VerticalAlignment="Center"
                                                                 Visibility="{Binding IsParent, Converter={StaticResource BoolToVisConverter}}"/>
 
-                                                <!-- Regular icon for files and folders -->
-                                                <TextBlock Text="{Binding IconEmoji}" Margin="0,0,6,0" VerticalAlignment="Center"
-                                                           Visibility="{Binding IsParent, Converter={StaticResource InverseBoolToVisConverter}}"/>
+                                                <!-- Native Windows Shell Icon for files, folders, and drives -->
+                                                <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                       Visibility="{Binding IsParent, Converter={StaticResource InverseBoolToVisConverter}}"/>
 
                                                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
                                             </StackPanel>

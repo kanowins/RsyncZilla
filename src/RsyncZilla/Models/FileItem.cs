@@ -1,4 +1,6 @@
 using System;
+using System.Windows.Media;
+using RsyncZilla.Services;
 using RsyncZilla.ViewModels;
 
 namespace RsyncZilla.Models
@@ -9,7 +11,14 @@ namespace RsyncZilla.Models
         public string Name
         {
             get => _name;
-            set => SetProperty(ref _name, value);
+            set
+            {
+                if (SetProperty(ref _name, value))
+                {
+                    _icon = null;
+                    OnPropertyChanged(nameof(Icon));
+                }
+            }
         }
 
         private string _fullPath = string.Empty;
@@ -23,14 +32,28 @@ namespace RsyncZilla.Models
         public bool IsDirectory
         {
             get => _isDirectory;
-            set => SetProperty(ref _isDirectory, value);
+            set
+            {
+                if (SetProperty(ref _isDirectory, value))
+                {
+                    _icon = null;
+                    OnPropertyChanged(nameof(Icon));
+                }
+            }
         }
 
         private bool _isDrive;
         public bool IsDrive
         {
             get => _isDrive;
-            set => SetProperty(ref _isDrive, value);
+            set
+            {
+                if (SetProperty(ref _isDrive, value))
+                {
+                    _icon = null;
+                    OnPropertyChanged(nameof(Icon));
+                }
+            }
         }
 
         private long _length;
@@ -64,8 +87,18 @@ namespace RsyncZilla.Models
         public bool IsParent
         {
             get => _isParent;
-            set => SetProperty(ref _isParent, value);
+            set
+            {
+                if (SetProperty(ref _isParent, value))
+                {
+                    _icon = null;
+                    OnPropertyChanged(nameof(Icon));
+                }
+            }
         }
+
+        private ImageSource? _icon;
+        public ImageSource? Icon => _icon ??= ShellIconHelper.GetIcon(IsDirectory, Name, IsDrive, IsParent);
 
         public string DisplaySize
         {

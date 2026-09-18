@@ -123,6 +123,7 @@ namespace RsyncZilla.ViewModels
 
         public string ConnectionButtonText => IsConnected ? "Disconnect" : "Quick Connect";
         public string ConnectionStatusIndicator => IsConnected ? "🟢 Connected" : (IsConnecting ? "🟡 Connecting" : "⚪ Disconnected");
+        public string ConnectionStatusText => IsConnected ? "Connected" : (IsConnecting ? "Connecting" : "Disconnected");
 
         public string AppVersion => typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
         public string FooterInfo => $"RsyncZilla v{AppVersion} | Engine: rsync 3.3.0 portable (Cygwin64) + SSH.NET";
@@ -413,6 +414,7 @@ namespace RsyncZilla.ViewModels
             OnPropertyChanged(nameof(IsConnecting));
             OnPropertyChanged(nameof(ConnectionButtonText));
             OnPropertyChanged(nameof(ConnectionStatusIndicator));
+            OnPropertyChanged(nameof(ConnectionStatusText));
             OnPropertyChanged(nameof(Host));
             OnPropertyChanged(nameof(Username));
             OnPropertyChanged(nameof(Port));

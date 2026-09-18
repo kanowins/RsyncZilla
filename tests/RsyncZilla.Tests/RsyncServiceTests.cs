@@ -53,6 +53,30 @@ namespace RsyncZilla.Tests
         }
 
         [Fact]
+        public void FileItem_Icon_ShouldResolveForFolderAndFiles()
+        {
+            var dirItem = new FileItem { Name = "my_folder", IsDirectory = true };
+            var fileItem = new FileItem { Name = "archive.zip", IsDirectory = false };
+            var parentItem = new FileItem { Name = "..", IsDirectory = true, IsParent = true };
+
+            // Parent folder '..' delegates to custom vector UI
+            Assert.Null(parentItem.Icon);
+
+            // On Windows, ShellIconHelper returns a valid frozen BitmapSource for directories and files
+            if (OperatingSystem.IsWindows())
+            {
+                Assert.NotNull(dirItem.Icon);
+                Assert.NotNull(fileItem.Icon);
+                Assert.True(dirItem.Icon.IsFrozen);
+                Assert.True(fileItem.Icon.IsFrozen);
+
+                // Changing name updates/re-evaluates icon
+                fileItem.Name = "image.png";
+                Assert.NotNull(fileItem.Icon);
+            }
+        }
+
+        [Fact]
         public void TransferTask_StatusTransitions_ShouldWork()
         {
             var task = new TransferTask
