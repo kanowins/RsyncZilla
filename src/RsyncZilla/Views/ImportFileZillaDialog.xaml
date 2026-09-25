@@ -1,0 +1,197 @@
+<Window x:Class="RsyncZilla.Views.ImportFileZillaDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Import Sites from FileZilla - RsyncZilla"
+        Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
+        Height="540" Width="860"
+        MinHeight="420" MinWidth="680"
+        WindowStartupLocation="CenterOwner"
+        Background="#F0F2F5" Foreground="#111111"
+        FontFamily="Segoe UI, Segoe UI Emoji, Arial">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Title Header -->
+            <RowDefinition Height="Auto"/> <!-- File Path & Browse Card -->
+            <RowDefinition Height="*"/>    <!-- DataGrid List of Sites -->
+            <RowDefinition Height="Auto"/> <!-- Bottom Controls & Actions -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. Title Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Image Source="{StaticResource FluentSitesIcon}" Width="22" Height="22" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <TextBlock Text="Import Sites from FileZilla" FontSize="18" FontWeight="SemiBold" Foreground="#005A9E" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock Text="Select the FileZilla configuration file (sitemanager.xml, filezilla.xml, or export XML) and choose which sites to import."
+                       FontSize="12" Foreground="#666666" Margin="30,3,0,0"/>
+        </StackPanel>
+
+        <!-- 2. File Selection Card -->
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="12,10" Margin="0,0,0,12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="FileZilla Configuration File:" FontWeight="SemiBold" Foreground="#333333" Margin="0,0,0,4"/>
+                
+                <Grid Grid.Row="1" Grid.Column="0" Margin="0,0,8,0">
+                    <TextBox x:Name="FilePathTextBox" Padding="8,5" Height="30" VerticalContentAlignment="Center"
+                             IsReadOnly="True" Background="#FAFAFA" BorderBrush="#CCCCCC"
+                             ToolTip="Detected or selected FileZilla configuration XML file"/>
+                </Grid>
+
+                <Button Grid.Row="1" Grid.Column="1" Click="BrowseFile_Click"
+                        Background="#F5F5F5" Foreground="#333333" BorderBrush="#CCCCCC"
+                        Padding="14,4" Height="30" FontWeight="SemiBold" Cursor="Hand">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="{StaticResource FluentExplorerIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Browse XML..." VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Status line below path -->
+                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="StatusMessageTextBlock"
+                           FontSize="11" Foreground="#0078D7" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- 3. Sites DataGrid -->
+        <Grid Grid.Row="2" Margin="0,0,0,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Table Header Bar -->
+            <Grid Grid.Row="0" Margin="0,0,0,6">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Sites to Import" FontWeight="SemiBold" Foreground="#333333" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="SelectedCountTextBlock" Text=" (0 sites found)" FontSize="12" Foreground="#666666" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Click="SelectAll_Click" Content="Select All" Background="Transparent" Foreground="#0078D7"
+                            BorderThickness="0" Padding="6,2" Cursor="Hand" FontWeight="SemiBold" FontSize="12" Margin="0,0,8,0"/>
+                    <TextBlock Text="|" Foreground="#CCCCCC" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Button Click="DeselectAll_Click" Content="Deselect All" Background="Transparent" Foreground="#666666"
+                            BorderThickness="0" Padding="6,2" Cursor="Hand" FontSize="12"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- DataGrid -->
+            <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4">
+                <DataGrid x:Name="SitesGrid"
+                          AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                          SelectionMode="Extended" SelectionUnit="FullRow"
+                          GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#EAEAEA"
+                          Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F9FAFB"
+                          HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <!-- Selection Checkbox -->
+                        <DataGridTemplateColumn Width="40">
+                            <DataGridTemplateColumn.Header>
+                                <CheckBox x:Name="HeaderCheckBox" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          Click="HeaderCheckBox_Click" ToolTip="Select / Deselect all"/>
+                            </DataGridTemplateColumn.Header>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              Click="RowCheckBox_Click"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Site Name -->
+                        <DataGridTextColumn Header="Site Name" Binding="{Binding Name}" Width="150" IsReadOnly="True" FontWeight="SemiBold"/>
+
+                        <!-- Folder / Category -->
+                        <DataGridTextColumn Header="Folder" Binding="{Binding Folder}" Width="110" IsReadOnly="True" Foreground="#555555"/>
+
+                        <!-- Protocol -->
+                        <DataGridTextColumn Header="Protocol" Binding="{Binding Protocol}" Width="90" IsReadOnly="True"/>
+
+                        <!-- Host -->
+                        <DataGridTextColumn Header="Host" Binding="{Binding Host}" Width="140" IsReadOnly="True"/>
+
+                        <!-- Port -->
+                        <DataGridTextColumn Header="Port" Binding="{Binding Port}" Width="55" IsReadOnly="True"/>
+
+                        <!-- Username -->
+                        <DataGridTextColumn Header="User" Binding="{Binding Username}" Width="90" IsReadOnly="True"/>
+
+                        <!-- Remote Path -->
+                        <DataGridTextColumn Header="Remote Path" Binding="{Binding RemotePath}" Width="130" IsReadOnly="True"/>
+
+                        <!-- Local Path -->
+                        <DataGridTextColumn Header="Local Path" Binding="{Binding LocalPath}" Width="130" IsReadOnly="True"/>
+
+                        <!-- Duplicate / Status -->
+                        <DataGridTemplateColumn Header="Status" Width="100" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="3" Padding="6,2" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                            Background="{Binding IsDuplicate, Converter={x:Null}}">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#E6F4EA"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsDuplicate}" Value="True">
+                                                        <Setter Property="Background" Value="#E8F0FE"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#137333"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsDuplicate}" Value="True">
+                                                            <Setter Property="Foreground" Value="#1A73E8"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </Grid>
+
+        <!-- 4. Bottom Controls & Actions -->
+        <Grid Grid.Row="3">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                <CheckBox x:Name="OverwriteCheckBox" IsChecked="True"
+                          Content="Overwrite existing sites with same Host, User, and Port"
+                          VerticalAlignment="Center" Foreground="#333333"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button Content="Cancel" Click="CancelButton_Click" IsCancel="True"
+                        Background="#F5F5F5" Foreground="#333333" BorderBrush="#CCCCCC"
+                        Padding="14,5" Margin="0,0,8,0" Cursor="Hand"/>
+
+                <Button x:Name="ImportButton" Click="ImportButton_Click" IsDefault="True"
+                        Background="#0078D7" Foreground="#FFFFFF" BorderBrush="#005A9E"
+                        Padding="16,5" FontWeight="SemiBold" Cursor="Hand">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="{StaticResource FluentSitesIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="ImportButtonText" Text="Import Selected (0)" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

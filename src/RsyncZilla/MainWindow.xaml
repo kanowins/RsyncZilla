@@ -549,6 +549,11 @@
                         <Image Source="{StaticResource FluentSitesIcon}" Width="16" Height="16"/>
                     </MenuItem.Icon>
                 </MenuItem>
+                <MenuItem Header="_Import FileZilla Sites..." Command="{Binding ImportFileZillaCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentSitesIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
                 <MenuItem Header="_Disconnect" Command="{Binding DisconnectCommand}" InputGestureText="Ctrl+D">
                     <MenuItem.Icon>

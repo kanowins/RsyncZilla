@@ -29,11 +29,12 @@
                       Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F9FAFB"
                       MouseDoubleClick="ConnectionsGrid_MouseDoubleClick">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Host" Binding="{Binding Host}" Width="170"/>
-                    <DataGridTextColumn Header="User" Binding="{Binding Username}" Width="110"/>
-                    <DataGridTextColumn Header="Port" Binding="{Binding Port}" Width="60"/>
-                    <DataGridTextColumn Header="Last Local Path" Binding="{Binding LastLocalPath}" Width="150"/>
-                    <DataGridTextColumn Header="Last Remote Path" Binding="{Binding LastRemotePath}" Width="150"/>
+                    <DataGridTextColumn Header="Site Name" Binding="{Binding Name}" Width="150" FontWeight="SemiBold"/>
+                    <DataGridTextColumn Header="Host" Binding="{Binding Host}" Width="160"/>
+                    <DataGridTextColumn Header="User" Binding="{Binding Username}" Width="100"/>
+                    <DataGridTextColumn Header="Port" Binding="{Binding Port}" Width="55"/>
+                    <DataGridTextColumn Header="Last Local Path" Binding="{Binding LastLocalPath}" Width="140"/>
+                    <DataGridTextColumn Header="Last Remote Path" Binding="{Binding LastRemotePath}" Width="140"/>
                     <DataGridTextColumn Header="Last Used" Binding="{Binding LastUsed, StringFormat='MM/dd/yyyy HH:mm'}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
@@ -48,6 +49,24 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <Image Source="{StaticResource FluentNewFolderIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
                         <TextBlock Text="New Site" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Click="EditSiteButton_Click"
+                        Background="#F5F5F5" Foreground="#333333" BorderBrush="#CCCCCC"
+                        Padding="12,5" FontWeight="SemiBold" Cursor="Hand" Margin="0,0,8,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="{StaticResource FluentEditIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Edit Site" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Click="ImportFileZillaButton_Click"
+                        Background="#F0F7FF" Foreground="#0078D7" BorderBrush="#0078D7"
+                        Padding="12,5" FontWeight="SemiBold" Cursor="Hand" Margin="0,0,8,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="{StaticResource FluentSitesIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Import from FileZilla..." VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 

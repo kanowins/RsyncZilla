@@ -1,5 +1,21 @@
 # RsyncZilla Release Notes
 
+## Version 1.3.4 (2026-09-25)
+
+### ✨ New Features & Improvements
+- **FileZilla Server Import Functionality**:
+  - Added native support to auto-detect and import server configurations directly from FileZilla (`%APPDATA%\FileZilla\sitemanager.xml`, `filezilla.xml`, or any exported XML file).
+  - Preserves hierarchical folder groupings (`<Folder>`) and displays folder breadcrumbs for categorized sites.
+  - Automatically decodes FileZilla's internal SafePath remote directories (e.g. `1 0 4 home 6 debian` → `/home/debian`) and loads configured local initial paths.
+  - **Automatic Port 21 to 22 Conversion**: Standard FTP connections configured with port 21 are automatically mapped to port 22 (SSH/SFTP) so they work immediately with RsyncZilla without manual reconfiguration.
+  - Interactive import dialog with preview DataGrid, per-site selection checkboxes, Select/Deselect All controls, and duplicate site detection with overwrite options.
+- **Enhanced Site Manager UI**:
+  - Added **Site Name** column to the Site Manager table to clearly distinguish custom site aliases from raw host addresses.
+  - Added **Edit Site** button to quickly update existing server parameters, paths, and friendly names.
+  - Added dedicated **Import from FileZilla...** button in the Site Manager dialog and top application menu (`File` → `Import FileZilla Sites...`).
+
+---
+
 ## Version 1.3.3 (2026-09-25)
 
 ### ✨ Bug Fixes & Improvements

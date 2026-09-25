@@ -51,7 +51,7 @@ namespace RsyncZilla.Views
                     editDialog.Host, 
                     editDialog.Username, 
                     editDialog.Port, 
-                    customName: null, 
+                    customName: editDialog.SiteName, 
                     localPath: editDialog.LocalPath, 
                     remotePath: editDialog.RemotePath);
 
@@ -67,6 +67,66 @@ namespace RsyncZilla.Views
                 {
                     ConnectionsGrid.SelectedItem = created;
                     ConnectionsGrid.ScrollIntoView(created);
+                }
+            }
+        }
+
+        private void EditSiteButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (ConnectionsGrid.SelectedItem is SavedConnection conn)
+            {
+                var editDialog = new SiteEditDialog(conn)
+                {
+                    Owner = this
+                };
+
+                if (editDialog.ShowDialog() == true)
+                {
+                    _service.SaveOrUpdate(
+                        editDialog.Host,
+                        editDialog.Username,
+                        editDialog.Port,
+                        customName: editDialog.SiteName,
+                        localPath: editDialog.LocalPath,
+                        remotePath: editDialog.RemotePath);
+
+                    LoadConnections();
+
+                    var updated = Connections.FirstOrDefault(c => 
+                        c.Host.Equals(editDialog.Host, System.StringComparison.OrdinalIgnoreCase) &&
+                        c.Username.Equals(editDialog.Username, System.StringComparison.OrdinalIgnoreCase) &&
+                        c.Port == editDialog.Port);
+
+                    if (updated != null)
+                    {
+                        ConnectionsGrid.SelectedItem = updated;
+                        ConnectionsGrid.ScrollIntoView(updated);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please select a site to edit.", "Notice", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        private void ImportFileZillaButton_Click(object sender, RoutedEventArgs e)
+        {
+            var importDialog = new ImportFileZillaDialog(_service)
+            {
+                Owner = this
+            };
+
+            if (importDialog.ShowDialog() == true)
+            {
+                LoadConnections();
+                if (importDialog.ImportedCount > 0)
+                {
+                    MessageBox.Show(
+                        $"Successfully imported {importDialog.ImportedCount} site(s) from FileZilla.",
+                        "Import Complete",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
                 }
             }
         }

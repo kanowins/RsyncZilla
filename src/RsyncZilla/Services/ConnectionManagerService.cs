@@ -11,12 +11,21 @@ namespace RsyncZilla.Services
     {
         private readonly string _filePath;
 
-        public ConnectionManagerService()
+        public ConnectionManagerService(string? customFilePath = null)
         {
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var folder = Path.Combine(appData, "RsyncZilla");
-            Directory.CreateDirectory(folder);
-            _filePath = Path.Combine(folder, "connections.json");
+            if (!string.IsNullOrWhiteSpace(customFilePath))
+            {
+                _filePath = customFilePath;
+                var dir = Path.GetDirectoryName(_filePath);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            }
+            else
+            {
+                var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                var folder = Path.Combine(appData, "RsyncZilla");
+                Directory.CreateDirectory(folder);
+                _filePath = Path.Combine(folder, "connections.json");
+            }
         }
 
         public List<SavedConnection> LoadConnections()
@@ -130,6 +139,60 @@ namespace RsyncZilla.Services
                 list.Remove(toRemove);
                 SaveToFile(list);
             }
+        }
+
+        public int ImportConnections(IEnumerable<SavedConnection> connectionsToImport, bool overwriteExisting = true)
+        {
+            var list = LoadConnections();
+            int importedCount = 0;
+
+            foreach (var conn in connectionsToImport)
+            {
+                if (string.IsNullOrWhiteSpace(conn.Host) || string.IsNullOrWhiteSpace(conn.Username))
+                    continue;
+
+                var existing = list.FirstOrDefault(c => 
+                    c.Host.Equals(conn.Host.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                    c.Username.Equals(conn.Username.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                    c.Port == conn.Port);
+
+                if (existing != null)
+                {
+                    if (overwriteExisting)
+                    {
+                        if (!string.IsNullOrWhiteSpace(conn.Name))
+                            existing.Name = conn.Name.Trim();
+                        if (!string.IsNullOrWhiteSpace(conn.LastLocalPath))
+                            existing.LastLocalPath = conn.LastLocalPath;
+                        if (!string.IsNullOrWhiteSpace(conn.LastRemotePath))
+                            existing.LastRemotePath = conn.LastRemotePath;
+                        existing.LastUsed = DateTime.Now;
+                        importedCount++;
+                    }
+                }
+                else
+                {
+                    list.Add(new SavedConnection
+                    {
+                        Id = Guid.NewGuid(),
+                        Host = conn.Host.Trim(),
+                        Username = conn.Username.Trim(),
+                        Port = conn.Port,
+                        Name = !string.IsNullOrWhiteSpace(conn.Name) ? conn.Name.Trim() : $"{conn.Username.Trim()}@{conn.Host.Trim()}",
+                        LastLocalPath = conn.LastLocalPath ?? string.Empty,
+                        LastRemotePath = conn.LastRemotePath ?? string.Empty,
+                        LastUsed = DateTime.Now
+                    });
+                    importedCount++;
+                }
+            }
+
+            if (importedCount > 0)
+            {
+                SaveToFile(list);
+            }
+
+            return importedCount;
         }
 
         private void SaveToFile(List<SavedConnection> list)

@@ -160,6 +160,7 @@ namespace RsyncZilla.ViewModels
         public ICommand RetryAllFailedCommand { get; }
         public ICommand ClearLogsCommand { get; }
         public ICommand OpenSiteManagerCommand { get; }
+        public ICommand ImportFileZillaCommand { get; }
         public ICommand OpenRemoteTerminalCommand { get; }
         public ICommand EditRemoteFileCommand { get; }
         public ICommand ShowInExplorerCommand { get; }
@@ -228,6 +229,7 @@ namespace RsyncZilla.ViewModels
             RetryAllFailedCommand = new RelayCommand(RetryAllFailed, () => FailedTransfers.Any());
             ClearLogsCommand = new RelayCommand(() => LogEntries.Clear());
             OpenSiteManagerCommand = new RelayCommand(OpenSiteManager);
+            ImportFileZillaCommand = new RelayCommand(OpenImportFileZilla);
             OpenRemoteTerminalCommand = new RelayCommand((param) => OpenRemoteTerminal(param), _ => IsConnected);
             EditRemoteFileCommand = new RelayCommand(async (param) => await EditRemoteFileAsync(param), _ => IsConnected);
             ShowInExplorerCommand = new RelayCommand((param) => ShowInExplorer(param));
@@ -582,6 +584,24 @@ namespace RsyncZilla.ViewModels
                 {
                     ApplySavedConnectionAction?.Invoke(conn, string.Empty);
                 }
+            }
+        }
+
+        public void OpenImportFileZilla()
+        {
+            var dialog = new Views.ImportFileZillaDialog(_connectionManagerService)
+            {
+                Owner = Application.Current.MainWindow
+            };
+
+            if (dialog.ShowDialog() == true && dialog.ImportedCount > 0)
+            {
+                AddLog($"[sitemanager] Imported {dialog.ImportedCount} site(s) from FileZilla.", false);
+                MessageBox.Show(
+                    $"Successfully imported {dialog.ImportedCount} site(s) from FileZilla.",
+                    "FileZilla Import",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
         }
 
