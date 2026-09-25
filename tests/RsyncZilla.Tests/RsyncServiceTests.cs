@@ -231,7 +231,32 @@ namespace RsyncZilla.Tests
             Assert.DoesNotContain("--update", args);
             Assert.DoesNotContain("--ignore-times", args);
             Assert.DoesNotContain("--checksum", args);
-            Assert.StartsWith("-avzP -s --stats -e", args);
+            Assert.StartsWith("-avzP -s --stats", args);
+            Assert.Contains("-e \"ssh -p 22\"", args);
+        }
+
+        [Fact]
+        public void BuildRsyncArguments_Upload_ShouldContainPermissionProtectionFlags()
+        {
+            var args = RsyncService.BuildRsyncArguments("ssh -p 22", "\"/source/file.txt\"", "\"/dest/\"", FileExistsAction.OverwriteIfDifferent, TransferDirection.Upload);
+
+            Assert.Contains("--no-perms", args);
+            Assert.Contains("--no-owner", args);
+            Assert.Contains("--no-group", args);
+            Assert.Contains("--omit-dir-times", args);
+            Assert.Contains("--chmod=D755,F644", args);
+        }
+
+        [Fact]
+        public void BuildRsyncArguments_Download_ShouldNotDisablePermsOrForceChmod()
+        {
+            var args = RsyncService.BuildRsyncArguments("ssh -p 22", "\"/source/file.txt\"", "\"/dest/\"", FileExistsAction.OverwriteIfDifferent, TransferDirection.Download);
+
+            Assert.DoesNotContain("--no-perms", args);
+            Assert.DoesNotContain("--chmod", args);
+            Assert.DoesNotContain("--omit-dir-times", args);
+            Assert.Contains("--no-owner", args);
+            Assert.Contains("--no-group", args);
         }
 
         [Fact]

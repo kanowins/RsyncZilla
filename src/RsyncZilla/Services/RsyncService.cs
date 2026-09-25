@@ -222,7 +222,8 @@ namespace RsyncZilla.Services
             string sshCommand,
             string sourcesArg,
             string destArg,
-            FileExistsAction fileExistsAction = FileExistsAction.OverwriteIfDifferent)
+            FileExistsAction fileExistsAction = FileExistsAction.OverwriteIfDifferent,
+            TransferDirection direction = TransferDirection.Upload)
         {
             string overwriteFlag = fileExistsAction switch
             {
@@ -232,7 +233,11 @@ namespace RsyncZilla.Services
                 _ => "" // Default: OverwriteIfDifferent (standard rsync -avzP without --update)
             };
 
-            return $"-avzP -s --stats {overwriteFlag}-e \"{sshCommand}\" {sourcesArg} {destArg}";
+            string permFlags = direction == TransferDirection.Upload
+                ? "--no-perms --no-owner --no-group --omit-dir-times --chmod=D755,F644 "
+                : "--no-owner --no-group ";
+
+            return $"-avzP -s --stats {permFlags}{overwriteFlag}-e \"{sshCommand}\" {sourcesArg} {destArg}";
         }
 
         public async Task<bool> ExecuteTransferAsync(
@@ -408,7 +413,7 @@ namespace RsyncZilla.Services
                 destArg = $"\"{localDest}\"";
             }
 
-            var args = BuildRsyncArguments(sshCommand, sourceArgsBuilder.ToString().TrimEnd(), destArg, fileExistsAction);
+            var args = BuildRsyncArguments(sshCommand, sourceArgsBuilder.ToString().TrimEnd(), destArg, fileExistsAction, direction);
 
             var batchDescription = tasks.Count == 1 ? tasks[0].FileName : $"{tasks.Count} files ({tasks[0].FileName}, ...)";
             LogMessageReceived?.Invoke($"[rsync] Transferring batch: {batchDescription}", false);

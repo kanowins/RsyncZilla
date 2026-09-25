@@ -1,5 +1,17 @@
 # RsyncZilla Release Notes
 
+## Version 1.3.3 (2026-09-25)
+
+### ✨ Bug Fixes & Improvements
+- **Server Permission Protection on Upload (Windows to Linux)**:
+  - Resolved a critical issue where uploading to existing remote directories from Windows stripped read and execute permissions (`r-x`) from *others* (`chmod 750`/`700`), causing HTTP 403 Forbidden errors on web servers (e.g. Nginx, Apache).
+  - Configured rsync to pass `--no-perms` on local-to-remote uploads, preventing synthetic Windows NTFS ACLs from overwriting existing directory and file permissions on Linux.
+  - Added `--chmod=D755,F644` to enforce standard permissions (`755` for directories, `644` for files) on newly created remote items without altering pre-existing files and folders.
+  - Added `--omit-dir-times` (`-O`) to prevent non-fatal `failed to set times: Operation not permitted` warnings when syncing directories.
+  - Added `--no-owner --no-group` on transfers to eliminate ownership mapping conflicts between Windows user accounts and Linux servers.
+
+---
+
 ## Version 1.3.2 (2026-09-18)
 
 ### ✨ New Features & UI Polishing
