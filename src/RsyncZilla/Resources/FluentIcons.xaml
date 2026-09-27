@@ -269,6 +269,71 @@
         </DrawingImage.Drawing>
     </DrawingImage>
 
+    <!-- 7b. Open With -->
+    <DrawingImage x:Key="FluentOpenWithIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Document Base -->
+                <GeometryDrawing Brush="#E2E8F0">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 3,2 L 13,2 L 17,6 L 17,10 L 10,10 C 9.4,10 9,10.4 9,11 L 9,21 L 3,21 C 2.4,21 2,20.6 2,20 L 2,3 C 2,2.4 2.4,2 3,2 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Folded Corner -->
+                <GeometryDrawing Brush="#94A3B8">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 13,2 L 13,6 L 17,6 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Document Lines -->
+                <GeometryDrawing Brush="#CBD5E1">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="4,6,6,1.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- App Picker Window Outline / Drop Shadow -->
+                <GeometryDrawing Brush="#0F172A">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="9,8,14,14" RadiusX="2" RadiusY="2"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- App Picker Header / Titlebar -->
+                <GeometryDrawing Brush="#0284C7">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 11,8.5 L 21,8.5 C 22,8.5 22.5,9 22.5,10 L 22.5,11.5 L 9.5,11.5 L 9.5,10 C 9.5,9 10,8.5 11,8.5 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- App Picker Body -->
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="9.5,11.5,13,10"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- 4 Colorful App Icons -->
+                <GeometryDrawing Brush="#38BDF8">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="11,13,4,3" RadiusX="0.5" RadiusY="0.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#10B981">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="17,13,4,3" RadiusX="0.5" RadiusY="0.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#F59E0B">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="11,17,4,3" RadiusX="0.5" RadiusY="0.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#8B5CF6">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="17,17,4,3" RadiusX="0.5" RadiusY="0.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
     <!-- 8. Explorer / Show in Explorer -->
     <DrawingImage x:Key="FluentExplorerIcon">
         <DrawingImage.Drawing>

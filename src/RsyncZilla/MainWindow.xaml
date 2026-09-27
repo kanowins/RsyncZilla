@@ -910,6 +910,11 @@
                                             <Image Source="{StaticResource FluentEditIcon}" Width="16" Height="16"/>
                                         </MenuItem.Icon>
                                     </MenuItem>
+                                    <MenuItem Header="Open with..." InputGestureText="Shift+F4" Command="{Binding OpenLocalFileWithCommand}" CommandParameter="{Binding LocalBrowser.SelectedItem}">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentOpenWithIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
                                     <MenuItem Header="Show in Explorer" Command="{Binding ShowInExplorerCommand}" CommandParameter="{Binding LocalBrowser.SelectedItem}">
                                         <MenuItem.Icon>
                                             <Image Source="{StaticResource FluentExplorerIcon}" Width="16" Height="16"/>
@@ -1063,6 +1068,11 @@
                                     <MenuItem Header="View / Edit (F4)" Command="{Binding EditRemoteFileCommand}" CommandParameter="{Binding RemoteBrowser.SelectedItem}">
                                         <MenuItem.Icon>
                                             <Image Source="{StaticResource FluentEditIcon}" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Open with..." InputGestureText="Shift+F4" Command="{Binding EditRemoteFileWithCommand}" CommandParameter="{Binding RemoteBrowser.SelectedItem}">
+                                        <MenuItem.Icon>
+                                            <Image Source="{StaticResource FluentOpenWithIcon}" Width="16" Height="16"/>
                                         </MenuItem.Icon>
                                     </MenuItem>
                                     <MenuItem Header="Open terminal here (Ctrl+T)" Command="{Binding OpenRemoteTerminalCommand}" CommandParameter="{Binding RemoteBrowser.SelectedItem}">

@@ -163,10 +163,31 @@ namespace RsyncZilla.ViewModels
         public ICommand ImportFileZillaCommand { get; }
         public ICommand OpenRemoteTerminalCommand { get; }
         public ICommand EditRemoteFileCommand { get; }
+        public ICommand EditRemoteFileWithCommand { get; }
         public ICommand ShowInExplorerCommand { get; }
         public Action<string, string>? ExplorerLauncher { get; set; }
         public ICommand OpenLocalFileCommand { get; }
-        public Action<string>? FileOpener { get; set; }
+        public ICommand OpenLocalFileWithCommand { get; }
+        private Action<string>? _fileOpener;
+        public Action<string>? FileOpener
+        {
+            get => _fileOpener;
+            set
+            {
+                _fileOpener = value;
+                if (_remoteEditService != null) _remoteEditService.EditorOpener = value;
+            }
+        }
+        private Action<string>? _fileWithOpener;
+        public Action<string>? FileWithOpener
+        {
+            get => _fileWithOpener;
+            set
+            {
+                _fileWithOpener = value;
+                if (_remoteEditService != null) _remoteEditService.OpenWithOpener = value;
+            }
+        }
 
         public UpdateCheckService UpdateService { get; } = new();
         public ICommand DisconnectCommand { get; }
@@ -232,8 +253,10 @@ namespace RsyncZilla.ViewModels
             ImportFileZillaCommand = new RelayCommand(OpenImportFileZilla);
             OpenRemoteTerminalCommand = new RelayCommand((param) => OpenRemoteTerminal(param), _ => IsConnected);
             EditRemoteFileCommand = new RelayCommand(async (param) => await EditRemoteFileAsync(param), _ => IsConnected);
+            EditRemoteFileWithCommand = new RelayCommand(async (param) => await EditRemoteFileWithAsync(param), _ => IsConnected);
             ShowInExplorerCommand = new RelayCommand((param) => ShowInExplorer(param));
             OpenLocalFileCommand = new RelayCommand((param) => OpenLocalFile(param));
+            OpenLocalFileWithCommand = new RelayCommand((param) => OpenLocalFileWith(param));
             SetFileExistsActionCommand = new RelayCommand((param) =>
             {
                 if (param is FileExistsAction action)
@@ -811,6 +834,30 @@ namespace RsyncZilla.ViewModels
             }
         }
 
+        public async Task EditRemoteFileWithAsync(object? param = null)
+        {
+            if (ActiveSession == null || !IsConnected) return;
+
+            var item = param as FileItem ?? ActiveSession.RemoteBrowser.SelectedItem;
+            if (item == null || item.IsDirectory || item.IsParent)
+            {
+                return;
+            }
+
+            var (ok, _, error) = await _remoteEditService.OpenFileForEditingAsync(ActiveSession, item, openWith: true);
+            if (!ok && !string.IsNullOrWhiteSpace(error))
+            {
+                RunOnUi(() =>
+                {
+                    MessageBox.Show(
+                        $"Failed to open remote file '{item.Name}' with selected application:\n\n{error}",
+                        "Open Remote File Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                });
+            }
+        }
+
         private void OnRemoteFileUploaded(RemoteSessionViewModel session, string remotePath, long newLength, DateTime newWriteTime)
         {
             RunOnUi(() =>
@@ -927,6 +974,45 @@ namespace RsyncZilla.ViewModels
                     MessageBox.Show(
                         $"Failed to open local file:\n\n{ex.Message}",
                         "Open File Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                });
+            }
+        }
+
+        public void OpenLocalFileWith(object? param = null)
+        {
+            try
+            {
+                var item = param as FileItem ?? LocalBrowser.SelectedItem;
+                if (item == null || item.IsDirectory || item.IsParent || item.IsDrive)
+                {
+                    return;
+                }
+
+                if (!File.Exists(item.FullPath))
+                {
+                    AddLog($"[Local] File does not exist: {item.FullPath}", true);
+                    return;
+                }
+
+                if (FileWithOpener != null)
+                {
+                    FileWithOpener(item.FullPath);
+                    return;
+                }
+
+                RemoteEditService.OpenWith(item.FullPath);
+                AddLog($"[Local] Opened 'Open with' dialog for '{item.Name}'.", false);
+            }
+            catch (Exception ex)
+            {
+                AddLog($"[Local] Failed to open 'Open with' dialog: {ex.Message}", true);
+                RunOnUi(() =>
+                {
+                    MessageBox.Show(
+                        $"Failed to open 'Open with' dialog:\n\n{ex.Message}",
+                        "Open With Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
                 });

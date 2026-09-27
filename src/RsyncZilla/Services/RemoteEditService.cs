@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,6 +46,9 @@ namespace RsyncZilla.Services
         public event Action<RemoteSessionViewModel, string, long, DateTime>? FileUploaded;
         public event Action<RemoteSessionViewModel, string, string, string>? FileUploadFailed; // (session, remotePath, fileName, error)
 
+        public Action<string>? EditorOpener { get; set; }
+        public Action<string>? OpenWithOpener { get; set; }
+
         public RemoteEditService(RsyncService? rsyncService = null)
         {
             _rsyncService = rsyncService ?? new RsyncService();
@@ -59,7 +63,7 @@ namespace RsyncZilla.Services
             return Path.Combine(tempBase, cleanRelative);
         }
 
-        public async Task<(bool success, string? localPath, string? error)> OpenFileForEditingAsync(RemoteSessionViewModel session, FileItem item)
+        public async Task<(bool success, string? localPath, string? error)> OpenFileForEditingAsync(RemoteSessionViewModel session, FileItem item, bool openWith = false)
         {
             if (item == null || item.IsDirectory || item.IsParent)
             {
@@ -73,12 +77,12 @@ namespace RsyncZilla.Services
 
             var localPath = GetLocalTempPath(session.Host, session.Port, session.Username, item.FullPath);
 
-            LogMessageReceived?.Invoke($"[Remote Edit] Downloading '{item.Name}' for editing...", false);
+            LogMessageReceived?.Invoke($"[Remote Edit] Downloading '{item.Name}' for {(openWith ? "opening" : "editing")}...", false);
 
             var (ok, err) = await session.SftpService.DownloadFileAsync(item.FullPath, localPath);
             if (!ok)
             {
-                var msg = $"Failed to download '{item.Name}' for editing: {err}";
+                var msg = $"Failed to download '{item.Name}' for {(openWith ? "opening" : "editing")}: {err}";
                 LogMessageReceived?.Invoke($"[Remote Edit] {msg}", true);
                 return (false, null, msg);
             }
@@ -88,10 +92,31 @@ namespace RsyncZilla.Services
             // Register or update watcher
             RegisterFileWatcher(localPath, item.FullPath, session, hash);
 
-            // Open in default editor (or notepad if no association)
-            OpenInEditor(localPath);
+            if (openWith)
+            {
+                if (OpenWithOpener != null)
+                {
+                    OpenWithOpener(localPath);
+                }
+                else
+                {
+                    OpenWith(localPath);
+                }
+                LogMessageReceived?.Invoke($"[Remote Edit] Opened 'Open with' for '{item.Name}'.", false);
+            }
+            else
+            {
+                if (EditorOpener != null)
+                {
+                    EditorOpener(localPath);
+                }
+                else
+                {
+                    OpenInEditor(localPath);
+                }
+                LogMessageReceived?.Invoke($"[Remote Edit] Opened '{item.Name}' in local editor.", false);
+            }
 
-            LogMessageReceived?.Invoke($"[Remote Edit] Opened '{item.Name}' in local editor.", false);
             return (true, localPath, null);
         }
 
@@ -224,8 +249,17 @@ namespace RsyncZilla.Services
             }
         }
 
+        public static Action<string>? CustomEditorAction { get; set; }
+        public static Action<string>? CustomOpenWithAction { get; set; }
+
         public static void OpenInEditor(string filePath)
         {
+            if (CustomEditorAction != null)
+            {
+                CustomEditorAction(filePath);
+                return;
+            }
+
             try
             {
                 // Attempt opening with system associated application
@@ -247,6 +281,86 @@ namespace RsyncZilla.Services
                 };
                 Process.Start(psi);
             }
+        }
+
+        [DllImport("shell32.dll", EntryPoint = "SHOpenWithDialog", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern int SHOpenWithDialog(IntPtr hWndParent, ref OPENASINFO oOAI);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct OPENASINFO
+        {
+            [MarshalAs(UnmanagedType.LPWStr)]
+            public string cszFile;
+
+            [MarshalAs(UnmanagedType.LPWStr)]
+            public string? cszClass;
+
+            public OPENASINFOFLAGS oaifInFlags;
+        }
+
+        [Flags]
+        private enum OPENASINFOFLAGS
+        {
+            OAIF_ALLOW_REGISTRATION = 0x00000001,
+            OAIF_REGISTER_EXT = 0x00000002,
+            OAIF_EXEC = 0x00000004,
+            OAIF_FORCE_REGISTRATION = 0x00000008,
+            OAIF_HIDE_REGISTRATION = 0x00000020,
+            OAIF_URL_PROTOCOL = 0x00000040,
+            OAIF_FILE_IS_URI = 0x00000080
+        }
+
+        public static void OpenWith(string filePath)
+        {
+            if (CustomOpenWithAction != null)
+            {
+                CustomOpenWithAction(filePath);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            {
+                return;
+            }
+
+            IntPtr parentHwnd = IntPtr.Zero;
+            try
+            {
+                var window = System.Windows.Application.Current?.MainWindow;
+                if (window != null)
+                {
+                    parentHwnd = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+                }
+            }
+            catch { }
+
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    var info = new OPENASINFO
+                    {
+                        cszFile = filePath,
+                        cszClass = null,
+                        oaifInFlags = OPENASINFOFLAGS.OAIF_ALLOW_REGISTRATION | OPENASINFOFLAGS.OAIF_EXEC
+                    };
+
+                    int hr = SHOpenWithDialog(parentHwnd, ref info);
+                    // If SHOpenWithDialog failed with error (hr < 0 and not cancelled)
+                    if (hr < 0 && hr != unchecked((int)0x800704C7) && hr != unchecked((int)0x80004004))
+                    {
+                        OpenInEditor(filePath);
+                    }
+                }
+                catch
+                {
+                    OpenInEditor(filePath);
+                }
+            });
+
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.IsBackground = true;
+            thread.Start();
         }
 
         private static bool WaitForFileReady(string filePath, TimeSpan timeout)

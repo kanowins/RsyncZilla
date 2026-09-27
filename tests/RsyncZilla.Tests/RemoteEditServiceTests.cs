@@ -255,5 +255,100 @@ namespace RsyncZilla.Tests
 
             Assert.Null(openedPath);
         }
+
+        [Fact]
+        public void EditRemoteFileWithCommand_ShouldRequireConnection()
+        {
+            var vm = new MainViewModel();
+
+            Assert.False(vm.IsConnected);
+            Assert.False(vm.EditRemoteFileWithCommand.CanExecute(null));
+        }
+
+        [Fact]
+        public void OpenLocalFileWithCommand_WhenFileExists_ShouldInvokeFileWithOpener()
+        {
+            var vm = new MainViewModel();
+            var tempFile = Path.GetTempFileName();
+            try
+            {
+                string? openedPath = null;
+                vm.FileWithOpener = path => openedPath = path;
+
+                var item = new FileItem
+                {
+                    Name = Path.GetFileName(tempFile),
+                    FullPath = tempFile,
+                    IsDirectory = false
+                };
+
+                vm.OpenLocalFileWithCommand.Execute(item);
+
+                Assert.Equal(tempFile, openedPath);
+            }
+            finally
+            {
+                if (File.Exists(tempFile)) File.Delete(tempFile);
+            }
+        }
+
+        [Fact]
+        public void OpenLocalFileWithCommand_WhenItemIsDirectory_ShouldNotOpen()
+        {
+            var vm = new MainViewModel();
+            string? openedPath = null;
+            vm.FileWithOpener = path => openedPath = path;
+
+            var item = new FileItem
+            {
+                Name = "MyFolder",
+                FullPath = "C:\\MyFolder",
+                IsDirectory = true
+            };
+
+            vm.OpenLocalFileWithCommand.Execute(item);
+
+            Assert.Null(openedPath);
+        }
+
+        [Fact]
+        public void OpenWith_WithCustomAction_ShouldInvokeCustomAction()
+        {
+            string? openedPath = null;
+            RemoteEditService.CustomOpenWithAction = path => openedPath = path;
+
+            try
+            {
+                var fakeFile = @"C:\dummy\file.txt";
+                RemoteEditService.OpenWith(fakeFile);
+
+                Assert.Equal(fakeFile, openedPath);
+            }
+            finally
+            {
+                RemoteEditService.CustomOpenWithAction = null;
+            }
+        }
+
+        [Fact]
+        public async Task OpenFileForEditingAsync_WithOpenWith_WhenDisconnected_ShouldReturnError()
+        {
+            var service = new RemoteEditService();
+            var session = new RemoteSessionViewModel();
+            Assert.False(session.IsConnected);
+
+            var fileItem = new FileItem
+            {
+                Name = "script.py",
+                FullPath = "/home/debian/script.py",
+                IsDirectory = false
+            };
+
+            var (success, localPath, error) = await service.OpenFileForEditingAsync(session, fileItem, openWith: true);
+
+            Assert.False(success);
+            Assert.Null(localPath);
+            Assert.Contains("not connected", error, StringComparison.OrdinalIgnoreCase);
+        }
     }
 }

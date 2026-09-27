@@ -999,13 +999,21 @@ namespace RsyncZilla
             else if (e.Key == Key.F4)
             {
                 var targetGrid = GetTargetFileGridForAction();
+                bool isShift = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
                 if (targetGrid == LocalDataGrid)
                 {
                     var item = LocalDataGrid.SelectedItem as FileItem;
                     if (item != null && !item.IsDirectory && !item.IsParent && !item.IsDrive)
                     {
                         e.Handled = true;
-                        _viewModel.OpenLocalFile(item);
+                        if (isShift)
+                        {
+                            _viewModel.OpenLocalFileWith(item);
+                        }
+                        else
+                        {
+                            _viewModel.OpenLocalFile(item);
+                        }
                     }
                 }
                 else if (targetGrid == RemoteDataGrid)
@@ -1013,10 +1021,21 @@ namespace RsyncZilla
                     var item = RemoteDataGrid.SelectedItem as FileItem;
                     if (item != null && !item.IsDirectory && !item.IsParent)
                     {
-                        if (_viewModel.EditRemoteFileCommand.CanExecute(item))
+                        if (isShift)
                         {
-                            e.Handled = true;
-                            _viewModel.EditRemoteFileCommand.Execute(item);
+                            if (_viewModel.EditRemoteFileWithCommand.CanExecute(item))
+                            {
+                                e.Handled = true;
+                                _viewModel.EditRemoteFileWithCommand.Execute(item);
+                            }
+                        }
+                        else
+                        {
+                            if (_viewModel.EditRemoteFileCommand.CanExecute(item))
+                            {
+                                e.Handled = true;
+                                _viewModel.EditRemoteFileCommand.Execute(item);
+                            }
                         }
                     }
                 }
