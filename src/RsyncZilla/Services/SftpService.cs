@@ -17,6 +17,7 @@ namespace RsyncZilla.Services
 
         public bool IsConnected => _client != null && _client.IsConnected;
         public string CurrentPath { get; private set; } = "/";
+        public string? HomeDirectory { get; private set; }
 
         public event Action<string, bool>? LogMessageReceived; // (message, isError)
 
@@ -56,6 +57,10 @@ namespace RsyncZilla.Services
                         _connectionInfo = connectionInfo;
 
                         CurrentPath = _client.WorkingDirectory;
+                        if (string.IsNullOrEmpty(HomeDirectory))
+                        {
+                            HomeDirectory = CurrentPath;
+                        }
                         LogMessageReceived?.Invoke($"Connected successfully. Initial directory: {CurrentPath}", false);
                         return (true, (string?)null);
                     }
@@ -92,6 +97,7 @@ namespace RsyncZilla.Services
         private void DisconnectInternal()
         {
             _connectionInfo = null;
+            HomeDirectory = null;
             if (_client != null)
             {
                 try

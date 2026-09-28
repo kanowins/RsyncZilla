@@ -28,7 +28,7 @@ namespace RsyncZilla.Views
         // Directory synchronization state
         private bool _isSyncEnabled = true;
         private volatile bool _isSyncing;
-        private string? _homeDirectory;
+        private bool _initialNavigationPending;
         private string? _lastKnownTerminalPath;
         private string _rollingOutputBuffer = "";
         private readonly object _bufferLock = new();
@@ -42,8 +42,13 @@ namespace RsyncZilla.Views
 
             if (!string.IsNullOrWhiteSpace(_session.RemoteBrowser.CurrentPath))
             {
-                _homeDirectory = _session.RemoteBrowser.CurrentPath;
                 _lastKnownTerminalPath = _session.RemoteBrowser.CurrentPath;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_session.InitialTerminalPath) && _session.InitialTerminalPath != "~")
+            {
+                _initialNavigationPending = true;
+                _ = Task.Delay(3500).ContinueWith(_ => _initialNavigationPending = false);
             }
 
             _session.RemoteBrowser.PropertyChanged += OnRemoteBrowserPropertyChanged;
@@ -440,10 +445,6 @@ namespace RsyncZilla.Views
                 }
                 else
                 {
-                    if (string.IsNullOrEmpty(_homeDirectory) && !string.IsNullOrWhiteSpace(_session.RemoteBrowser.CurrentPath) && _session.RemoteBrowser.CurrentPath != "/")
-                    {
-                        _homeDirectory = _session.RemoteBrowser.CurrentPath;
-                    }
                     _lastKnownTerminalPath = _session.RemoteBrowser.CurrentPath;
                     _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] Remote tree verified: {_session.RemoteBrowser.Items.Count} item(s) in '{_session.RemoteBrowser.CurrentPath}'.", false);
                     HideTreeOverlay();
@@ -579,11 +580,6 @@ namespace RsyncZilla.Views
                 var newPath = _session.RemoteBrowser.CurrentPath;
                 if (string.IsNullOrWhiteSpace(newPath)) return;
 
-                if (string.IsNullOrEmpty(_homeDirectory) && newPath != "/")
-                {
-                    _homeDirectory = newPath;
-                }
-
                 if (_isSyncEnabled && !_isSyncing)
                 {
                     if (!string.Equals(_lastKnownTerminalPath, newPath, StringComparison.Ordinal))
@@ -605,28 +601,44 @@ namespace RsyncZilla.Views
             }
         }
 
-        private string GetEffectiveHomeDirectory()
+        public string GetEffectiveHomeDirectory()
         {
-            if (!string.IsNullOrWhiteSpace(_homeDirectory) && _homeDirectory != "/") return _homeDirectory;
-            if (!string.IsNullOrWhiteSpace(_session.RemoteBrowser.CurrentPath) && _session.RemoteBrowser.CurrentPath != "/") return _session.RemoteBrowser.CurrentPath;
-            if (!string.IsNullOrWhiteSpace(_session.SftpService.CurrentPath) && _session.SftpService.CurrentPath != "/") return _session.SftpService.CurrentPath;
-            if (!string.IsNullOrWhiteSpace(_session.InitialTerminalPath) && _session.InitialTerminalPath != "/") return _session.InitialTerminalPath;
+            if (!string.IsNullOrWhiteSpace(_session.SftpService.HomeDirectory) && _session.SftpService.HomeDirectory != "/")
+            {
+                return _session.SftpService.HomeDirectory;
+            }
             return _session.Username == "root" ? "/root" : $"/home/{_session.Username}";
         }
 
-        public static string ResolveRemotePath(string rawPath, string? homeDirectory)
+        public static string ResolveRemotePath(string rawPath, string? homeDirectory, string? currentDirectory = null)
         {
             if (string.IsNullOrWhiteSpace(rawPath)) return "";
             var resolved = rawPath.Trim();
-            if (resolved == "~" && !string.IsNullOrEmpty(homeDirectory))
+
+            // Handle ~
+            if (resolved == "~")
             {
-                return homeDirectory;
+                return string.IsNullOrEmpty(homeDirectory) ? "/" : homeDirectory.TrimEnd('/');
             }
-            if (resolved.StartsWith("~/") && !string.IsNullOrEmpty(homeDirectory))
+            if (resolved.StartsWith("~/"))
             {
-                return homeDirectory.TrimEnd('/') + resolved.Substring(1);
+                var home = string.IsNullOrEmpty(homeDirectory) ? "" : homeDirectory.TrimEnd('/');
+                return home + resolved.Substring(1);
             }
-            return resolved;
+
+            // Absolute path (/...)
+            if (resolved.StartsWith("/"))
+            {
+                return resolved;
+            }
+
+            // Relative path fallback (e.g. "subdir" or "../subdir")
+            if (!string.IsNullOrEmpty(currentDirectory) && currentDirectory.StartsWith("/"))
+            {
+                return $"{currentDirectory.TrimEnd('/')}/{resolved}";
+            }
+
+            return "/" + resolved;
         }
 
         private static readonly System.Text.RegularExpressions.Regex AnsiEscapeRegex = new(
@@ -715,8 +727,18 @@ namespace RsyncZilla.Views
             if (string.IsNullOrWhiteSpace(rawPath) || !_isSyncEnabled) return;
 
             var home = GetEffectiveHomeDirectory();
-            var resolvedPath = ResolveRemotePath(rawPath, home);
+            var resolvedPath = ResolveRemotePath(rawPath, home, _session.RemoteBrowser.CurrentPath);
             if (!resolvedPath.StartsWith("/")) return;
+
+            // When opening the terminal in a specific directory, ignore the shell's default startup prompt in home
+            if (_initialNavigationPending)
+            {
+                if (string.Equals(resolvedPath, home, StringComparison.Ordinal) || rawPath == "~")
+                {
+                    return;
+                }
+                _initialNavigationPending = false;
+            }
 
             if (_isSyncing) return;
 
@@ -885,7 +907,44 @@ namespace RsyncZilla.Views
         {
             if (RemoteDataGrid.SelectedItem is FileItem item && !item.IsDirectory && !item.IsParent)
             {
+                _mainViewModel.ActiveSession = _session;
                 _mainViewModel.EditRemoteFileCommand.Execute(item);
+            }
+        }
+
+        private void EditRemoteFileWith_Click(object sender, RoutedEventArgs e)
+        {
+            if (RemoteDataGrid.SelectedItem is FileItem item && !item.IsDirectory && !item.IsParent)
+            {
+                _mainViewModel.ActiveSession = _session;
+                _mainViewModel.EditRemoteFileWithCommand.Execute(item);
+            }
+        }
+
+        private void RemoteDataGrid_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.F4)
+            {
+                bool isShift = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+                if (isShift)
+                {
+                    EditRemoteFileWith_Click(sender, e);
+                }
+                else
+                {
+                    EditRemoteFile_Click(sender, e);
+                }
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Delete)
+            {
+                DeleteRemoteItem_Click(sender, e);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.F2)
+            {
+                RenameRemoteItem_Click(sender, e);
+                e.Handled = true;
             }
         }
 

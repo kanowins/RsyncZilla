@@ -83,12 +83,12 @@ namespace RsyncZilla.Services
                         Disconnected?.Invoke();
                     };
 
-                    if (!string.IsNullOrWhiteSpace(InitialPath) && InitialPath != "/" && InitialPath != "~")
+                    if (!string.IsNullOrWhiteSpace(InitialPath) && InitialPath != "~")
                     {
                         // Navigate to initial path once shell starts
                         _ = Task.Run(async () =>
                         {
-                            await Task.Delay(250);
+                            await Task.Delay(200);
                             SendInput($"cd '{InitialPath.Replace("'", "'\\''")}'\r");
                         });
                     }

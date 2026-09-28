@@ -207,7 +207,8 @@
                               AllowDrop="True"
                               DragOver="RemoteDataGrid_DragOver"
                               DragEnter="RemoteDataGrid_DragEnter"
-                              Drop="RemoteDataGrid_Drop">
+                              Drop="RemoteDataGrid_Drop"
+                              PreviewKeyDown="RemoteDataGrid_PreviewKeyDown">
                         <DataGrid.ContextMenu>
                             <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
                                 <MenuItem Header="Download to local..." Click="DownloadSelected_Click">
@@ -234,6 +235,11 @@
                                 <MenuItem Header="View / Edit (F4)" Click="EditRemoteFile_Click">
                                     <MenuItem.Icon>
                                         <Image Source="{StaticResource FluentEditIcon}" Width="16" Height="16"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Open with..." InputGestureText="Shift+F4" Click="EditRemoteFileWith_Click">
+                                    <MenuItem.Icon>
+                                        <Image Source="{StaticResource FluentOpenWithIcon}" Width="16" Height="16"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
                                 <Separator Background="#E0E0E0"/>
