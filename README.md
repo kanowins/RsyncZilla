@@ -43,10 +43,13 @@ Engineered to eliminate the classic issue of silent FTP transfer failures, ensur
    - On save (`Ctrl + S`), a background file watcher debounces writes (450 ms), computes SHA256 hashes, and quietly auto-uploads the file via SFTP.
    - If the connection drops or permissions fail, a clear error dialog alerts you immediately and preserves changes for automatic retry.
 
-5. **Site Manager & Zero-Leak Credential Security:**
-   - **Site Manager (📂 Sites):** Save frequently used servers (Host, User, Port) to connect in a single click.
-   - **Strict Security:** **NEVER saves passwords to disk** (unlike FileZilla's plaintext XML).
-   - Automatically navigates to the remote user's **home directory** upon login.
+5. **Site Manager & Encrypted Password Vault (AES-256-GCM):**
+   - **Site Manager (📂 Sites):** Save frequently used servers (Host, User, Port, Site Name, and custom Paths) to connect in a single click.
+   - **Optional Encrypted Password Vault:** Protect all your server passwords behind a single **Master Password**.
+   - **Zero Plaintext Storage:** Passwords are encrypted on disk with industry-standard authenticated **AES-256-GCM** and **PBKDF2** key derivation (HMAC-SHA256, 100,000 iterations, random 32-byte salt). Unlike FileZilla's vulnerable plaintext XML (`sitemanager.xml`), your credentials are safe from infostealers and malware.
+   - **Seamless Direct Connect:** Connecting to a site with saved credentials connects immediately without repetitive password prompts. Entering a new password automatically saves it to the vault.
+   - **Strict Session Isolation:** Prompts for the master password when opening Site Manager, and automatically locks and wipes decrypted keys from memory as soon as Site Manager closes.
+   - **Opt-in Flexibility:** If the vault is not activated, RsyncZilla operates in zero-disk mode, keeping passwords strictly in ephemeral session memory.
    - Built-in `RsyncAskPass.exe` and `SSH_ASKPASS` helper pipes credentials to OpenSSH subprocesses in-memory without intrusive popups.
 
 6. **Transfer Queue & Real-Time Logs:**
@@ -63,19 +66,21 @@ Engineered to eliminate the classic issue of silent FTP transfer failures, ensur
 - `src/RsyncZilla/`: Main WPF application (.NET 8 Windows x64).
   - `tools/cygwin64/`: Portable binaries (`rsync.exe`, `ssh.exe`, runtime DLLs).
   - `tools/kitty.exe`: Portable KiTTY SSH terminal.
-  - `Models/`: Data models for files, transfer tasks, connections, and logs.
+  - `Models/`: Data models for files, transfer tasks, connections, vault entries, and logs.
   - `Services/`:
     - `LocalFileService.cs`: Local disk browsing and file management.
     - `SftpService.cs`: Persistent SFTP connection and file stream handling via SSH.NET.
     - `RsyncService.cs`: Subprocess orchestration, progress stream parsing, and exit code validation.
     - `RemoteEditService.cs`: Temporary file lifecycle, SHA256 hashing, and live file watcher auto-sync.
     - `TerminalService.cs`: KiTTY terminal launcher with auto-navigation.
-    - `ConnectionManagerService.cs`: Site manager persistence (metadata only).
+    - `ConnectionManagerService.cs`: Site manager persistence (metadata and saved connections).
+    - `VaultService.cs`: AES-256-GCM encrypted credential vault with PBKDF2 key derivation.
+    - `FileZillaImportService.cs`: Native import of FileZilla `sitemanager.xml` configurations.
   - `ViewModels/`: Decoupled MVVM presentation logic.
-  - `Views/`: Custom XAML dialogs (Site Manager, InputDialog, SiteEditDialog).
+  - `Views/`: Custom XAML dialogs (Site Manager, Vault Setup/Unlock/ChangePassword, SiteEditDialog, FileZilla Import, InputDialog).
 - `src/RsyncAskPass/`: Secure credential pipe bridge for OpenSSH `SSH_ASKPASS`.
 - `installer/`: Inno Setup configuration (`RsyncZilla.iss`) for building the standalone Windows installer.
-- `tests/RsyncZilla.Tests/`: xUnit test suite (78 tests covering rsync path translation, watchers, explorer integration, multi-selection, update checks, and CLI args).
+- `tests/RsyncZilla.Tests/`: xUnit test suite (155 tests covering rsync path translation, watchers, explorer integration, vault cryptography, multi-selection, and dialogs).
 - `dist/RsyncZilla/`: Ready-to-run precompiled portable distribution (`RsyncZilla.exe`).
 
 ---

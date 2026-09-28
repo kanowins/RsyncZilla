@@ -16,7 +16,7 @@ If you are a developer, sysadmin, or DevOps engineer managing servers over SSH/S
 | **Integrated SSH Terminal** | ❌ None. Must open external PuTTY and `cd` manually | ✅ **Built-in portable KiTTY (`Ctrl + T`)** launched in the active remote folder |
 | **Live Remote Editing** | ⚠️ Annoying popup prompts every time you save | ✅ **Seamless auto-upload on save (`Ctrl + S`)** with `F4` & SHA256 hashing |
 | **Local File Handling** | ⚠️ Clunky, rigid experience | ✅ Double-click, `Enter`, `F4`, and native **"Show in Explorer"** (`/select`) |
-| **Credential Security** | 🚨 **Plaintext passwords** stored on disk (`sitemanager.xml`) | 🔒 **Zero passwords saved to disk** (in-memory only) |
+| **Credential Security** | 🚨 **Plaintext passwords** stored on disk (`sitemanager.xml`) | 🔒 **AES-256-GCM Encrypted Vault** (Master Password) or zero-disk RAM mode |
 | **Installer Cleanliness** | ⚠️ Infamous bundled adware / PUP installers | 🛡️ **100% Clean, portable, and open source** |
 | **Error Handling** | ❌ Silent drops or ambiguous status codes | ✅ Dedicated Failed tab with exact rsync `ExitCode` & stderr log |
 | **Drag & Drop** | Basic | ✅ Between panes & **directly from Windows Explorer** |
@@ -51,9 +51,13 @@ If you are a developer, sysadmin, or DevOps engineer managing servers over SSH/S
   - Right-click -> **`📂 Show in Explorer`** (or click the header button) to reveal and highlight that exact file inside Windows Explorer (`/select`).
   - Native Drag & Drop: Drag files directly from your desktop or Windows Explorer windows into the remote panel to trigger an rsync upload.
 
-### 6. Real Security: Plaintext Passwords Are Gone
+### 6. Real Security: Encrypted Vault vs Plaintext Disaster
 - **The FileZilla Danger:** FileZilla notoriously stores all saved Site Manager passwords in **unencrypted plaintext XML** inside `%APPDATA%\FileZilla\sitemanager.xml`. This file is the primary target for infostealers and trojans (RedLine, Raccoon, Vidar, AgentTesla), causing countless server compromises every day.
-- **The RsyncZilla Security Model:** RsyncZilla’s Site Manager **NEVER writes passwords to disk**. It only persists connection metadata (Host, User, Port, Site Name). Passwords live solely in ephemeral session memory and are piped securely to OpenSSH subprocesses via our specialized `RsyncAskPass` / `SSH_ASKPASS` helper.
+- **The RsyncZilla Security Model:**
+  - **Zero Plaintext Ever:** Passwords are never written unencrypted to disk.
+  - **Optional Encrypted Password Vault:** Users can activate a secure vault protected by a Master Password. All saved server passwords are encrypted using authenticated **AES-256-GCM** with **PBKDF2** key derivation (HMAC-SHA256, 100,000 rounds, 32-byte cryptographically random salt).
+  - **Zero-Trust Memory Lifecycle:** The vault requires your master password when opening Site Manager and automatically locks and clears decrypted credentials from RAM as soon as Site Manager is closed.
+  - **Opt-in Freedom:** If you choose not to activate the vault, credentials remain 100% ephemeral in session memory and are never written to disk at all.
 
 ### 7. No Adware, No Bloatware, 100% Open Source
 - **The FileZilla Installer Issue:** The official FileZilla website has historically bundled adware, search hijackers, and Potentially Unwanted Programs (PUPs) into its primary installer executable.
@@ -67,6 +71,7 @@ If you are a developer, sysadmin, or DevOps engineer managing servers over SSH/S
 - **Sync Engine:** Portable rsync 3.3.0 (Cygwin64) over SSH.
 - **SFTP Engine:** SSH.NET.
 - **Embedded Terminal:** Portable KiTTY.
+- **Vault Security:** Native AES-256-GCM authenticated encryption with PBKDF2.
 - **Credential Bridge:** Internal `RsyncAskPass.exe` secure pipe.
 
 ---
