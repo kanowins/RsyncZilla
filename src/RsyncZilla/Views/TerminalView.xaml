@@ -86,6 +86,48 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Vector Icon: Bidirectional horizontal sync arrows -->
+        <DataTemplate x:Key="SyncIconTemplate">
+            <Viewbox Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Canvas Width="20" Height="20">
+                    <!-- Top arrow pointing right (tree to terminal) -->
+                    <Path Data="M 3,6.5 L 14.5,6.5 M 11.5,3.5 L 15,6.5 L 11.5,9.5"
+                          Stroke="#0078D4" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                    <!-- Bottom arrow pointing left (terminal to tree) -->
+                    <Path Data="M 17,13.5 L 5.5,13.5 M 8.5,10.5 L 5,13.5 L 8.5,16.5"
+                          Stroke="#10B981" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                </Canvas>
+            </Viewbox>
+        </DataTemplate>
+
+        <Style x:Key="TerminalSyncToggleButtonStyle" TargetType="ToggleButton">
+            <Setter Property="Background" Value="#F8F9FA"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#E0F2FE"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#0284C7"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="#0284C7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="#EBECEE">
@@ -136,11 +178,13 @@
                         <Image Source="{StaticResource FluentRefreshIcon}" Width="15" Height="15"/>
                     </Button>
 
-                    <Button Grid.Column="4" ToolTip="Upload files here"
-                            Click="UploadFilesButton_Click"
-                            Style="{StaticResource TerminalSecondaryButtonStyle}" Width="28" Height="26" Padding="0">
-                        <Image Source="{StaticResource FluentUploadIcon}" Width="15" Height="15"/>
-                    </Button>
+                    <ToggleButton Grid.Column="4" x:Name="SyncDirToggleButton"
+                                  IsChecked="True"
+                                  Click="SyncDirToggleButton_Click"
+                                  Style="{StaticResource TerminalSyncToggleButtonStyle}" Width="28" Height="26" Padding="0"
+                                  ToolTip="Directory Synchronization: ON (Tree and Terminal sync automatically)">
+                        <ContentControl ContentTemplate="{StaticResource SyncIconTemplate}" Focusable="False"/>
+                    </ToggleButton>
                 </Grid>
 
                 <!-- Compact Remote DataGrid (Name only, clean sidebar feel) -->

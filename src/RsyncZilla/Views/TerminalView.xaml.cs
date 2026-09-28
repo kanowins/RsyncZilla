@@ -24,12 +24,26 @@ namespace RsyncZilla.Views
         private uint _currentCols = 80;
         private uint _currentRows = 24;
 
+        // Directory synchronization state
+        private bool _isSyncEnabled = true;
+        private bool _isSyncing;
+        private string? _homeDirectory;
+        private string? _lastKnownTerminalPath;
+
         public TerminalView(RemoteSessionViewModel session, MainViewModel mainViewModel)
         {
             InitializeComponent();
             _session = session;
             _mainViewModel = mainViewModel;
             DataContext = _session;
+
+            if (!string.IsNullOrWhiteSpace(_session.RemoteBrowser.CurrentPath))
+            {
+                _homeDirectory = _session.RemoteBrowser.CurrentPath;
+                _lastKnownTerminalPath = _session.RemoteBrowser.CurrentPath;
+            }
+
+            _session.RemoteBrowser.PropertyChanged += OnRemoteBrowserPropertyChanged;
 
             Loaded += TerminalView_Loaded;
             Unloaded += TerminalView_Unloaded;
@@ -146,6 +160,25 @@ namespace RsyncZilla.Views
                             {
                                 Clipboard.SetText(text);
                             }
+                        }
+                        break;
+
+                    case "request_paste":
+                        if (Clipboard.ContainsText())
+                        {
+                            var text = Clipboard.GetText();
+                            if (!string.IsNullOrEmpty(text))
+                            {
+                                _session.TerminalSession?.SendInput(text);
+                            }
+                        }
+                        break;
+
+                    case "dir_changed":
+                        if (root.TryGetProperty("path", out var pathProp))
+                        {
+                            var rawPath = pathProp.GetString();
+                            HandleTerminalDirectoryChanged(rawPath);
                         }
                         break;
                 }
@@ -303,6 +336,101 @@ namespace RsyncZilla.Views
         private void ReconnectButton_Click(object sender, RoutedEventArgs e)
         {
             _ = ConnectSshAsync(_currentCols, _currentRows);
+        }
+
+        // ==========================================
+        // DIRECTORY SYNCHRONIZATION
+        // ==========================================
+
+        private void SyncDirToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            _isSyncEnabled = SyncDirToggleButton.IsChecked == true;
+            SyncDirToggleButton.ToolTip = _isSyncEnabled
+                ? "Directory Synchronization: ON (Tree and Terminal sync automatically)"
+                : "Directory Synchronization: OFF (Click to sync tree & terminal directories)";
+
+            if (_isSyncEnabled && !string.IsNullOrWhiteSpace(_session.RemoteBrowser.CurrentPath))
+            {
+                var escaped = _session.RemoteBrowser.CurrentPath.Replace("'", "'\\''");
+                _session.TerminalSession?.SendInput($"cd '{escaped}'\r");
+                TerminalWebView.Focus();
+            }
+        }
+
+        private void OnRemoteBrowserPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(FileBrowserViewModel.CurrentPath))
+            {
+                var newPath = _session.RemoteBrowser.CurrentPath;
+                if (string.IsNullOrWhiteSpace(newPath)) return;
+
+                if (string.IsNullOrEmpty(_homeDirectory))
+                {
+                    _homeDirectory = newPath;
+                }
+
+                if (_isSyncEnabled && !_isSyncing)
+                {
+                    if (!string.Equals(_lastKnownTerminalPath, newPath, StringComparison.Ordinal))
+                    {
+                        _isSyncing = true;
+                        _lastKnownTerminalPath = newPath;
+                        try
+                        {
+                            var escaped = newPath.Replace("'", "'\\''");
+                            _session.TerminalSession?.SendInput($"cd '{escaped}'\r");
+                        }
+                        catch { }
+                        finally
+                        {
+                            _ = Task.Delay(600).ContinueWith(_ => _isSyncing = false);
+                        }
+                    }
+                }
+            }
+        }
+
+        public static string ResolveRemotePath(string rawPath, string? homeDirectory)
+        {
+            if (string.IsNullOrWhiteSpace(rawPath)) return "";
+            var resolved = rawPath.Trim();
+            if (resolved == "~" && !string.IsNullOrEmpty(homeDirectory))
+            {
+                return homeDirectory;
+            }
+            if (resolved.StartsWith("~/") && !string.IsNullOrEmpty(homeDirectory))
+            {
+                return homeDirectory.TrimEnd('/') + resolved.Substring(1);
+            }
+            return resolved;
+        }
+
+        private async void HandleTerminalDirectoryChanged(string? rawPath)
+        {
+            if (string.IsNullOrWhiteSpace(rawPath) || !_isSyncEnabled) return;
+
+            var resolvedPath = ResolveRemotePath(rawPath, _homeDirectory);
+            if (!resolvedPath.StartsWith("/")) return;
+
+            _lastKnownTerminalPath = resolvedPath;
+
+            if (_isSyncing) return;
+
+            if (string.Equals(_session.RemoteBrowser.CurrentPath, resolvedPath, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            try
+            {
+                _isSyncing = true;
+                await _session.RemoteBrowser.NavigateToAsync(resolvedPath);
+            }
+            catch { }
+            finally
+            {
+                _ = Task.Delay(600).ContinueWith(_ => _isSyncing = false);
+            }
         }
 
         // ==========================================
@@ -513,6 +641,12 @@ namespace RsyncZilla.Views
             if (!_isDisposed)
             {
                 _isDisposed = true;
+                try
+                {
+                    _session.RemoteBrowser.PropertyChanged -= OnRemoteBrowserPropertyChanged;
+                }
+                catch { }
+
                 try
                 {
                     TerminalWebView.WebMessageReceived -= OnWebMessageReceived;

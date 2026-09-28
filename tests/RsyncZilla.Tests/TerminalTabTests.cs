@@ -103,5 +103,17 @@ namespace RsyncZilla.Tests
             Assert.Equal("Disconnected", session.StatusText);
             Assert.Equal("New Connection", session.Title);
         }
+
+        [Theory]
+        [InlineData("~", "/home/debian", "/home/debian")]
+        [InlineData("~/projects/app", "/home/debian", "/home/debian/projects/app")]
+        [InlineData("~/my folder", "/home/user", "/home/user/my folder")]
+        [InlineData("/var/www/html", "/home/debian", "/var/www/html")]
+        [InlineData("  /etc/nginx/sites-available  ", "/root", "/etc/nginx/sites-available")]
+        public void TerminalView_ResolveRemotePath_ResolvesProperly(string input, string home, string expected)
+        {
+            var resolved = RsyncZilla.Views.TerminalView.ResolveRemotePath(input, home);
+            Assert.Equal(expected, resolved);
+        }
     }
 }

@@ -46,7 +46,8 @@
         foreground: '#D8DEE9',
         cursor: '#38BDF8',
         cursorAccent: '#12151A',
-        selectionBackground: 'rgba(56, 189, 248, 0.3)',
+        selectionBackground: 'rgba(56, 189, 248, 0.35)',
+        selectionInactiveBackground: 'rgba(56, 189, 248, 0.2)',
         black: '#1E232A',
         red: '#EF4444',
         green: '#10B981',
@@ -70,6 +71,64 @@
 
     const fitAddon = new FitAddon.FitAddon();
     term.loadAddon(fitAddon);
+
+    // Intercept DECSET mouse modes so vi / vim / htop don't disable mouse text selection
+    const mouseTrackingModes = new Set([9, 1000, 1001, 1002, 1003, 1005, 1006, 1015, 1016]);
+    term.parser.registerCsiHandler({ prefix: '?', final: 'h' }, params => {
+      for (let i = 0; i < params.length; i++) {
+        if (mouseTrackingModes.has(params[i])) {
+          return true; // Intercept and suppress mouse tracking to keep native text selection enabled
+        }
+      }
+      return false;
+    });
+
+    term.parser.registerCsiHandler({ prefix: '?', final: 'l' }, params => {
+      for (let i = 0; i < params.length; i++) {
+        if (mouseTrackingModes.has(params[i])) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    // OSC 7 handler for current directory reporting
+    term.parser.registerOscHandler(7, data => {
+      try {
+        let path = data;
+        if (path.startsWith('file://')) {
+          const url = new URL(path);
+          path = decodeURIComponent(url.pathname);
+        }
+        if (path && window.chrome && window.chrome.webview) {
+          window.chrome.webview.postMessage({
+            type: 'dir_changed',
+            path: path
+          });
+        }
+      } catch (err) {}
+      return true;
+    });
+
+    // Window title handler as fallback for directory tracking
+    term.onTitleChange(title => {
+      try {
+        if (!title) return;
+        let path = title;
+        const colonIdx = path.lastIndexOf(':');
+        if (colonIdx !== -1) {
+          path = path.substring(colonIdx + 1).trim();
+        }
+        if (path.startsWith('/') || path.startsWith('~')) {
+          if (window.chrome && window.chrome.webview) {
+            window.chrome.webview.postMessage({
+              type: 'dir_changed',
+              path: path
+            });
+          }
+        }
+      } catch (err) {}
+    });
 
     const container = document.getElementById('terminal-container');
     term.open(container);
@@ -114,6 +173,14 @@
           term.clear();
         } else if (msg && msg.type === 'fit') {
           reportResize();
+        } else if (msg && msg.type === 'copy') {
+          if (term.hasSelection()) {
+            const selected = term.getSelection();
+            window.chrome.webview.postMessage({
+              type: 'copy_selection',
+              text: selected
+            });
+          }
         }
       });
     }
@@ -123,36 +190,57 @@
       e.preventDefault();
       if (term.hasSelection()) {
         const selected = term.getSelection();
-        navigator.clipboard.writeText(selected);
+        if (window.chrome && window.chrome.webview) {
+          window.chrome.webview.postMessage({
+            type: 'copy_selection',
+            text: selected
+          });
+        }
+        try { navigator.clipboard.writeText(selected); } catch (err) {}
         term.clearSelection();
       } else {
-        navigator.clipboard.readText().then(text => {
-          if (text && window.chrome && window.chrome.webview) {
-            window.chrome.webview.postMessage({
-              type: 'input',
-              data: text
-            });
-          }
-        }).catch(() => {});
+        if (window.chrome && window.chrome.webview) {
+          window.chrome.webview.postMessage({
+            type: 'request_paste'
+          });
+        }
       }
     });
 
-    // Keyboard shortcuts (Ctrl+Shift+C / Ctrl+Shift+V)
+    // Keyboard shortcuts (Ctrl+C when selected, Ctrl+Shift+C / Ctrl+Shift+V)
     window.addEventListener('keydown', e => {
-      if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+      if (e.ctrlKey && !e.shiftKey && (e.key === 'c' || e.key === 'C')) {
         if (term.hasSelection()) {
-          navigator.clipboard.writeText(term.getSelection());
-          e.preventDefault();
-        }
-      } else if (e.ctrlKey && e.shiftKey && (e.key === 'V' || e.key === 'v')) {
-        navigator.clipboard.readText().then(text => {
-          if (text && window.chrome && window.chrome.webview) {
+          const selected = term.getSelection();
+          if (window.chrome && window.chrome.webview) {
             window.chrome.webview.postMessage({
-              type: 'input',
-              data: text
+              type: 'copy_selection',
+              text: selected
             });
           }
-        }).catch(() => {});
+          try { navigator.clipboard.writeText(selected); } catch (err) {}
+          e.preventDefault();
+          return;
+        }
+      } else if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+        if (term.hasSelection()) {
+          const selected = term.getSelection();
+          if (window.chrome && window.chrome.webview) {
+            window.chrome.webview.postMessage({
+              type: 'copy_selection',
+              text: selected
+            });
+          }
+          try { navigator.clipboard.writeText(selected); } catch (err) {}
+        }
+        e.preventDefault();
+      } else if ((e.ctrlKey && e.shiftKey && (e.key === 'V' || e.key === 'v')) ||
+                 (e.ctrlKey && !e.shiftKey && (e.key === 'v' || e.key === 'V') && e.target === document.body)) {
+        if (window.chrome && window.chrome.webview) {
+          window.chrome.webview.postMessage({
+            type: 'request_paste'
+          });
+        }
         e.preventDefault();
       }
     });
