@@ -1,5 +1,20 @@
 # RsyncZilla Release Notes
 
+## Version 1.4.0 (2026-09-28)
+
+### ✨ New Features & Improvements
+- **Encrypted Password Vault for Saved Sites**:
+  - Securely store and auto-fill server passwords using native **AES-256-GCM** authenticated encryption with **PBKDF2** key derivation (HMAC-SHA256, 100,000 iterations, and random 32-byte salt).
+  - **Opt-in & Zero Plaintext Storage**: Passwords are never saved in plain text. Users can choose to enable the vault with a master password or keep entering credentials manually per session.
+  - **Seamless Auto-Connect**: Connecting to a saved site with stored credentials connects directly without credential prompts. If no password is saved yet, entering it in the credentials dialog saves it automatically to the vault.
+  - **Inline Password Management**: Added a password field (with plain text toggle `👁` / `🔒`) in the Site Edit dialog to view, set, or update passwords directly when the vault is unlocked.
+  - **Vault Lifecycle & Security**: Prompts for master password upon opening Site Manager; automatically locks and clears credentials from RAM when closing Site Manager. Provides options to change the master key or delete/reset the vault.
+  - **Password Status Column**: The Site Manager table displays a dedicated "Password" indicator (`Saved` / `—`) for quick visibility.
+- **"Open With..." Context Menu**:
+  - Added "Open with..." support for remote and local files, enabling seamless editing with any system application alongside automatic remote change detection and upload sync.
+
+---
+
 ## Version 1.3.4 (2026-09-25)
 
 ### ✨ New Features & Improvements

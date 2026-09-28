@@ -1,5 +1,5 @@
 #ifndef MyAppVersion
-#define MyAppVersion "1.2.2"
+#define MyAppVersion "1.4.0"
 #endif
 
 #define MyAppName "RsyncZilla"
