@@ -1,5 +1,22 @@
 # RsyncZilla Release Notes
 
+## Version 1.5.0 (2026-09-28)
+
+### ✨ New Features & Improvements
+- **Integrated SSH Terminal with Synchronized Remote File Tree**:
+  - Open full interactive SSH terminal sessions directly in dedicated tabs using **xterm.js** and **SSH.NET** shell streaming.
+  - Includes a compact, synchronized remote file browser sidebar alongside the terminal.
+  - **Dynamic Directory Tracking**: Automatically detects shell navigation commands (`cd`, `cd ~`, `cd ..`, absolute paths, etc.) and synchronizes the file browser tree to the current terminal working directory in real time.
+  - **Terminal Tab Disconnect Lifecycle**: Clicking "Disconnect" (or pressing `Ctrl+D` / menu disconnect) cleanly terminates the SSH session and closes the terminal tab.
+  - Context menu options in the terminal remote file browser, including **"Open with..."** and download options.
+- **Remote-to-Desktop & Windows Explorer Drag & Drop**:
+  - Drag and drop files and folders directly from remote server listings (both the main window remote panel and the terminal tree) onto Windows Explorer windows or the Windows Desktop.
+  - **Unified Rsync Transfer Engine**: Transfers are natively enqueued into the **Queue** tab and executed via Rsync delta algorithms (`DownloadItemsAsync`), ensuring full progress tracking, speed stats, and reliability.
+  - **Zero UI Freezing**: Eliminated blocking synchronous remote SFTP directory traversals on the UI thread when dragging folders.
+  - **Persistent Drag-and-Drop Cursor Feedback**: Maintained the native standard drag-and-drop copy cursor across application boundaries until dropped or cancelled with <kbd>Escape</kbd>.
+
+---
+
 ## Version 1.4.0 (2026-09-28)
 
 ### ✨ New Features & Improvements

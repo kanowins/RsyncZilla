@@ -104,16 +104,152 @@ namespace RsyncZilla.Tests
             Assert.Equal("New Connection", session.Title);
         }
 
-        [Theory]
-        [InlineData("~", "/home/debian", "/home/debian")]
-        [InlineData("~/projects/app", "/home/debian", "/home/debian/projects/app")]
-        [InlineData("~/my folder", "/home/user", "/home/user/my folder")]
-        [InlineData("/var/www/html", "/home/debian", "/var/www/html")]
-        [InlineData("  /etc/nginx/sites-available  ", "/root", "/etc/nginx/sites-available")]
-        public void TerminalView_ResolveRemotePath_ResolvesProperly(string input, string home, string expected)
+        [Fact]
+        public void MainViewModel_Disconnect_OnTerminalTab_ClosesTab()
         {
-            var resolved = RsyncZilla.Views.TerminalView.ResolveRemotePath(input, home);
+            var vm = new MainViewModel();
+            var initialCount = vm.RemoteSessions.Count;
+
+            var termSession = vm.OpenTerminalTab("test.server.com", 22, "admin", "pwd123", "/var/www");
+            Assert.Equal(initialCount + 1, vm.RemoteSessions.Count);
+            Assert.Same(termSession, vm.ActiveSession);
+            Assert.True(vm.ActiveSession.IsTerminalTab);
+            Assert.Equal("Disconnect", vm.ConnectionButtonText);
+
+            // Execute ConnectCommand (the Disconnect button on the QuickConnect bar)
+            vm.ConnectCommand.Execute(null);
+
+            Assert.Equal(initialCount, vm.RemoteSessions.Count);
+            Assert.NotSame(termSession, vm.ActiveSession);
+            Assert.False(vm.ActiveSession.IsTerminalTab);
+        }
+
+        [Fact]
+        public void MainViewModel_DisconnectCommand_OnTerminalTab_ClosesTab()
+        {
+            var vm = new MainViewModel();
+            var initialCount = vm.RemoteSessions.Count;
+
+            var termSession = vm.OpenTerminalTab("test.server.com", 22, "admin", "pwd123", "/var/www");
+            Assert.Equal(initialCount + 1, vm.RemoteSessions.Count);
+            Assert.Same(termSession, vm.ActiveSession);
+
+            Assert.True(vm.DisconnectCommand.CanExecute(null));
+            vm.DisconnectCommand.Execute(null);
+
+            Assert.Equal(initialCount, vm.RemoteSessions.Count);
+            Assert.NotSame(termSession, vm.ActiveSession);
+        }
+
+        [Theory]
+        [InlineData("~", "/home/debian", "/var/www", "/home/debian")]
+        [InlineData("~/projects/app", "/home/debian", "/var/www", "/home/debian/projects/app")]
+        [InlineData("~/my folder", "/home/user", "/var/www", "/home/user/my folder")]
+        [InlineData("/var/www/html", "/home/debian", "/home/debian", "/var/www/html")]
+        [InlineData("  /etc/nginx/sites-available  ", "/root", "/var/www", "/etc/nginx/sites-available")]
+        [InlineData("config", "/home/debian", "/var/www", "/var/www/config")]
+        [InlineData("sub/folder", "/home/debian", "/etc", "/etc/sub/folder")]
+        public void TerminalView_ResolveRemotePath_ResolvesProperly(string input, string home, string current, string expected)
+        {
+            var resolved = RsyncZilla.Views.TerminalView.ResolveRemotePath(input, home, current);
             Assert.Equal(expected, resolved);
+        }
+
+        [Fact]
+        public void SshDiagnostics_Analyze_AuthenticationFailure_IdentifiesAsServerError()
+        {
+            var ex = new Renci.SshNet.Common.SshAuthenticationException("Permission denied (password).");
+            var result = SshDiagnostics.Analyze(ex, "test.server.com", 22, "debian");
+
+            Assert.True(result.IsServerError);
+            Assert.Equal("Authentication", result.Category);
+            Assert.Contains("rejected", result.Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("sshd_config", result.Diagnosis);
+        }
+
+        [Fact]
+        public void SshDiagnostics_Analyze_ConnectionRefused_IdentifiesAsServerError()
+        {
+            var socketEx = new System.Net.Sockets.SocketException((int)System.Net.Sockets.SocketError.ConnectionRefused);
+            var ex = new Exception("Connection error", socketEx);
+            var result = SshDiagnostics.Analyze(ex, "test.server.com", 22, "debian");
+
+            Assert.True(result.IsServerError);
+            Assert.Equal("Connection Refused", result.Category);
+            Assert.Contains("refused", result.Summary, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public void SshDiagnostics_Analyze_HostNotFound_IdentifiesAsClientError()
+        {
+            var socketEx = new System.Net.Sockets.SocketException((int)System.Net.Sockets.SocketError.HostNotFound);
+            var ex = new Exception("Name resolution failure", socketEx);
+            var result = SshDiagnostics.Analyze(ex, "invalid.domain.unknown", 22, "debian");
+
+            Assert.False(result.IsServerError);
+            Assert.Equal("DNS Resolution", result.Category);
+            Assert.Contains("resolved", result.Summary, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public void SshDiagnostics_Analyze_PtyChannelRequestFailed_IdentifiesPtyIssue()
+        {
+            var ex = new Renci.SshNet.Common.SshException("Channel request failed: pty-req rejected");
+            var result = SshDiagnostics.Analyze(ex, "test.server.com", 22, "debian");
+
+            Assert.True(result.IsServerError);
+            Assert.Equal("PTY / Shell Allocation", result.Category);
+            Assert.Contains("shell", result.Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("MaxSessions", result.Diagnosis);
+        }
+
+        [Fact]
+        public void SshDiagnosticResult_FormatForTerminal_ProducesAnsiFormattedOutput()
+        {
+            var result = new SshDiagnosticResult
+            {
+                IsServerError = true,
+                Category = "Authentication",
+                Summary = "Authentication failed",
+                Diagnosis = "Password was incorrect",
+                RawMessage = "Permission denied",
+                SuggestedAction = "Check password"
+            };
+
+            var formatted = result.FormatForTerminal();
+            Assert.Contains("[SSH Connection Failed]", formatted);
+            Assert.Contains("Remote Server", formatted);
+            Assert.Contains("Authentication", formatted);
+            Assert.Contains("Password was incorrect", formatted);
+            Assert.Contains("Check password", formatted);
+        }
+
+        [Theory]
+        [InlineData("debian@sumalab:~$ ", "~")]
+        [InlineData("debian@sumalab:/etc$ ", "/etc")]
+        [InlineData("root@sumalab:/var/log/nginx# ", "/var/log/nginx")]
+        [InlineData("\r\n\x1b[01;32mdebian@sumalab\x1b[00m:\x1b[01;34m/var/www\x1b[00m$ ", "/var/www")]
+        [InlineData("[debian@sumalab ~]$ ", "~")]
+        [InlineData("[root@sumalab /etc/systemd]# ", "/etc/systemd")]
+        [InlineData("debian@sumalab:~/My Documents$ ", "~/My Documents")]
+        [InlineData("user@host:/$ ", "/")]
+        [InlineData("/var/log $ ", "/var/log")]
+        public void TerminalView_TryExtractDirectoryFromPrompt_ExtractsExpectedPath(string promptText, string expected)
+        {
+            var detected = RsyncZilla.Views.TerminalView.TryExtractDirectoryFromPrompt(promptText);
+            Assert.Equal(expected, detected);
+        }
+
+        [Theory]
+        [InlineData("debian@sumalab:~$ cd /etc")]
+        [InlineData("total 48\r\ndrwxr-xr-x 2 root root 4096")]
+        [InlineData("hello world")]
+        [InlineData("")]
+        [InlineData(null)]
+        public void TerminalView_TryExtractDirectoryFromPrompt_IgnoresNonPrompts(string? input)
+        {
+            var detected = RsyncZilla.Views.TerminalView.TryExtractDirectoryFromPrompt(input!);
+            Assert.Null(detected);
         }
     }
 }

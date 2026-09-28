@@ -133,14 +133,24 @@
     const container = document.getElementById('terminal-container');
     term.open(container);
 
+    function getSafeDimensions() {
+      const c = term.cols && term.cols > 0 ? term.cols : 80;
+      const r = term.rows && term.rows > 0 ? term.rows : 24;
+      return {
+        cols: Math.max(c, 20),
+        rows: Math.max(r, 5)
+      };
+    }
+
     function reportResize() {
       try {
         fitAddon.fit();
+        const dims = getSafeDimensions();
         if (window.chrome && window.chrome.webview) {
           window.chrome.webview.postMessage({
             type: 'resize',
-            cols: term.cols,
-            rows: term.rows
+            cols: dims.cols,
+            rows: dims.rows
           });
         }
       } catch (err) {}
@@ -249,11 +259,12 @@
     setTimeout(() => {
       reportResize();
       term.focus();
+      const dims = getSafeDimensions();
       if (window.chrome && window.chrome.webview) {
         window.chrome.webview.postMessage({
           type: 'ready',
-          cols: term.cols,
-          rows: term.rows
+          cols: dims.cols,
+          rows: dims.rows
         });
       }
     }, 100);

@@ -947,7 +947,7 @@ namespace RsyncZilla.Views
                 finally
                 {
                     _activeDragItems = null;
-                    Mouse.OverrideCursor = null;
+                    ExplorerDropHelper.ResetDragDropFeedback();
                 }
             }
         }
@@ -959,13 +959,8 @@ namespace RsyncZilla.Views
         {
             if (_activeDragItems != null && _activeDragItems.Any())
             {
-                if (ExplorerDropHelper.IsCursorOverExplorerOrDesktop())
-                {
-                    e.UseDefaultCursors = false;
-                    Mouse.OverrideCursor = Cursors.Arrow;
-                    e.Handled = true;
-                    return;
-                }
+                ExplorerDropHelper.SetDragDropFeedback(e);
+                return;
             }
 
             e.UseDefaultCursors = true;
@@ -977,6 +972,8 @@ namespace RsyncZilla.Views
             if (e.EscapePressed)
             {
                 _isDragCancelled = true;
+                e.Action = DragAction.Cancel;
+                e.Handled = true;
             }
         }
 

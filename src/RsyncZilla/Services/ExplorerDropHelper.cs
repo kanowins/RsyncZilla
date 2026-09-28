@@ -3,11 +3,96 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Interop;
+using Microsoft.Win32.SafeHandles;
 
 namespace RsyncZilla.Services
 {
     public static class ExplorerDropHelper
     {
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern IntPtr LoadLibrary(string lpFileName);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern IntPtr LoadCursor(IntPtr hInstance, IntPtr lpCursorName);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr SetCursor(IntPtr hCursor);
+
+        private static Cursor? _copyCursor;
+        private static IntPtr _copyCursorHandle;
+        private static readonly object _cursorLock = new();
+
+        public static Cursor DragDropCopyCursor
+        {
+            get
+            {
+                EnsureCursorLoaded();
+                return _copyCursor ?? Cursors.Arrow;
+            }
+        }
+
+        public static IntPtr DragDropCopyCursorHandle
+        {
+            get
+            {
+                EnsureCursorLoaded();
+                return _copyCursorHandle;
+            }
+        }
+
+        private static void EnsureCursorLoaded()
+        {
+            if (_copyCursor != null) return;
+            lock (_cursorLock)
+            {
+                if (_copyCursor != null) return;
+                try
+                {
+                    IntPtr hModule = LoadLibrary("ole32.dll");
+                    if (hModule != IntPtr.Zero)
+                    {
+                        IntPtr hCursor = LoadCursor(hModule, (IntPtr)3); // 3 = OLE Drag & Drop Copy cursor
+                        if (hCursor != IntPtr.Zero)
+                        {
+                            _copyCursorHandle = hCursor;
+                            var safeHandle = new SafeFileHandle(hCursor, ownsHandle: false);
+                            _copyCursor = CursorInteropHelper.Create(safeHandle);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[ExplorerDropHelper] Failed to load drag cursor: {ex.Message}");
+                }
+
+                _copyCursor ??= Cursors.Arrow;
+            }
+        }
+
+        public static void SetDragDropFeedback(GiveFeedbackEventArgs e)
+        {
+            e.UseDefaultCursors = false;
+            if (System.Threading.Thread.CurrentThread.GetApartmentState() == System.Threading.ApartmentState.STA)
+            {
+                Mouse.OverrideCursor = DragDropCopyCursor;
+            }
+            if (DragDropCopyCursorHandle != IntPtr.Zero)
+            {
+                SetCursor(DragDropCopyCursorHandle);
+            }
+            e.Handled = true;
+        }
+
+        public static void ResetDragDropFeedback()
+        {
+            if (System.Threading.Thread.CurrentThread.GetApartmentState() == System.Threading.ApartmentState.STA)
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
         [DllImport("user32.dll")]
         private static extern bool GetCursorPos(out POINT lpPoint);
 

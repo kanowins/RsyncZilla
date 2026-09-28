@@ -1,16 +1,15 @@
 {
   "runtimeTarget": {
-    "name": ".NETCoreApp,Version=v8.0/win-x64",
+    "name": ".NETCoreApp,Version=v8.0",
     "signature": ""
   },
   "compilationOptions": {},
   "targets": {
-    ".NETCoreApp,Version=v8.0": {},
-    ".NETCoreApp,Version=v8.0/win-x64": {
-      "RsyncZilla/1.4.0": {
+    ".NETCoreApp,Version=v8.0": {
+      "RsyncZilla/1.5.0": {
         "dependencies": {
           "Microsoft.Web.WebView2": "1.0.4258.31",
-          "RsyncAskPass": "1.3.4",
+          "RsyncAskPass": "1.5.0",
           "SSH.NET": "2026.0.0",
           "VirtualFileDataObject": "1.0.0",
           "Microsoft.Web.WebView2.Core": "1.0.4258.31",
@@ -49,8 +48,20 @@
         }
       },
       "Microsoft.Web.WebView2/1.0.4258.31": {
-        "native": {
+        "runtimeTargets": {
+          "runtimes/win-arm64/native/WebView2Loader.dll": {
+            "rid": "win-arm64",
+            "assetType": "native",
+            "fileVersion": "1.0.4258.31"
+          },
           "runtimes/win-x64/native/WebView2Loader.dll": {
+            "rid": "win-x64",
+            "assetType": "native",
+            "fileVersion": "1.0.4258.31"
+          },
+          "runtimes/win-x86/native/WebView2Loader.dll": {
+            "rid": "win-x86",
+            "assetType": "native",
             "fileVersion": "1.0.4258.31"
           }
         }
@@ -75,11 +86,11 @@
           }
         }
       },
-      "RsyncAskPass/1.3.4": {
+      "RsyncAskPass/1.5.0": {
         "runtime": {
           "RsyncAskPass.dll": {
-            "assemblyVersion": "1.3.4.0",
-            "fileVersion": "1.3.4.0"
+            "assemblyVersion": "1.5.0.0",
+            "fileVersion": "1.5.0.0"
           }
         }
       },
@@ -110,7 +121,7 @@
     }
   },
   "libraries": {
-    "RsyncZilla/1.4.0": {
+    "RsyncZilla/1.5.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
@@ -157,7 +168,7 @@
       "path": "virtualfiledataobject/1.0.0",
       "hashPath": "virtualfiledataobject.1.0.0.nupkg.sha512"
     },
-    "RsyncAskPass/1.3.4": {
+    "RsyncAskPass/1.5.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
