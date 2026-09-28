@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
 using RsyncZilla.Models;
@@ -793,12 +794,234 @@ namespace RsyncZilla.Views
             }
         }
 
+        // Drag-and-drop initiation from remote tree to Windows Explorer / external apps
+        private Point _dragStartPoint;
+        private bool _isDragCandidate;
+        private DataGridRow? _draggedRow;
+
+        private void RemoteDataGrid_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount > 1) return; // Allow double-click to pass through to navigation / edit
+
+            // Ignore scrollbar clicks
+            var dep = e.OriginalSource as DependencyObject;
+            var testObj = dep;
+            while (testObj != null && testObj != RemoteDataGrid)
+            {
+                if (testObj is System.Windows.Controls.Primitives.ScrollBar)
+                {
+                    return;
+                }
+                testObj = VisualTreeHelper.GetParent(testObj);
+            }
+
+            _dragStartPoint = e.GetPosition(RemoteDataGrid);
+            _isDragCandidate = false;
+            _draggedRow = null;
+
+            DataGridRow? row = null;
+            var curr = dep;
+            while (curr != null && curr != RemoteDataGrid)
+            {
+                if (curr is DataGridRow r) { row = r; break; }
+                curr = VisualTreeHelper.GetParent(curr);
+            }
+
+            bool isCtrl = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+            bool isShift = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+
+            if (row == null)
+            {
+                if (!isCtrl && !isShift)
+                {
+                    RemoteDataGrid.SelectedItems.Clear();
+                }
+                return;
+            }
+
+            var item = row.Item as FileItem;
+            if (item != null && item.IsParent)
+            {
+                return;
+            }
+
+            _draggedRow = row;
+
+            if (isCtrl)
+            {
+                _isDragCandidate = true;
+                row.IsSelected = !row.IsSelected;
+                RemoteDataGrid.CurrentItem = row.Item;
+                row.Focus();
+                e.Handled = true;
+            }
+            else if (isShift)
+            {
+                _isDragCandidate = true;
+                var anchor = RemoteDataGrid.CurrentItem as FileItem ?? RemoteDataGrid.SelectedItems.Cast<FileItem>().FirstOrDefault();
+                var target = row.Item as FileItem;
+
+                if (anchor != null && target != null)
+                {
+                    var itemsList = RemoteDataGrid.Items.Cast<FileItem>().ToList();
+                    int idx1 = itemsList.IndexOf(anchor);
+                    int idx2 = itemsList.IndexOf(target);
+                    if (idx1 >= 0 && idx2 >= 0)
+                    {
+                        int start = Math.Min(idx1, idx2);
+                        int end = Math.Max(idx1, idx2);
+
+                        RemoteDataGrid.SelectedItems.Clear();
+                        for (int i = start; i <= end; i++)
+                        {
+                            RemoteDataGrid.SelectedItems.Add(itemsList[i]);
+                        }
+                    }
+                }
+                else
+                {
+                    row.IsSelected = true;
+                }
+
+                row.Focus();
+                e.Handled = true;
+            }
+            else
+            {
+                if (row.IsSelected)
+                {
+                    // Already selected: mark candidate so user can start dragging the selection!
+                    _isDragCandidate = true;
+                    RemoteDataGrid.CurrentItem = row.Item;
+                    row.Focus();
+                    e.Handled = true;
+                }
+                else
+                {
+                    RemoteDataGrid.SelectedItems.Clear();
+                    row.IsSelected = true;
+                    RemoteDataGrid.CurrentItem = row.Item;
+                    _isDragCandidate = true;
+                    row.Focus();
+                    e.Handled = true;
+                }
+            }
+        }
+
+        private void RemoteDataGrid_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed || !_isDragCandidate) return;
+
+            var currentPoint = e.GetPosition(RemoteDataGrid);
+            var diff = currentPoint - _dragStartPoint;
+
+            if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+            {
+                _isDragCandidate = false;
+                _draggedRow = null;
+
+                var selected = RemoteDataGrid.SelectedItems.Cast<FileItem>()
+                    .Where(i => i != null && !i.IsParent && !i.IsDrive).ToList();
+
+                var data = new DataObject();
+                data.SetData("RsyncZilla.Source", "Remote");
+                data.SetData("RsyncZilla.Items", selected);
+
+                _activeDragItems = selected;
+                _isDragCancelled = false;
+                try
+                {
+                    DragDrop.DoDragDrop(RemoteDataGrid, data, DragDropEffects.Copy);
+
+                    if (!_isDragCancelled)
+                    {
+                        var targetDir = ExplorerDropHelper.GetDropTargetDirectory();
+                        if (!string.IsNullOrWhiteSpace(targetDir) && Directory.Exists(targetDir))
+                        {
+                            _ = _mainViewModel.DownloadItemsAsync(selected, targetDir);
+                        }
+                    }
+                }
+                catch { }
+                finally
+                {
+                    _activeDragItems = null;
+                    Mouse.OverrideCursor = null;
+                }
+            }
+        }
+
+        private bool _isDragCancelled;
+        private List<FileItem>? _activeDragItems;
+
+        private void RemoteDataGrid_GiveFeedback(object sender, GiveFeedbackEventArgs e)
+        {
+            if (_activeDragItems != null && _activeDragItems.Any())
+            {
+                if (ExplorerDropHelper.IsCursorOverExplorerOrDesktop())
+                {
+                    e.UseDefaultCursors = false;
+                    Mouse.OverrideCursor = Cursors.Arrow;
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            e.UseDefaultCursors = true;
+            Mouse.OverrideCursor = null;
+        }
+
+        private void RemoteDataGrid_QueryContinueDrag(object sender, QueryContinueDragEventArgs e)
+        {
+            if (e.EscapePressed)
+            {
+                _isDragCancelled = true;
+            }
+        }
+
+        private void RemoteDataGrid_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (_isDragCandidate && _draggedRow != null)
+            {
+                bool isCtrlOrShift = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl) ||
+                                     Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+
+                if (!isCtrlOrShift && RemoteDataGrid.SelectedItems.Count > 1)
+                {
+                    RemoteDataGrid.SelectedItems.Clear();
+                    _draggedRow.IsSelected = true;
+                    _draggedRow.Focus();
+                }
+
+                _isDragCandidate = false;
+                _draggedRow = null;
+            }
+        }
+
         private void RemoteDataGrid_DragOver(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            if (!_session.IsConnected)
+            {
+                e.Effects = DragDropEffects.None;
+                return;
+            }
+
+            if (e.Data.GetDataPresent("RsyncZilla.Source"))
+            {
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+                return;
+            }
+
+            if (DropDataHelper.HasDroppableFiles(e.Data) || e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 e.Effects = DragDropEffects.Copy;
                 e.Handled = true;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
             }
         }
 
@@ -810,6 +1033,11 @@ namespace RsyncZilla.Views
         private void RemoteDataGrid_Drop(object sender, DragEventArgs e)
         {
             if (!_session.IsConnected) return;
+
+            if (e.Data.GetDataPresent("RsyncZilla.Source"))
+            {
+                return;
+            }
 
             var pos = e.GetPosition(RemoteDataGrid);
             var targetItem = GetItemAtPosition(RemoteDataGrid, pos);

@@ -1062,6 +1062,8 @@
                                   PreviewMouseLeftButtonDown="DataGrid_PreviewMouseLeftButtonDown"
                                   PreviewMouseLeftButtonUp="DataGrid_PreviewMouseLeftButtonUp"
                                   LostMouseCapture="DataGrid_LostMouseCapture"
+                                  GiveFeedback="DataGrid_GiveFeedback"
+                                  QueryContinueDrag="DataGrid_QueryContinueDrag"
                                   DragOver="RemoteDataGrid_DragOver"
                                   DragEnter="RemoteDataGrid_DragEnter"
                                   Drop="RemoteDataGrid_Drop">

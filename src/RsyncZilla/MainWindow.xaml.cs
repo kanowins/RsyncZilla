@@ -439,57 +439,29 @@ namespace RsyncZilla
                             }
                             else
                             {
-                                var sftp = _viewModel.SftpService;
-                                var descriptors = new List<VirtualFileDataObject.VirtualFileDataObject.FileDescriptor>();
-
-                                if (sftp != null && sftp.IsConnected)
-                                {
-                                    foreach (var item in selected)
-                                    {
-                                        if (item.IsDirectory)
-                                        {
-                                            var files = sftp.GetFilesRecursive(item.FullPath, item.Name);
-                                            foreach (var f in files)
-                                            {
-                                                descriptors.Add(new VirtualFileDataObject.VirtualFileDataObject.FileDescriptor
-                                                {
-                                                    Name = f.relativePath,
-                                                    Length = f.size,
-                                                    ChangeTimeUtc = f.modified,
-                                                    StreamContents = stream => sftp.DownloadFileToStream(f.fullPath, stream)
-                                                });
-                                            }
-                                        }
-                                        else
-                                        {
-                                            descriptors.Add(new VirtualFileDataObject.VirtualFileDataObject.FileDescriptor
-                                            {
-                                                Name = item.Name,
-                                                Length = item.Length,
-                                                ChangeTimeUtc = item.LastWriteTime,
-                                                StreamContents = stream => sftp.DownloadFileToStream(item.FullPath, stream)
-                                            });
-                                        }
-                                    }
-                                }
-
-                                var vfdo = new VirtualFileDataObject.VirtualFileDataObject();
-                                if (descriptors.Count > 0)
-                                {
-                                    vfdo.SetData(descriptors);
-                                }
-
-                                var format = DataFormats.GetDataFormat("RsyncZilla.Source");
-                                vfdo.SetData((short)format.Id, Encoding.UTF8.GetBytes("Remote"));
+                                var data = new DataObject();
+                                data.SetData("RsyncZilla.Source", "Remote");
+                                data.SetData("RsyncZilla.Items", selected);
 
                                 _activeRemoteDragItems = selected;
+                                _isDragCancelled = false;
                                 try
                                 {
-                                    DragDrop.DoDragDrop(_leftDragGrid, vfdo, DragDropEffects.Copy);
+                                    DragDrop.DoDragDrop(_leftDragGrid, data, DragDropEffects.Copy);
+
+                                    if (!_isDragCancelled)
+                                    {
+                                        var targetDir = ExplorerDropHelper.GetDropTargetDirectory();
+                                        if (!string.IsNullOrWhiteSpace(targetDir) && Directory.Exists(targetDir))
+                                        {
+                                            _ = _viewModel.DownloadItemsAsync(selected, targetDir);
+                                        }
+                                    }
                                 }
                                 finally
                                 {
                                     _activeRemoteDragItems = null;
+                                    Mouse.OverrideCursor = null;
                                 }
                             }
                         }
@@ -622,6 +594,33 @@ namespace RsyncZilla
             _isDragDropCandidate = false;
             _draggedRow = null;
             _leftDragGrid = null;
+        }
+
+        private bool _isDragCancelled;
+
+        private void DataGrid_GiveFeedback(object sender, GiveFeedbackEventArgs e)
+        {
+            if (_activeRemoteDragItems != null && _activeRemoteDragItems.Any())
+            {
+                if (ExplorerDropHelper.IsCursorOverExplorerOrDesktop())
+                {
+                    e.UseDefaultCursors = false;
+                    Mouse.OverrideCursor = Cursors.Arrow;
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            e.UseDefaultCursors = true;
+            Mouse.OverrideCursor = null;
+        }
+
+        private void DataGrid_QueryContinueDrag(object sender, QueryContinueDragEventArgs e)
+        {
+            if (e.EscapePressed)
+            {
+                _isDragCancelled = true;
+            }
         }
 
         private void DataGrid_LostMouseCapture(object sender, MouseEventArgs e)
