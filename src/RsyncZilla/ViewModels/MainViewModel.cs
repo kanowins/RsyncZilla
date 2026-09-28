@@ -23,6 +23,8 @@ namespace RsyncZilla.ViewModels
         private readonly TerminalService _terminalService;
         private readonly RemoteEditService _remoteEditService;
         private readonly SettingsService _settingsService;
+        private readonly VaultService _vaultService;
+        public VaultService VaultService => _vaultService;
 
         private FileExistsAction _fileExistsAction;
         public FileExistsAction CurrentFileExistsAction
@@ -208,11 +210,11 @@ namespace RsyncZilla.ViewModels
         public Action<SavedConnection, string>? ApplySavedConnectionAction { get; set; }
 
 
-        public MainViewModel() : this(null, null, null, null, null, null)
+        public MainViewModel() : this(null, null, null, null, null, null, null)
         {
         }
 
-        public MainViewModel(LocalFileService? localService = null, RsyncService? rsyncService = null, ConnectionManagerService? connectionManagerService = null, TerminalService? terminalService = null, RemoteEditService? remoteEditService = null, SettingsService? settingsService = null)
+        public MainViewModel(LocalFileService? localService = null, RsyncService? rsyncService = null, ConnectionManagerService? connectionManagerService = null, TerminalService? terminalService = null, RemoteEditService? remoteEditService = null, SettingsService? settingsService = null, VaultService? vaultService = null)
         {
             _localService = localService ?? new LocalFileService();
             _rsyncService = rsyncService ?? new RsyncService();
@@ -220,6 +222,7 @@ namespace RsyncZilla.ViewModels
             _terminalService = terminalService ?? new TerminalService(_rsyncService);
             _remoteEditService = remoteEditService ?? new RemoteEditService(_rsyncService);
             _settingsService = settingsService ?? new SettingsService();
+            _vaultService = vaultService ?? new VaultService(_settingsService);
             _fileExistsAction = _settingsService.Current.FileExistsAction;
             _remoteEditService.LogMessageReceived += (msg, isErr) => AddLog(msg, isErr);
             _remoteEditService.FileUploaded += (session, path, len, time) => OnRemoteFileUploaded(session, path, len, time);
@@ -562,7 +565,7 @@ namespace RsyncZilla.ViewModels
 
         public void OpenSiteManager()
         {
-            var dialog = new Views.ConnectionManagerDialog(_connectionManagerService)
+            var dialog = new Views.ConnectionManagerDialog(_connectionManagerService, _vaultService)
             {
                 Owner = Application.Current.MainWindow
             };

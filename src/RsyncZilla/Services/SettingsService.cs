@@ -8,6 +8,7 @@ namespace RsyncZilla.Services
     public class AppSettings
     {
         public FileExistsAction FileExistsAction { get; set; } = FileExistsAction.OverwriteIfDifferent;
+        public bool VaultEnabled { get; set; } = true;
     }
 
     public class SettingsService
@@ -79,6 +80,12 @@ namespace RsyncZilla.Services
         public void SaveFileExistsAction(FileExistsAction action)
         {
             _currentSettings.FileExistsAction = action;
+            SaveSettings(_currentSettings);
+        }
+
+        public void SaveVaultEnabled(bool enabled)
+        {
+            _currentSettings.VaultEnabled = enabled;
             SaveSettings(_currentSettings);
         }
     }

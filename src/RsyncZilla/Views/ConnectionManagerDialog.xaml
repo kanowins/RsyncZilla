@@ -3,11 +3,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Site Manager - RsyncZilla"
         Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
-        Height="450" Width="800"
+        Height="490" Width="850"
         WindowStartupLocation="CenterOwner"
         Background="#F0F2F5" Foreground="#111111"
         FontFamily="Segoe UI, Arial"
-        MinHeight="320" MinWidth="550">
+        MinHeight="350" MinWidth="600">
 
     <Grid Margin="14">
         <Grid.RowDefinitions>
@@ -16,9 +16,80 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header explanation -->
-        <TextBlock Grid.Row="0" Text="Saved sites (passwords are never stored for security reasons):" 
-                   FontWeight="SemiBold" Foreground="#333333" Margin="0,0,0,10"/>
+        <!-- Top Header & Vault Status Bar -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: Title & Subtitle -->
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock Text="Site Manager" FontSize="15" FontWeight="SemiBold" Foreground="#005A9E"/>
+                <TextBlock x:Name="VaultSubtitleTextBlock" Text="Saved server connections." FontSize="12" Foreground="#666666" Margin="0,2,0,0"/>
+            </StackPanel>
+
+            <!-- Right: Vault Controls -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- If Vault not configured -->
+                <Button x:Name="EnableVaultButton" Click="EnableVaultButton_Click"
+                        Background="#F0F7FF" Foreground="#0078D7" BorderBrush="#0078D7"
+                        Padding="10,5" FontWeight="SemiBold" Cursor="Hand">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image Source="{StaticResource FluentLockIcon}" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Enable Password Vault" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- If Vault is configured (Locked or Unlocked) -->
+                <Border x:Name="VaultControlsContainer" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6,3" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Image x:Name="VaultStatusIcon" Source="{StaticResource FluentLockIcon}" Width="15" Height="15" Margin="2,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="VaultStatusLabel" Text="Vault Locked" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#333333"/>
+
+                        <!-- Unlock Button (shown when locked) -->
+                        <Button x:Name="UnlockVaultButton" Click="UnlockVaultButton_Click"
+                                Background="#0078D7" Foreground="#FFFFFF" BorderBrush="#005A9E"
+                                Padding="8,3" FontWeight="SemiBold" Cursor="Hand" Margin="0,0,4,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image Source="{StaticResource FluentUnlockIcon}" Width="13" Height="13" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Unlock" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Lock Button (shown when unlocked) -->
+                        <Button x:Name="LockVaultButton" Click="LockVaultButton_Click"
+                                Background="#F5F5F5" Foreground="#333333" BorderBrush="#CCCCCC"
+                                Padding="8,3" Cursor="Hand" Margin="0,0,4,0" ToolTip="Lock the password vault">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image Source="{StaticResource FluentLockIcon}" Width="13" Height="13" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Lock" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Change Password Button (shown when unlocked) -->
+                        <Button x:Name="ChangePasswordButton" Click="ChangePasswordButton_Click"
+                                Background="#F5F5F5" Foreground="#333333" BorderBrush="#CCCCCC"
+                                Padding="8,3" Cursor="Hand" Margin="0,0,4,0" ToolTip="Change Master Password">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image Source="{StaticResource FluentKeyIcon}" Width="13" Height="13" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Change Key" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Delete Vault Button -->
+                        <Button x:Name="DeleteVaultButton" Click="DeleteVault_Click"
+                                Background="#F5F5F5" Foreground="#C62828" BorderBrush="#CCCCCC"
+                                Padding="8,3" Cursor="Hand" ToolTip="Delete Vault and all stored passwords">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Image Source="{StaticResource FluentDeleteIcon}" Width="13" Height="13" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Delete Vault" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
 
         <!-- DataGrid of connections -->
         <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="3">
@@ -30,11 +101,27 @@
                       MouseDoubleClick="ConnectionsGrid_MouseDoubleClick">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Site Name" Binding="{Binding Name}" Width="150" FontWeight="SemiBold"/>
-                    <DataGridTextColumn Header="Host" Binding="{Binding Host}" Width="160"/>
-                    <DataGridTextColumn Header="User" Binding="{Binding Username}" Width="100"/>
-                    <DataGridTextColumn Header="Port" Binding="{Binding Port}" Width="55"/>
-                    <DataGridTextColumn Header="Last Local Path" Binding="{Binding LastLocalPath}" Width="140"/>
-                    <DataGridTextColumn Header="Last Remote Path" Binding="{Binding LastRemotePath}" Width="140"/>
+                    <DataGridTextColumn Header="Host" Binding="{Binding Host}" Width="150"/>
+                    <DataGridTextColumn Header="User" Binding="{Binding Username}" Width="95"/>
+                    <DataGridTextColumn Header="Port" Binding="{Binding Port}" Width="50"/>
+                    <DataGridTextColumn Header="Password" Binding="{Binding PasswordStatus}" Width="80">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                <Style.Triggers>
+                                    <Trigger Property="Text" Value="Saved">
+                                        <Setter Property="Foreground" Value="#059669"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </Trigger>
+                                    <Trigger Property="Text" Value="—">
+                                        <Setter Property="Foreground" Value="#9CA3AF"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Last Local Path" Binding="{Binding LastLocalPath}" Width="130"/>
+                    <DataGridTextColumn Header="Last Remote Path" Binding="{Binding LastRemotePath}" Width="130"/>
                     <DataGridTextColumn Header="Last Used" Binding="{Binding LastUsed, StringFormat='MM/dd/yyyy HH:mm'}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>

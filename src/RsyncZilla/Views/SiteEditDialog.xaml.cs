@@ -15,9 +15,33 @@ namespace RsyncZilla.Views
         public string LocalPath => LocalPathTextBox.Text.Trim();
         public string RemotePath => RemotePathTextBox.Text.Trim();
 
-        public SiteEditDialog(SavedConnection? existing = null)
+        private bool _isShowingPlainPassword;
+        private bool _isVaultUnlocked;
+        private string _initialPassword = string.Empty;
+
+        public bool IsPasswordModified { get; private set; }
+        public string Password => _isShowingPlainPassword ? PasswordTextBox.Text : PasswordBoxInput.Password;
+
+        public SiteEditDialog(SavedConnection? existing = null, string? initialPassword = null, bool isVaultUnlocked = false)
         {
             InitializeComponent();
+            _isVaultUnlocked = isVaultUnlocked;
+
+            if (_isVaultUnlocked)
+            {
+                _initialPassword = initialPassword ?? string.Empty;
+                PasswordBoxInput.Password = _initialPassword;
+                PasswordTextBox.Text = _initialPassword;
+                PasswordBoxInput.PasswordChanged += (s, e) => { if (!_isShowingPlainPassword) IsPasswordModified = true; };
+                PasswordTextBox.TextChanged += (s, e) => { if (_isShowingPlainPassword) IsPasswordModified = true; };
+            }
+            else
+            {
+                PasswordBoxInput.Visibility = Visibility.Collapsed;
+                PasswordTextBox.Visibility = Visibility.Collapsed;
+                TogglePasswordVisibilityButton.Visibility = Visibility.Collapsed;
+                VaultLockedHintTextBox.Visibility = Visibility.Visible;
+            }
 
             if (existing != null)
             {
@@ -41,6 +65,29 @@ namespace RsyncZilla.Views
                     UsernameTextBox.Focus();
                 }
             };
+        }
+
+        private void TogglePasswordVisibility_Click(object sender, RoutedEventArgs e)
+        {
+            _isShowingPlainPassword = !_isShowingPlainPassword;
+
+            if (_isShowingPlainPassword)
+            {
+                PasswordTextBox.Text = PasswordBoxInput.Password;
+                PasswordBoxInput.Visibility = Visibility.Collapsed;
+                PasswordTextBox.Visibility = Visibility.Visible;
+                PasswordTextBox.Focus();
+                PasswordTextBox.CaretIndex = PasswordTextBox.Text.Length;
+                TogglePasswordVisibilityButton.Content = "🔒";
+            }
+            else
+            {
+                PasswordBoxInput.Password = PasswordTextBox.Text;
+                PasswordTextBox.Visibility = Visibility.Collapsed;
+                PasswordBoxInput.Visibility = Visibility.Visible;
+                PasswordBoxInput.Focus();
+                TogglePasswordVisibilityButton.Content = "👁";
+            }
         }
 
         private void BrowseLocalPath_Click(object sender, RoutedEventArgs e)
@@ -83,6 +130,17 @@ namespace RsyncZilla.Views
                 MessageBox.Show("Please enter a valid port number between 1 and 65535.", "Invalid Port", MessageBoxButton.OK, MessageBoxImage.Warning);
                 PortTextBox.Focus();
                 return;
+            }
+
+            // Sync passwords if plain was visible
+            if (_isShowingPlainPassword)
+            {
+                PasswordBoxInput.Password = PasswordTextBox.Text;
+            }
+
+            if (_isVaultUnlocked && Password != _initialPassword)
+            {
+                IsPasswordModified = true;
             }
 
             DialogResult = true;

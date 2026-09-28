@@ -859,4 +859,99 @@
         </DrawingImage.Drawing>
     </DrawingImage>
 
+    <!-- 27. Lock / Vault Locked -->
+    <DrawingImage x:Key="FluentLockIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Shackle -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#64748B" Thickness="2.5" StartLineCap="Round" EndLineCap="Round"/>
+                    </GeometryDrawing.Pen>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 8,11 L 8,7 C 8,4.8 9.8,3 12,3 C 14.2,3 16,4.8 16,7 L 16,11"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Body -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#F59E0B" Offset="0"/>
+                            <GradientStop Color="#D97706" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="5,10,14,11" RadiusX="2.5" RadiusY="2.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Keyhole -->
+                <GeometryDrawing Brush="#78350F">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <EllipseGeometry Center="12,14.5" RadiusX="1.6" RadiusY="1.6"/>
+                            <RectangleGeometry Rect="11.2,14.5,1.6,3.5"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 28. Unlock / Vault Unlocked -->
+    <DrawingImage x:Key="FluentUnlockIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <!-- Shackle Open -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#64748B" Thickness="2.5" StartLineCap="Round" EndLineCap="Round"/>
+                    </GeometryDrawing.Pen>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 8,9 L 8,5 C 8,2.8 9.8,1 12,1 C 14.2,1 16,2.8 16,5 L 16,6"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Body (Emerald Green for Unlocked) -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#10B981" Offset="0"/>
+                            <GradientStop Color="#059669" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="5,10,14,11" RadiusX="2.5" RadiusY="2.5"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Keyhole -->
+                <GeometryDrawing Brush="#064E3B">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <EllipseGeometry Center="12,14.5" RadiusX="1.6" RadiusY="1.6"/>
+                            <RectangleGeometry Rect="11.2,14.5,1.6,3.5"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- 29. Key / Password -->
+    <DrawingImage x:Key="FluentKeyIcon">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing>
+                    <GeometryDrawing.Brush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#F59E0B" Offset="0"/>
+                            <GradientStop Color="#D97706" Offset="1"/>
+                        </LinearGradientBrush>
+                    </GeometryDrawing.Brush>
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 7,2 C 4.2,2 2,4.2 2,7 C 2,9.4 3.7,11.4 6,11.9 L 6,21 L 10,21 L 10,18 L 8,18 L 8,16 L 11,16 L 11,13 L 8,13 L 8,11.9 C 10.3,11.4 12,9.4 12,7 C 12,4.2 9.8,2 7,2 Z M 7,5 C 8.1,5 9,5.9 9,7 C 9,8.1 8.1,9 7,9 C 5.9,9 5,8.1 5,7 C 5,5.9 5.9,5 7,5 Z"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
 </ResourceDictionary>

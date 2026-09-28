@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace RsyncZilla.Models
 {
@@ -12,6 +13,12 @@ namespace RsyncZilla.Models
         public string LastLocalPath { get; set; } = string.Empty;
         public string LastRemotePath { get; set; } = string.Empty;
         public DateTime LastUsed { get; set; } = DateTime.Now;
+
+        [JsonIgnore]
+        public bool HasSavedPassword { get; set; }
+
+        [JsonIgnore]
+        public string PasswordStatus => HasSavedPassword ? "Saved" : "—";
 
         public string DisplayName => string.IsNullOrWhiteSpace(Name) 
             ? $"{Username}@{Host}:{Port}" 

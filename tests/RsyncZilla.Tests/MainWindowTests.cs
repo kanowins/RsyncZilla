@@ -38,7 +38,8 @@ namespace RsyncZilla.Tests
                     window.Close();
 
                     var service = new RsyncZilla.Services.ConnectionManagerService();
-                    var cmDialog = new RsyncZilla.Views.ConnectionManagerDialog(service);
+                    var vaultService = new RsyncZilla.Services.VaultService();
+                    var cmDialog = new RsyncZilla.Views.ConnectionManagerDialog(service, vaultService);
                     Assert.NotNull(cmDialog);
                     cmDialog.Close();
 
@@ -48,9 +49,21 @@ namespace RsyncZilla.Tests
                     Assert.Equal("testuser", credDialog.Username);
                     credDialog.Close();
 
-                    var siteDialog = new RsyncZilla.Views.SiteEditDialog();
+                    var siteDialog = new RsyncZilla.Views.SiteEditDialog(null, null, isVaultUnlocked: true);
                     Assert.NotNull(siteDialog);
                     siteDialog.Close();
+
+                    var setupDialog = new RsyncZilla.Views.VaultSetupDialog();
+                    Assert.NotNull(setupDialog);
+                    setupDialog.Close();
+
+                    var unlockDialog = new RsyncZilla.Views.VaultUnlockDialog(vaultService);
+                    Assert.NotNull(unlockDialog);
+                    unlockDialog.Close();
+
+                    var changeDialog = new RsyncZilla.Views.VaultChangePasswordDialog(vaultService);
+                    Assert.NotNull(changeDialog);
+                    changeDialog.Close();
                 }
                 catch (Exception ex)
                 {
@@ -68,6 +81,57 @@ namespace RsyncZilla.Tests
             if (thrown != null)
             {
                 throw new Exception($"Fallo al instanciar UI views/dialogs: {thrown.GetType().Name}: {thrown.Message}\n{thrown.StackTrace}", thrown);
+            }
+        }
+
+        [Fact]
+        public void ConnectionManagerDialog_LocksVaultOnOpenAndClose()
+        {
+            var tempVault = Path.Combine(Path.GetTempPath(), $"cm_vault_{Guid.NewGuid():N}.dat");
+            try
+            {
+                var vaultService = new RsyncZilla.Services.VaultService(null, tempVault, iterations: 1000);
+                vaultService.Setup("MasterKey");
+                Assert.True(vaultService.IsUnlocked);
+
+                Exception? threadEx = null;
+                var thread = new Thread(() =>
+                {
+                    try
+                    {
+                        var app = System.Windows.Application.Current ?? new System.Windows.Application();
+                        if (!app.Resources.MergedDictionaries.Any(d => d.Source?.OriginalString?.Contains("FluentIcons.xaml") == true))
+                        {
+                            app.Resources.MergedDictionaries.Add(new System.Windows.ResourceDictionary
+                            {
+                                Source = new Uri("pack://application:,,,/RsyncZilla;component/Resources/FluentIcons.xaml", UriKind.Absolute)
+                            });
+                        }
+
+                        var cmService = new RsyncZilla.Services.ConnectionManagerService();
+                        var dialog = new RsyncZilla.Views.ConnectionManagerDialog(cmService, vaultService);
+                        Assert.False(vaultService.IsUnlocked);
+
+                        vaultService.Unlock("MasterKey");
+                        Assert.True(vaultService.IsUnlocked);
+
+                        dialog.Close();
+                        Assert.False(vaultService.IsUnlocked);
+                    }
+                    catch (Exception ex)
+                    {
+                        threadEx = ex;
+                    }
+                });
+                thread.SetApartmentState(ApartmentState.STA);
+                thread.Start();
+                thread.Join(5000);
+
+                if (threadEx != null) throw threadEx;
+            }
+            finally
+            {
+                if (File.Exists(tempVault)) File.Delete(tempVault);
             }
         }
 
