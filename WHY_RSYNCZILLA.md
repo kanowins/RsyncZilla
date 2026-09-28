@@ -13,7 +13,7 @@ If you are a developer, sysadmin, or DevOps engineer managing servers over SSH/S
 | **Transfer Engine** | Standard sequential SFTP / FTP stream | **Native rsync 3.3.0** with delta-transfer |
 | **Differential Sync** | ❌ Always uploads the whole file (0% to 100%) | ✅ **Transfers only modified byte deltas** (saves up to 99% bandwidth) |
 | **Atomic Writes & Integrity** | ❌ Network blip = truncated/corrupted file in production | ✅ **Atomic replacement** via hidden temp files; zero broken deploys |
-| **Integrated SSH Terminal** | ❌ None. Must open external PuTTY and `cd` manually | ✅ **Built-in portable KiTTY (`Ctrl + T`)** launched in the active remote folder |
+| **Integrated SSH Terminal** | ❌ None. Must open external PuTTY and `cd` manually | ✅ **Built-in Tabbed SSH Terminal (`Ctrl + T`)** with auto-sync remote tree |
 | **Live Remote Editing** | ⚠️ Annoying popup prompts every time you save | ✅ **Seamless auto-upload on save (`Ctrl + S`)** with `F4` & SHA256 hashing |
 | **Local File Handling** | ⚠️ Clunky, rigid experience | ✅ Double-click, `Enter`, `F4`, and native **"Show in Explorer"** (`/select`) |
 | **Credential Security** | 🚨 **Plaintext passwords** stored on disk (`sitemanager.xml`) | 🔒 **AES-256-GCM Encrypted Vault** (Master Password) or zero-disk RAM mode |
@@ -35,7 +35,7 @@ If you are a developer, sysadmin, or DevOps engineer managing servers over SSH/S
 
 ### 3. Integrated Remote Terminal in Current Folder (`Ctrl + T`)
 - **The FileZilla Problem:** You navigate deep into `/var/www/my-app/releases/v2.4/` and need to run `npm run build`, `composer install`, `git pull`, `pm2 restart`, or inspect system logs. You have to open a separate terminal (PuTTY or Windows Terminal), re-enter your host, username, and credentials, and manually `cd` through the directory tree.
-- **The RsyncZilla Advantage:** RsyncZilla bundles a fully portable **KiTTY** terminal. Press **`Ctrl + T`** or right-click -> *"Open terminal here"*, and an authenticated SSH terminal instantly pops up, already positioned inside the exact remote directory you were browsing.
+- **The RsyncZilla Advantage:** RsyncZilla includes a fully integrated, interactive **SSH Terminal** in a dedicated tab (powered by xterm.js and SSH.NET) with an auto-synchronized remote file tree sidebar. Press **`Ctrl + T`** or right-click -> *"Open terminal here"*, and an authenticated SSH terminal tab instantly opens, already positioned inside the exact remote directory you were browsing.
 
 ### 4. Frictionless Live Remote Editing (`F4`)
 - **The FileZilla Problem:** FileZilla’s remote editing interrupts your flow with constant confirmation dialogs: *"A file has changed. Do you want to upload it now? [Yes/No]"*. If you miss the prompt or close it by mistake, your changes are lost on the server.
@@ -61,7 +61,7 @@ If you are a developer, sysadmin, or DevOps engineer managing servers over SSH/S
 
 ### 7. No Adware, No Bloatware, 100% Open Source
 - **The FileZilla Installer Issue:** The official FileZilla website has historically bundled adware, search hijackers, and Potentially Unwanted Programs (PUPs) into its primary installer executable.
-- **The RsyncZilla Standard:** 100% clean, transparent, open-source code built on modern .NET 8 WPF, Cygwin rsync 3.3.0, SSH.NET, and KiTTY. Fully portable—extract and run anywhere without system bloat.
+- **The RsyncZilla Standard:** 100% clean, transparent, open-source code built on modern .NET 8 WPF, Cygwin rsync 3.3.0, SSH.NET, and xterm.js. Fully portable—extract and run anywhere without system bloat.
 
 ---
 
@@ -70,7 +70,7 @@ If you are a developer, sysadmin, or DevOps engineer managing servers over SSH/S
 - **Frontend:** WPF / .NET 8 (Native Windows x64).
 - **Sync Engine:** Portable rsync 3.3.0 (Cygwin64) over SSH.
 - **SFTP Engine:** SSH.NET.
-- **Embedded Terminal:** Portable KiTTY.
+- **Embedded Terminal:** xterm.js + SSH.NET shell streaming.
 - **Vault Security:** Native AES-256-GCM authenticated encryption with PBKDF2.
 - **Credential Bridge:** Internal `RsyncAskPass.exe` secure pipe.
 

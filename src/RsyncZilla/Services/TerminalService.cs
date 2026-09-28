@@ -14,40 +14,6 @@ namespace RsyncZilla.Services
             _rsyncService = rsyncService ?? new RsyncService();
         }
 
-        public string? FindKittyBinary()
-        {
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var candidates = new[]
-            {
-                Path.Combine(baseDir, "tools", "kitty.exe"),
-                Path.Combine(baseDir, "kitty.exe"),
-                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "src", "RsyncZilla", "tools", "kitty.exe")),
-                Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "tools", "kitty.exe"))
-            };
-
-            foreach (var p in candidates)
-            {
-                if (File.Exists(p)) return p;
-            }
-
-            return null;
-        }
-
-        public static string BuildKittyArguments(string host, int port, string username, string? password, string? remotePath)
-        {
-            var portArg = port > 0 && port != 22 ? $"-P {port}" : "";
-            var target = $"{username}@{host}";
-            var pwArg = !string.IsNullOrEmpty(password) ? $"-pw \"{password.Replace("\"", "\\\"")}\"" : "";
-            var cmdArg = !string.IsNullOrWhiteSpace(remotePath) && remotePath != "." && remotePath != "~"
-                ? $"-cmd \"cd '{remotePath.Trim().Replace("'", "'\\''")}'\\n\""
-                : "";
-
-            var parts = new[] { "-ssh", target, portArg, pwArg, cmdArg }
-                .Where(p => !string.IsNullOrWhiteSpace(p));
-
-            return string.Join(" ", parts);
-        }
-
         public string FindSshBinary()
         {
             // 1. Prefer native Windows OpenSSH if installed
@@ -131,22 +97,7 @@ namespace RsyncZilla.Services
 
             try
             {
-                // Priority 1: KiTTY (bundled in tools/kitty.exe)
-                var kittyExe = FindKittyBinary();
-                if (!string.IsNullOrEmpty(kittyExe) && File.Exists(kittyExe))
-                {
-                    var kittyArgs = BuildKittyArguments(host, port, username, password, remotePath);
-                    var kittyPsi = new ProcessStartInfo
-                    {
-                        FileName = kittyExe,
-                        Arguments = kittyArgs,
-                        UseShellExecute = false
-                    };
-                    Process.Start(kittyPsi);
-                    return true;
-                }
-
-                // Priority 2: Fallback to cmd.exe launcher script
+                // Fallback to cmd.exe launcher script if needed
                 var (fileName, args) = BuildTerminalCommand(host, port, username, remotePath);
 
                 var psi = new ProcessStartInfo

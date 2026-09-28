@@ -65,7 +65,7 @@
                         <Grid Margin="0,2">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="140"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <TextBlock Text="Terminal:" Foreground="#555555"/>
-                            <TextBlock Grid.Column="1" Text="KiTTY / PuTTY integrated"/>
+                            <TextBlock Grid.Column="1" Text="Integrated SSH Terminal (xterm.js + SSH.NET)"/>
                         </Grid>
                     </StackPanel>
                 </GroupBox>

@@ -34,8 +34,8 @@ Engineered to eliminate the classic issue of silent FTP transfer failures, ensur
    - **Transfers Deltas Only:** Uses `-avzP --stats` by default to transmit only modified byte blocks and new files. Supports configurable file-exists actions (update if size/date differ, update only if newer, always overwrite, or checksum).
    - **Atomic Writes:** rsync writes to hidden temporary files before swapping, preventing corrupt or half-written files on your server.
 
-3. **💻 Integrated Remote SSH Terminal (Portable KiTTY) (`Ctrl + T`):**
-   - Instantly launches an authenticated SSH console positioned directly inside your current remote directory.
+3. **💻 Integrated Remote SSH Terminal (xterm.js + SSH.NET) (`Ctrl + T`):**
+   - Instantly opens a dedicated tab with a full interactive SSH terminal and a synchronized remote file tree positioned directly inside your current remote directory.
    - Run server-side commands (`npm run build`, `composer install`, `git pull`, `pm2 restart`, etc.) without opening PuTTY or manually typing `cd` paths.
 
 4. **📝 Live Remote File Editing (`F4`):**
@@ -65,14 +65,12 @@ Engineered to eliminate the classic issue of silent FTP transfer failures, ensur
 
 - `src/RsyncZilla/`: Main WPF application (.NET 8 Windows x64).
   - `tools/cygwin64/`: Portable binaries (`rsync.exe`, `ssh.exe`, runtime DLLs).
-  - `tools/kitty.exe`: Portable KiTTY SSH terminal.
   - `Models/`: Data models for files, transfer tasks, connections, vault entries, and logs.
   - `Services/`:
     - `LocalFileService.cs`: Local disk browsing and file management.
     - `SftpService.cs`: Persistent SFTP connection and file stream handling via SSH.NET.
     - `RsyncService.cs`: Subprocess orchestration, progress stream parsing, and exit code validation.
     - `RemoteEditService.cs`: Temporary file lifecycle, SHA256 hashing, and live file watcher auto-sync.
-    - `TerminalService.cs`: KiTTY terminal launcher with auto-navigation.
     - `ConnectionManagerService.cs`: Site manager persistence (metadata and saved connections).
     - `VaultService.cs`: AES-256-GCM encrypted credential vault with PBKDF2 key derivation.
     - `FileZillaImportService.cs`: Native import of FileZilla `sitemanager.xml` configurations.

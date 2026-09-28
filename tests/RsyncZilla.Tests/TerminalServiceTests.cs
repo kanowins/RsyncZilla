@@ -89,26 +89,5 @@ namespace RsyncZilla.Tests
             p.WaitForExit(3000);
             Assert.Equal(0, p.ExitCode);
         }
-
-        [Fact]
-        public void BuildKittyArguments_WithPasswordAndPath_ShouldGenerateCorrectOptions()
-        {
-            var args = TerminalService.BuildKittyArguments("myserver.com", 2222, "debian", "pass123", "/var/www/html");
-
-            Assert.Contains("-ssh debian@myserver.com", args);
-            Assert.Contains("-P 2222", args);
-            Assert.Contains("-pw \"pass123\"", args);
-            Assert.Contains("-cmd \"cd '/var/www/html'\\n\"", args);
-        }
-
-        [Fact]
-        public void FindKittyBinary_ShouldFindBundledExecutable()
-        {
-            var service = new TerminalService();
-            var kittyPath = service.FindKittyBinary();
-
-            Assert.NotNull(kittyPath);
-            Assert.True(File.Exists(kittyPath));
-        }
     }
 }

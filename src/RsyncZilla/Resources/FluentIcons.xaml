@@ -384,7 +384,7 @@
         </DrawingImage.Drawing>
     </DrawingImage>
 
-    <!-- 10. Terminal (KiTTY) -->
+    <!-- 10. Terminal -->
     <DrawingImage x:Key="FluentTerminalIcon">
         <DrawingImage.Drawing>
             <DrawingGroup>
