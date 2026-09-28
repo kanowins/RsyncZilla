@@ -42,6 +42,8 @@ namespace RsyncZilla
         private List<FileItem>? _activeRemoteDragItems;
         private DataGrid? _lastActiveFileGrid;
 
+        private readonly Dictionary<Guid, TerminalView> _terminalViews = new();
+
         public MainWindow()
         {
             InitializeComponent();
@@ -58,6 +60,31 @@ namespace RsyncZilla
             // Link multiple selection extractors
             _viewModel.GetLocalSelectedItemsFunc = () => LocalDataGrid.SelectedItems.Cast<FileItem>().ToList();
             _viewModel.GetRemoteSelectedItemsFunc = () => RemoteDataGrid.SelectedItems.Cast<FileItem>().ToList();
+
+            // Terminal Tab dynamic view synchronization
+            _viewModel.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(MainViewModel.ActiveSession))
+                {
+                    UpdateActiveTerminalView();
+                }
+            };
+
+            _viewModel.RemoteSessions.CollectionChanged += (s, e) =>
+            {
+                if (e.OldItems != null)
+                {
+                    foreach (RemoteSessionViewModel oldSession in e.OldItems)
+                    {
+                        if (_terminalViews.TryGetValue(oldSession.Id, out var view))
+                        {
+                            TerminalTabContainer.Children.Remove(view);
+                            view.Dispose();
+                            _terminalViews.Remove(oldSession.Id);
+                        }
+                    }
+                }
+            };
 
             // Dialog actions
             _viewModel.ShowAboutAction = () =>
@@ -1217,6 +1244,31 @@ namespace RsyncZilla
                     _viewModel.ToggleDirectoryTask(task, collection);
                     e.Handled = true;
                 }
+            }
+        }
+
+        private void UpdateActiveTerminalView()
+        {
+            var session = _viewModel.ActiveSession;
+            if (session == null || !session.IsTerminalTab)
+            {
+                foreach (var v in _terminalViews.Values)
+                {
+                    v.Visibility = Visibility.Collapsed;
+                }
+                return;
+            }
+
+            if (!_terminalViews.TryGetValue(session.Id, out var terminalView))
+            {
+                terminalView = new TerminalView(session, _viewModel);
+                _terminalViews[session.Id] = terminalView;
+                TerminalTabContainer.Children.Add(terminalView);
+            }
+
+            foreach (var kvp in _terminalViews)
+            {
+                kvp.Value.Visibility = (kvp.Key == session.Id) ? Visibility.Visible : Visibility.Collapsed;
             }
         }
 

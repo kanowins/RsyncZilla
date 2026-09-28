@@ -1,0 +1,306 @@
+<UserControl x:Class="RsyncZilla.Views.TerminalView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             xmlns:converters="clr-namespace:RsyncZilla.Views.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="900">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+        <converters:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisConverter"/>
+
+        <!-- Folder Up Icon Template -->
+        <DataTemplate x:Key="FolderUpIconTemplate">
+            <Viewbox Width="19" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Canvas Width="20" Height="18">
+                    <!-- Back flap & tab -->
+                    <Path Fill="#E8A020" Stroke="#C07800" StrokeThickness="0.6"
+                          Data="M 1,3 C 1,2 1.5,1.5 2.5,1.5 L 7,1.5 L 9,3.5 L 17.5,3.5 C 18.5,3.5 19,4 19,5 L 19,16 C 19,17 18.5,17.5 17.5,17.5 L 2.5,17.5 C 1.5,17.5 1,17 1,16 Z"/>
+                    <!-- Front folder pocket -->
+                    <Path Fill="#FFCA28" Stroke="#C07800" StrokeThickness="0.5"
+                          Data="M 1,6.5 L 19,6.5 L 19,16 C 19,17 18.5,17.5 17.5,17.5 L 2.5,17.5 C 1.5,17.5 1,17 1,16 Z"/>
+                    <!-- Upward Arrow inside folder -->
+                    <Path Fill="#005A9E" Stroke="#003D7A" StrokeThickness="0.4"
+                          Data="M 10,4.8 L 5.2,10 L 7.8,10 L 7.8,14.8 L 12.2,14.8 L 12.2,10 L 14.8,10 Z"/>
+                </Canvas>
+            </Viewbox>
+        </DataTemplate>
+
+        <Style x:Key="TerminalToolbarButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#252A34"/>
+            <Setter Property="Foreground" Value="#CBD5E1"/>
+            <Setter Property="BorderBrush" Value="#384152"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#333A48"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#4F5B70"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#1E232B"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TerminalSecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#F8F9FA"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#E9ECEF"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#ADB5BD"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#DEE2E6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="#EBECEE">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="280" MinWidth="180" MaxWidth="600"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="*" MinWidth="300"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- LEFT PANEL: COMPACT REMOTE FILE TREE -->
+        <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6"
+                AllowDrop="True" DragOver="RemoteDataGrid_DragOver" DragEnter="RemoteDataGrid_DragEnter" Drop="RemoteDataGrid_Drop">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Compact Path Bar & Navigation -->
+                <Grid Grid.Row="0" Margin="2,2,2,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
+                        <Image Source="{StaticResource FluentWebIcon}" Width="15" Height="15" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Files:" FontWeight="Bold" Foreground="#0E7036" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBox Grid.Column="1" x:Name="RemotePathTextBox"
+                             Text="{Binding RemoteBrowser.CurrentPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                             KeyDown="RemotePathTextBox_KeyDown"
+                             Margin="0,0,4,0" VerticalContentAlignment="Center" Height="26"/>
+
+                    <Button Grid.Column="2" ToolTip="Up one level"
+                            Command="{Binding RemoteBrowser.NavigateUpCommand}"
+                            Style="{StaticResource TerminalSecondaryButtonStyle}" Width="28" Height="26" Padding="0" Margin="0,0,4,0">
+                        <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"/>
+                    </Button>
+
+                    <Button Grid.Column="3" ToolTip="Refresh remote directory"
+                            Command="{Binding RemoteBrowser.RefreshCommand}"
+                            Style="{StaticResource TerminalSecondaryButtonStyle}" Width="28" Height="26" Padding="0" Margin="0,0,4,0">
+                        <Image Source="{StaticResource FluentRefreshIcon}" Width="15" Height="15"/>
+                    </Button>
+
+                    <Button Grid.Column="4" ToolTip="Upload files here"
+                            Click="UploadFilesButton_Click"
+                            Style="{StaticResource TerminalSecondaryButtonStyle}" Width="28" Height="26" Padding="0">
+                        <Image Source="{StaticResource FluentUploadIcon}" Width="15" Height="15"/>
+                    </Button>
+                </Grid>
+
+                <!-- Compact Remote DataGrid (Name only, clean sidebar feel) -->
+                <DataGrid Grid.Row="1" x:Name="RemoteDataGrid"
+                          ItemsSource="{Binding RemoteBrowser.Items}"
+                          SelectedItem="{Binding RemoteBrowser.SelectedItem, Mode=TwoWay}"
+                          MouseDoubleClick="RemoteDataGrid_MouseDoubleClick"
+                          HeadersVisibility="None"
+                          GridLinesVisibility="None"
+                          RowHeaderWidth="0"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserResizeRows="False"
+                          CanUserReorderColumns="False"
+                          IsReadOnly="True"
+                          SelectionMode="Extended"
+                          AllowDrop="True"
+                          DragOver="RemoteDataGrid_DragOver"
+                          DragEnter="RemoteDataGrid_DragEnter"
+                          Drop="RemoteDataGrid_Drop">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu Background="#FFFFFF" Foreground="#111111" BorderBrush="#CCCCCC">
+                            <MenuItem Header="Download to local..." Click="DownloadSelected_Click">
+                                <MenuItem.Icon>
+                                    <Image Source="{StaticResource FluentDownloadIcon}" Width="16" Height="16"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Upload files to this folder..." Click="UploadFilesButton_Click">
+                                <MenuItem.Icon>
+                                    <Image Source="{StaticResource FluentUploadIcon}" Width="16" Height="16"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Upload folder to this folder..." Click="UploadFolderButton_Click">
+                                <MenuItem.Icon>
+                                    <Image Source="{StaticResource FluentNewFolderIcon}" Width="16" Height="16"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator Background="#E0E0E0"/>
+                            <MenuItem Header="Go to folder in terminal" Click="CdInTerminal_Click">
+                                <MenuItem.Icon>
+                                    <Image Source="{StaticResource FluentTerminalIcon}" Width="16" Height="16"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="View / Edit (F4)" Click="EditRemoteFile_Click">
+                                <MenuItem.Icon>
+                                    <Image Source="{StaticResource FluentEditIcon}" Width="16" Height="16"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator Background="#E0E0E0"/>
+                            <MenuItem Header="New folder..." Click="NewRemoteFolder_Click">
+                                <MenuItem.Icon>
+                                    <Image Source="{StaticResource FluentNewFolderIcon}" Width="16" Height="16"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Rename..." Click="RenameRemoteItem_Click">
+                                <MenuItem.Icon>
+                                    <Image Source="{StaticResource FluentRenameIcon}" Width="16" Height="16"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Delete" Click="DeleteRemoteItem_Click">
+                                <MenuItem.Icon>
+                                    <Image Source="{StaticResource FluentDeleteIcon}" Width="16" Height="16"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <Separator Background="#E0E0E0"/>
+                            <MenuItem Header="Copy remote path" Click="CopyPath_Click">
+                                <MenuItem.Icon>
+                                    <Image Source="{StaticResource FluentEditIcon}" Width="16" Height="16"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Refresh list" Command="{Binding RemoteBrowser.RefreshCommand}">
+                                <MenuItem.Icon>
+                                    <Image Source="{StaticResource FluentRefreshIcon}" Width="16" Height="16"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="4,2">
+                                        <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"
+                                                        Margin="-2,0,5,0" VerticalAlignment="Center"
+                                                        Visibility="{Binding IsParent, Converter={StaticResource BoolToVisConverter}}"/>
+                                        <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"
+                                               RenderOptions.BitmapScalingMode="HighQuality"
+                                               Visibility="{Binding IsParent, Converter={StaticResource InverseBoolToVisConverter}}"/>
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <!-- SPLITTER -->
+        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                      Background="#D0D0D0" Cursor="SizeWE"/>
+
+        <!-- RIGHT PANEL: TERMINAL (WEBVIEW2 + XTERM) -->
+        <Border Grid.Column="2" Background="#12151A" BorderBrush="#333842" BorderThickness="1" CornerRadius="4">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Modern Dark Terminal Header Bar -->
+                <Border Grid.Row="0" Background="#1A1E24" BorderBrush="#282C34" BorderThickness="0,0,0,1" Padding="8,4">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Title and Status -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text=">_" FontFamily="Cascadia Code, Consolas" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="StatusDot" Text="🟡" FontSize="9" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TerminalTitleText" Text="Connecting..." Foreground="#D8DEE9" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- Action Buttons -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button ToolTip="Copy selected text (Ctrl+Shift+C)" Click="CopyButton_Click"
+                                    Style="{StaticResource TerminalToolbarButtonStyle}">
+                                <TextBlock Text="📋 Copy" FontSize="11"/>
+                            </Button>
+                            <Button ToolTip="Paste from clipboard (Ctrl+Shift+V)" Click="PasteButton_Click" Margin="4,0,0,0"
+                                    Style="{StaticResource TerminalToolbarButtonStyle}">
+                                <TextBlock Text="📥 Paste" FontSize="11"/>
+                            </Button>
+                            <Button ToolTip="Clear terminal screen" Click="ClearButton_Click" Margin="4,0,0,0"
+                                    Style="{StaticResource TerminalToolbarButtonStyle}">
+                                <TextBlock Text="🧹 Clear" FontSize="11"/>
+                            </Button>
+                            <Button ToolTip="Restart / Reconnect terminal" Click="ReconnectButton_Click" Margin="4,0,0,0"
+                                    Style="{StaticResource TerminalToolbarButtonStyle}">
+                                <TextBlock Text="🔄 Reconnect" FontSize="11"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- WebView2 Terminal Host -->
+                <wv2:WebView2 Grid.Row="1" x:Name="TerminalWebView" DefaultBackgroundColor="#12151A"/>
+
+                <!-- Connecting / Error Overlay -->
+                <Border Grid.Row="1" x:Name="ConnectingOverlay" Background="#12151A" Visibility="Visible">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="400">
+                        <ProgressBar x:Name="ConnectingProgressBar" IsIndeterminate="True" Width="160" Height="4" Margin="0,0,0,12" Background="#1E232A" Foreground="#38BDF8" BorderThickness="0"/>
+                        <TextBlock x:Name="ConnectingText" Text="Connecting SSH Terminal..." Foreground="#94A3B8" FontSize="13" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                        <Button x:Name="RetryButton" Content="Retry Connection" Visibility="Collapsed" Click="ReconnectButton_Click" Margin="0,14,0,0" Padding="14,5" Style="{StaticResource TerminalSecondaryButtonStyle}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

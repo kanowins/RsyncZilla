@@ -118,22 +118,58 @@ namespace RsyncZilla.ViewModels
 
         public string DisplayHost => !string.IsNullOrWhiteSpace(Host) ? $"{Host}:{Port}" : "Disconnected";
 
+        private bool _isTerminalTab;
+        public bool IsTerminalTab
+        {
+            get => _isTerminalTab;
+            set
+            {
+                if (SetProperty(ref _isTerminalTab, value))
+                {
+                    OnPropertyChanged(nameof(Title));
+                }
+            }
+        }
+
+        private SshTerminalSession? _terminalSession;
+        public SshTerminalSession? TerminalSession
+        {
+            get => _terminalSession;
+            set => SetProperty(ref _terminalSession, value);
+        }
+
+        public string? InitialTerminalPath { get; set; }
+
         public string Title
         {
             get
             {
+                if (_isTerminalTab)
+                {
+                    var h = !string.IsNullOrWhiteSpace(Host) ? Host.Trim() : (SiteName?.Trim() ?? "");
+                    if (!string.IsNullOrWhiteSpace(h))
+                    {
+                        if (!string.IsNullOrWhiteSpace(Username))
+                        {
+                            return $"Terminal: {Username.Trim()}@{h}";
+                        }
+                        return $"Terminal: {h}";
+                    }
+                    return "Terminal";
+                }
+
                 if (_isTabNameReset)
                     return "New Connection";
 
-                var h = !string.IsNullOrWhiteSpace(Host) ? Host.Trim() : (SiteName?.Trim() ?? "");
+                var hNormal = !string.IsNullOrWhiteSpace(Host) ? Host.Trim() : (SiteName?.Trim() ?? "");
 
-                if (!string.IsNullOrWhiteSpace(h))
+                if (!string.IsNullOrWhiteSpace(hNormal))
                 {
                     if (!string.IsNullOrWhiteSpace(Username))
                     {
-                        return $"{Username.Trim()}@{h}";
+                        return $"{Username.Trim()}@{hNormal}";
                     }
-                    return h;
+                    return hNormal;
                 }
 
                 return "New Connection";
@@ -181,6 +217,13 @@ namespace RsyncZilla.ViewModels
 
         public void Disconnect()
         {
+            try
+            {
+                _terminalSession?.Dispose();
+                _terminalSession = null;
+            }
+            catch { }
+
             try
             {
                 SftpService.Disconnect();

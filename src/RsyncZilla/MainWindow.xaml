@@ -609,7 +609,7 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator/>
-                <MenuItem Header="Open KiTTY _Terminal" Command="{Binding OpenRemoteTerminalCommand}" CommandParameter="{x:Null}">
+                <MenuItem Header="Open SSH _Terminal" InputGestureText="Ctrl+T" Command="{Binding OpenRemoteTerminalCommand}" CommandParameter="{x:Null}">
                     <MenuItem.Icon>
                         <Image Source="{StaticResource FluentTerminalIcon}" Width="16" Height="16"/>
                     </MenuItem.Icon>
@@ -810,7 +810,12 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" ToolTip="{Binding Title}">
-                                    <Ellipse Style="{StaticResource ConnectionDotStyle}" Width="8" Height="8" Margin="0,0,6,0"/>
+                                    <Grid Margin="0,0,6,0" VerticalAlignment="Center">
+                                        <Ellipse Style="{StaticResource ConnectionDotStyle}" Width="8" Height="8"
+                                                 Visibility="{Binding IsTerminalTab, Converter={StaticResource InverseBoolToVisConverter}}"/>
+                                        <Image Source="{StaticResource FluentTerminalIcon}" Width="14" Height="14"
+                                               Visibility="{Binding IsTerminalTab, Converter={StaticResource BoolToVisConverter}}"/>
+                                    </Grid>
                                     <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" MaxWidth="280" TextTrimming="CharacterEllipsis"/>
                                     <Button Command="{Binding CloseCommand}" ToolTip="Close connection" Margin="8,0,0,0" Style="{StaticResource TabCloseButtonStyle}">
                                         <TextBlock Text="✕" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
@@ -826,13 +831,16 @@
                 </Grid>
             </Border>
 
-            <!-- Dual Explorers Area -->
+            <!-- Main Content Area in Row 1 (Dual Explorers or Embedded Terminal Tab) -->
             <Grid Grid.Row="1">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" MinWidth="300"/>
-                    <ColumnDefinition Width="Auto"/> <!-- Center Actions -->
-                    <ColumnDefinition Width="*" MinWidth="300"/>
-                </Grid.ColumnDefinitions>
+                <!-- Dual Explorers Area (Active when not a terminal tab) -->
+                <Grid x:Name="DualExplorersPanel"
+                      Visibility="{Binding ActiveSession.IsTerminalTab, Converter={StaticResource InverseBoolToVisConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="300"/>
+                        <ColumnDefinition Width="Auto"/> <!-- Center Actions -->
+                        <ColumnDefinition Width="*" MinWidth="300"/>
+                    </Grid.ColumnDefinitions>
 
                 <!-- LEFT PANEL: LOCAL MACHINE -->
                 <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6"
@@ -1131,6 +1139,12 @@
                         </DataGrid>
                     </Grid>
                 </Border>
+                </Grid>
+
+                <!-- Embedded Terminal Tab Host (Active when a terminal tab is selected) -->
+                <Grid x:Name="TerminalTabContainer"
+                      Visibility="{Binding ActiveSession.IsTerminalTab, Converter={StaticResource BoolToVisConverter}}">
+                </Grid>
             </Grid>
         </Grid>
 

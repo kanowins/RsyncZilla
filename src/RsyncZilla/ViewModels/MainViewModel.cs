@@ -412,6 +412,7 @@ namespace RsyncZilla.ViewModels
                 session.StatusText = "Disconnected";
                 session.RemoteBrowser.Items.Clear();
                 session.RemoteBrowser.CurrentPath = "";
+                session.IsTerminalTab = false;
                 session.NotifyConnectionChanged();
                 OnSessionStateChanged();
                 return;
@@ -803,14 +804,64 @@ namespace RsyncZilla.ViewModels
             var username = ActiveSession.Username;
             var password = !string.IsNullOrEmpty(ActiveSession.Password) ? ActiveSession.Password : _cachedPassword;
 
-            AddLog($"[Terminal] Opening remote terminal at {username}@{host}:{targetPath}...", false);
+            OpenTerminalTab(host, port, username, password, targetPath, ActiveSession.SiteName);
+        }
 
-            var ok = _terminalService.OpenTerminal(host, port, username, password, targetPath, out var error);
-            if (!ok)
+        public RemoteSessionViewModel OpenTerminalTab(string host, int port, string username, string password, string? initialPath = null, string? siteName = null)
+        {
+            var session = new RemoteSessionViewModel(_localService, new SftpService())
             {
-                AddLog($"[Terminal] Failed to open terminal: {error}", true);
-                MessageBox.Show($"Could not open remote terminal:\n{error}", "Terminal Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+                IsTerminalTab = true,
+                Host = host,
+                Port = port > 0 ? port : 22,
+                Username = username,
+                Password = password,
+                SiteName = siteName,
+                InitialTerminalPath = initialPath
+            };
+
+            session.CloseRequested += (s) => CloseTab(s);
+            session.SftpService.LogMessageReceived += (msg, isErr) => AddLog($"[{session.Title}] {msg}", isErr);
+            session.RemoteBrowser.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(FileBrowserViewModel.CurrentPath))
+                {
+                    OnBrowserPathChanged(session);
+                }
+            };
+
+            RemoteSessions.Add(session);
+            ActiveSession = session;
+
+            // Connect SFTP for the compact remote file tree in background
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var (ok, err) = await session.SftpService.ConnectAsync(host, session.Port, username, password);
+                    if (ok)
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(async () =>
+                        {
+                            session.NotifyConnectionChanged();
+                            OnSessionStateChanged();
+                            var startPath = !string.IsNullOrWhiteSpace(initialPath) ? initialPath : "/";
+                            await session.RemoteBrowser.NavigateToAsync(startPath);
+                        });
+                    }
+                    else
+                    {
+                        AddLog($"[Terminal SFTP] Connection error: {err}", true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AddLog($"[Terminal SFTP] Error: {ex.Message}", true);
+                }
+            });
+
+            AddLog($"[Terminal] Opened SSH terminal tab for {username}@{host}:{initialPath ?? "/"}", false);
+            return session;
         }
 
         public async Task EditRemoteFileAsync(object? param = null)

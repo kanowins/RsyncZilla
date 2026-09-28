@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RsyncZilla Terminal</title>
+  <link rel="stylesheet" href="xterm.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #12151A;
+    }
+    #terminal-container {
+      width: 100%;
+      height: 100%;
+      padding: 4px;
+    }
+    .xterm {
+      height: 100%;
+    }
+    .xterm-viewport {
+      overflow-y: auto !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal-container"></div>
+
+  <script src="xterm.js"></script>
+  <script src="xterm-addon-fit.js"></script>
+  <script>
+    const term = new Terminal({
+      cursorBlink: true,
+      cursorStyle: 'bar',
+      fontSize: 13,
+      fontFamily: "'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace",
+      theme: {
+        background: '#12151A',
+        foreground: '#D8DEE9',
+        cursor: '#38BDF8',
+        cursorAccent: '#12151A',
+        selectionBackground: 'rgba(56, 189, 248, 0.3)',
+        black: '#1E232A',
+        red: '#EF4444',
+        green: '#10B981',
+        yellow: '#F59E0B',
+        blue: '#3B82F6',
+        magenta: '#EC4899',
+        cyan: '#06B6D4',
+        white: '#E2E8F0',
+        brightBlack: '#475569',
+        brightRed: '#F87171',
+        brightGreen: '#34D399',
+        brightYellow: '#FBBF24',
+        brightBlue: '#60A5FA',
+        brightMagenta: '#F472B6',
+        brightCyan: '#22D3EE',
+        brightWhite: '#F8FAFC'
+      },
+      scrollback: 5000,
+      allowProposedApi: true
+    });
+
+    const fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+
+    const container = document.getElementById('terminal-container');
+    term.open(container);
+
+    function reportResize() {
+      try {
+        fitAddon.fit();
+        if (window.chrome && window.chrome.webview) {
+          window.chrome.webview.postMessage({
+            type: 'resize',
+            cols: term.cols,
+            rows: term.rows
+          });
+        }
+      } catch (err) {}
+    }
+
+    // Auto-fit on window resize
+    window.addEventListener('resize', () => {
+      reportResize();
+    });
+
+    // Send user input to C#
+    term.onData(data => {
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({
+          type: 'input',
+          data: data
+        });
+      }
+    });
+
+    // Handle messages from C#
+    if (window.chrome && window.chrome.webview) {
+      window.chrome.webview.addEventListener('message', event => {
+        const msg = event.data;
+        if (typeof msg === 'string') {
+          term.write(msg);
+        } else if (msg && msg.type === 'data') {
+          term.write(msg.data);
+        } else if (msg && msg.type === 'clear') {
+          term.clear();
+        } else if (msg && msg.type === 'fit') {
+          reportResize();
+        }
+      });
+    }
+
+    // Quick copy / paste with mouse right-click
+    container.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      if (term.hasSelection()) {
+        const selected = term.getSelection();
+        navigator.clipboard.writeText(selected);
+        term.clearSelection();
+      } else {
+        navigator.clipboard.readText().then(text => {
+          if (text && window.chrome && window.chrome.webview) {
+            window.chrome.webview.postMessage({
+              type: 'input',
+              data: text
+            });
+          }
+        }).catch(() => {});
+      }
+    });
+
+    // Keyboard shortcuts (Ctrl+Shift+C / Ctrl+Shift+V)
+    window.addEventListener('keydown', e => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
+        if (term.hasSelection()) {
+          navigator.clipboard.writeText(term.getSelection());
+          e.preventDefault();
+        }
+      } else if (e.ctrlKey && e.shiftKey && (e.key === 'V' || e.key === 'v')) {
+        navigator.clipboard.readText().then(text => {
+          if (text && window.chrome && window.chrome.webview) {
+            window.chrome.webview.postMessage({
+              type: 'input',
+              data: text
+            });
+          }
+        }).catch(() => {});
+        e.preventDefault();
+      }
+    });
+
+    // Initial fit once DOM is ready
+    setTimeout(() => {
+      reportResize();
+      term.focus();
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({
+          type: 'ready',
+          cols: term.cols,
+          rows: term.rows
+        });
+      }
+    }, 100);
+  </script>
+</body>
+</html>
