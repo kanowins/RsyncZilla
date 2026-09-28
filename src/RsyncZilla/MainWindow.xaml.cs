@@ -1256,6 +1256,17 @@ namespace RsyncZilla
                 {
                     v.Visibility = Visibility.Collapsed;
                 }
+
+                var toRemove = _terminalViews.Keys.Where(id => !_viewModel.RemoteSessions.Any(s => s.Id == id && s.IsTerminalTab)).ToList();
+                foreach (var id in toRemove)
+                {
+                    if (_terminalViews.TryGetValue(id, out var view))
+                    {
+                        TerminalTabContainer.Children.Remove(view);
+                        view.Dispose();
+                        _terminalViews.Remove(id);
+                    }
+                }
                 return;
             }
 

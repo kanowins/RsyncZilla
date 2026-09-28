@@ -112,7 +112,7 @@ namespace RsyncZilla.ViewModels
             set => SetProperty(ref _statusText, value);
         }
 
-        public bool IsConnected => SftpService.IsConnected;
+        public bool IsConnected => SftpService.IsConnected || (_isTerminalTab && _terminalSession != null && _terminalSession.IsConnected);
 
         public string StatusIndicator => IsConnected ? "🟢" : (IsConnecting ? "🟡" : "⚪");
 
@@ -127,6 +127,7 @@ namespace RsyncZilla.ViewModels
                 if (SetProperty(ref _isTerminalTab, value))
                 {
                     OnPropertyChanged(nameof(Title));
+                    NotifyConnectionChanged();
                 }
             }
         }
@@ -135,7 +136,13 @@ namespace RsyncZilla.ViewModels
         public SshTerminalSession? TerminalSession
         {
             get => _terminalSession;
-            set => SetProperty(ref _terminalSession, value);
+            set
+            {
+                if (SetProperty(ref _terminalSession, value))
+                {
+                    NotifyConnectionChanged();
+                }
+            }
         }
 
         public string? InitialTerminalPath { get; set; }

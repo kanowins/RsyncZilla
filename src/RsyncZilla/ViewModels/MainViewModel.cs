@@ -123,7 +123,7 @@ namespace RsyncZilla.ViewModels
         public bool IsConnecting => ActiveSession?.IsConnecting ?? false;
         public string StatusText => ActiveSession?.StatusText ?? "Disconnected";
 
-        public string ConnectionButtonText => IsConnected ? "Disconnect" : "Quick Connect";
+        public string ConnectionButtonText => (ActiveSession?.IsTerminalTab == true || IsConnected) ? "Disconnect" : "Quick Connect";
         public string ConnectionStatusIndicator => IsConnected ? "🟢 Connected" : (IsConnecting ? "🟡 Connecting" : "⚪ Disconnected");
         public string ConnectionStatusText => IsConnected ? "Connected" : (IsConnecting ? "Connecting" : "Disconnected");
 
@@ -268,8 +268,25 @@ namespace RsyncZilla.ViewModels
                 }
             });
 
-            DisconnectCommand = new RelayCommand(async () => { if (IsConnected) await ToggleConnectionAsync(null); }, () => IsConnected);
-            ReconnectCommand = new RelayCommand(async () => { if (IsConnected) await ToggleConnectionAsync(null); await ToggleConnectionAsync(null); }, () => !string.IsNullOrWhiteSpace(Host));
+            DisconnectCommand = new RelayCommand(
+                async () =>
+                {
+                    if (ActiveSession?.IsTerminalTab == true || IsConnected)
+                    {
+                        await ToggleConnectionAsync(null);
+                    }
+                },
+                () => ActiveSession?.IsTerminalTab == true || IsConnected);
+            ReconnectCommand = new RelayCommand(
+                async () =>
+                {
+                    if (IsConnected)
+                    {
+                        await ToggleConnectionAsync(null);
+                        await ToggleConnectionAsync(null);
+                    }
+                },
+                () => ActiveSession?.IsTerminalTab != true && !string.IsNullOrWhiteSpace(Host));
             RefreshAllCommand = new RelayCommand(async () => await RefreshAllPanelsAsync());
             ExitCommand = new RelayCommand(() => ExitAction?.Invoke());
             ShowAboutCommand = new RelayCommand(() => ShowAboutAction?.Invoke());
@@ -469,6 +486,12 @@ namespace RsyncZilla.ViewModels
         private async Task ToggleConnectionAsync(object? param)
         {
             if (ActiveSession == null) return;
+
+            if (ActiveSession.IsTerminalTab)
+            {
+                CloseTab(ActiveSession);
+                return;
+            }
 
             if (IsConnected)
             {
