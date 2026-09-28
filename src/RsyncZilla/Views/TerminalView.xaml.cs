@@ -21,14 +21,17 @@ namespace RsyncZilla.Views
         private readonly MainViewModel _mainViewModel;
         private bool _isWebViewInitialized;
         private bool _isDisposed;
+        private readonly System.Threading.SemaphoreSlim _treeLock = new(1, 1);
         private uint _currentCols = 80;
         private uint _currentRows = 24;
 
         // Directory synchronization state
         private bool _isSyncEnabled = true;
-        private bool _isSyncing;
+        private volatile bool _isSyncing;
         private string? _homeDirectory;
         private string? _lastKnownTerminalPath;
+        private string _rollingOutputBuffer = "";
+        private readonly object _bufferLock = new();
 
         public TerminalView(RemoteSessionViewModel session, MainViewModel mainViewModel)
         {
@@ -178,7 +181,7 @@ namespace RsyncZilla.Views
                         if (root.TryGetProperty("path", out var pathProp))
                         {
                             var rawPath = pathProp.GetString();
-                            HandleTerminalDirectoryChanged(rawPath);
+                            _ = HandleTerminalDirectoryChangedAsync(rawPath);
                         }
                         break;
                 }
@@ -190,7 +193,11 @@ namespace RsyncZilla.Views
         {
             if (_session == null) return;
 
+            cols = Math.Max(cols > 0 ? cols : 80u, 20u);
+            rows = Math.Max(rows > 0 ? rows : 24u, 5u);
+
             ShowConnecting($"Connecting SSH terminal to {_session.Username}@{_session.Host}:{_session.Port}...");
+            _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] Connecting SSH shell ({cols}x{rows})...", false);
 
             try
             {
@@ -213,6 +220,8 @@ namespace RsyncZilla.Views
                         }
                         catch { }
                     });
+
+                    ProcessTerminalOutputForDirectoryChange(text);
                 };
 
                 terminal.Disconnected += () =>
@@ -222,6 +231,7 @@ namespace RsyncZilla.Views
                         StatusDot.Text = "🔴";
                         TerminalTitleText.Text = $"{_session.Username}@{_session.Host} (Disconnected)";
                         _session.NotifyConnectionChanged();
+                        _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] SSH shell disconnected.", false);
                     });
                 };
 
@@ -229,11 +239,11 @@ namespace RsyncZilla.Views
                 {
                     Dispatcher.InvokeAsync(() =>
                     {
-                        _mainViewModel.AddLog($"[Terminal Error] {err}", true);
+                        _mainViewModel.AddLog($"[Terminal Error: {_session.Username}@{_session.Host}] {err}", true);
                     });
                 };
 
-                var (success, error) = await terminal.ConnectAsync(cols, rows);
+                var (success, error, diagnostic) = await terminal.ConnectAsync(cols, rows);
 
                 await Dispatcher.InvokeAsync(() =>
                 {
@@ -245,21 +255,42 @@ namespace RsyncZilla.Views
                         HideConnecting();
                         _session.NotifyConnectionChanged();
                         _mainViewModel.OnSessionStateChanged();
+                        _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] SSH shell connected successfully ({cols}x{rows}).", false);
 
                         TerminalWebView.Focus();
-                        TerminalWebView.CoreWebView2?.ExecuteScriptAsync("term.focus();");
+                        try
+                        {
+                            TerminalWebView.CoreWebView2?.ExecuteScriptAsync("term.focus();");
+                        }
+                        catch { }
+
+                        // Terminal connected successfully! Now load and verify the remote tree
+                        _ = EnsureTreeLoadedAsync(forceReload: false);
                     }
                     else
                     {
-                        ShowError($"Failed to connect to {_session.Host}: {error}");
+                        var diag = diagnostic ?? new SshDiagnosticResult
+                        {
+                            IsServerError = true,
+                            Category = "Connection Error",
+                            Summary = error ?? "Failed to connect",
+                            Diagnosis = "Could not establish SSH terminal connection.",
+                            RawMessage = error ?? "Unknown error",
+                            SuggestedAction = "Click '🔄 Reconnect' in the toolbar to retry."
+                        };
+
+                        _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] SSH connection failed: {diag.Summary}. Origin: {(diag.IsServerError ? "Remote Server" : "Local Client / Network")}. Diagnosis: {diag.Diagnosis} ({diag.RawMessage})", true);
+                        ShowError(diag);
                     }
                 });
             }
             catch (Exception ex)
             {
+                var diag = SshDiagnostics.Analyze(ex, _session.Host, _session.Port, _session.Username);
                 await Dispatcher.InvokeAsync(() =>
                 {
-                    ShowError($"SSH connection exception: {ex.Message}");
+                    _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] SSH connection exception: {diag.Summary}. Origin: {(diag.IsServerError ? "Remote Server" : "Local Client / Network")}. Diagnosis: {diag.Diagnosis} ({diag.RawMessage})", true);
+                    ShowError(diag);
                 });
             }
         }
@@ -269,24 +300,202 @@ namespace RsyncZilla.Views
             ConnectingText.Text = message;
             ConnectingProgressBar.Visibility = Visibility.Visible;
             RetryButton.Visibility = Visibility.Collapsed;
-            ConnectingOverlay.Visibility = Visibility.Visible;
             StatusDot.Text = "🟡";
             TerminalTitleText.Text = "Connecting...";
+
+            if (!_isWebViewInitialized)
+            {
+                TerminalWebView.Visibility = Visibility.Collapsed;
+                ConnectingOverlay.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                try
+                {
+                    var notice = $"\r\n\x1b[1;36m[RsyncZilla] {message}\x1b[0m\r\n";
+                    var jsonText = JsonSerializer.Serialize(notice);
+                    TerminalWebView.CoreWebView2?.ExecuteScriptAsync($"term.write({jsonText});");
+                }
+                catch { }
+            }
         }
 
         private void HideConnecting()
         {
             ConnectingOverlay.Visibility = Visibility.Collapsed;
+            TerminalWebView.Visibility = Visibility.Visible;
         }
 
         private void ShowError(string message)
         {
-            ConnectingText.Text = message;
-            ConnectingProgressBar.Visibility = Visibility.Collapsed;
-            RetryButton.Visibility = Visibility.Visible;
-            ConnectingOverlay.Visibility = Visibility.Visible;
+            var diag = new SshDiagnosticResult
+            {
+                IsServerError = false,
+                Category = "Initialization",
+                Summary = message,
+                Diagnosis = message,
+                RawMessage = message,
+                SuggestedAction = "Check application resources and retry."
+            };
+            ShowError(diag);
+        }
+
+        private void ShowError(SshDiagnosticResult diag)
+        {
             StatusDot.Text = "🔴";
             TerminalTitleText.Text = $"{_session.Username}@{_session.Host} (Error)";
+
+            ConnectingText.Text = $"{diag.Summary}\n\nOrigin: {(diag.IsServerError ? "Remote Server" : "Local Client / Network")}\n\n{diag.Diagnosis}";
+            ConnectingProgressBar.Visibility = Visibility.Collapsed;
+            RetryButton.Visibility = Visibility.Visible;
+
+            if (_isWebViewInitialized && TerminalWebView.CoreWebView2 != null)
+            {
+                HideConnecting();
+                var formatted = diag.FormatForTerminal();
+                var jsonText = JsonSerializer.Serialize(formatted);
+                try
+                {
+                    TerminalWebView.CoreWebView2.ExecuteScriptAsync($"term.clear(); term.write({jsonText}); term.focus();");
+                }
+                catch { }
+            }
+            else
+            {
+                TerminalWebView.Visibility = Visibility.Collapsed;
+                ConnectingOverlay.Visibility = Visibility.Visible;
+            }
+        }
+
+        // ==========================================
+        // TREE VERIFICATION & RECONNECTION
+        // ==========================================
+
+        public async Task EnsureTreeLoadedAsync(string? targetPath = null, bool forceReload = false)
+        {
+            if (_session == null) return;
+
+            await _treeLock.WaitAsync();
+            try
+            {
+                // 1. Verify or establish SFTP connection
+                if (!_session.SftpService.IsConnected || forceReload)
+                {
+                    UpdateTreeOverlay(isLoading: true, "Connecting to SFTP server...");
+                    _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] Connecting SFTP for remote tree...", false);
+                    var (sftpOk, sftpErr) = await _session.SftpService.ConnectAsync(_session.Host, _session.Port, _session.Username, _session.Password);
+                    if (!sftpOk)
+                    {
+                        var diag = SshDiagnostics.Analyze(new Exception(sftpErr ?? "SFTP connection failed"), _session.Host, _session.Port, _session.Username);
+                        _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] SFTP connection failed: {diag.Summary}. Origin: {(diag.IsServerError ? "Remote Server" : "Local Client / Network")}. Diagnosis: {diag.Diagnosis}", true);
+                        UpdateTreeOverlay(isLoading: false, "SFTP Connection Failed", diag.Diagnosis);
+                        return;
+                    }
+                    _session.NotifyConnectionChanged();
+                    _mainViewModel.OnSessionStateChanged();
+                }
+
+                // 2. Determine target path
+                var path = !string.IsNullOrWhiteSpace(targetPath)
+                    ? targetPath
+                    : (!string.IsNullOrWhiteSpace(_session.RemoteBrowser.CurrentPath)
+                        ? _session.RemoteBrowser.CurrentPath
+                        : (!string.IsNullOrWhiteSpace(_session.InitialTerminalPath)
+                            ? _session.InitialTerminalPath
+                            : (!string.IsNullOrWhiteSpace(_session.SftpService.CurrentPath)
+                                ? _session.SftpService.CurrentPath
+                                : "/")));
+
+                // If already on that path with items loaded and not forcing reload, done
+                if (!forceReload && _session.RemoteBrowser.Items.Count > 0 &&
+                    string.Equals(_session.RemoteBrowser.CurrentPath, path, StringComparison.Ordinal))
+                {
+                    HideTreeOverlay();
+                    return;
+                }
+
+                UpdateTreeOverlay(isLoading: true, $"Loading {path}...");
+                _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] Loading tree: {path}...", false);
+                await _session.RemoteBrowser.NavigateToAsync(path);
+
+                // 3. Fallback if navigation to initial path failed
+                if (!string.IsNullOrWhiteSpace(_session.RemoteBrowser.ErrorMessage))
+                {
+                    var fallback = !string.IsNullOrWhiteSpace(_session.SftpService.CurrentPath)
+                        ? _session.SftpService.CurrentPath
+                        : "/";
+
+                    if (!string.Equals(path, fallback, StringComparison.Ordinal))
+                    {
+                        _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] Notice: Could not list '{path}', retrying with home '{fallback}'...", false, isWarning: true);
+                        await _session.RemoteBrowser.NavigateToAsync(fallback);
+                    }
+                }
+
+                // 4. Update UI state based on result
+                if (!string.IsNullOrWhiteSpace(_session.RemoteBrowser.ErrorMessage))
+                {
+                    _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] Remote tree failed to load: {_session.RemoteBrowser.ErrorMessage}", true);
+                    UpdateTreeOverlay(isLoading: false, "Tree Load Error", _session.RemoteBrowser.ErrorMessage);
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(_homeDirectory) && !string.IsNullOrWhiteSpace(_session.RemoteBrowser.CurrentPath) && _session.RemoteBrowser.CurrentPath != "/")
+                    {
+                        _homeDirectory = _session.RemoteBrowser.CurrentPath;
+                    }
+                    _lastKnownTerminalPath = _session.RemoteBrowser.CurrentPath;
+                    _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] Remote tree verified: {_session.RemoteBrowser.Items.Count} item(s) in '{_session.RemoteBrowser.CurrentPath}'.", false);
+                    HideTreeOverlay();
+                }
+            }
+            catch (Exception ex)
+            {
+                _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] Tree error: {ex.Message}", true);
+                UpdateTreeOverlay(isLoading: false, "Tree Error", ex.Message);
+            }
+            finally
+            {
+                _treeLock.Release();
+            }
+        }
+
+        private void UpdateTreeOverlay(bool isLoading, string title, string? subtitle = null)
+        {
+            TreeProgressBar.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
+
+            if (isLoading)
+            {
+                if (_session.RemoteBrowser.Items.Count == 0)
+                {
+                    TreeStatusIcon.Text = "⏳";
+                    TreeStatusTitle.Text = title;
+                    TreeStatusSubtitle.Text = subtitle ?? "Connecting to server...";
+                    TreeStatusOverlay.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    TreeStatusOverlay.Visibility = Visibility.Collapsed;
+                }
+            }
+            else
+            {
+                TreeStatusIcon.Text = "⚠️";
+                TreeStatusTitle.Text = title;
+                TreeStatusSubtitle.Text = subtitle ?? "Could not load files.";
+                TreeStatusOverlay.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void HideTreeOverlay()
+        {
+            TreeProgressBar.Visibility = Visibility.Collapsed;
+            TreeStatusOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        private async void RefreshTreeButton_Click(object sender, RoutedEventArgs e)
+        {
+            await EnsureTreeLoadedAsync(targetPath: null, forceReload: true);
         }
 
         // ==========================================
@@ -333,9 +542,15 @@ namespace RsyncZilla.Views
             catch { }
         }
 
-        private void ReconnectButton_Click(object sender, RoutedEventArgs e)
+        public async Task ReconnectAllAsync()
         {
-            _ = ConnectSshAsync(_currentCols, _currentRows);
+            await ConnectSshAsync(_currentCols, _currentRows);
+            await EnsureTreeLoadedAsync(targetPath: null, forceReload: true);
+        }
+
+        private async void ReconnectButton_Click(object sender, RoutedEventArgs e)
+        {
+            await ReconnectAllAsync();
         }
 
         // ==========================================
@@ -364,7 +579,7 @@ namespace RsyncZilla.Views
                 var newPath = _session.RemoteBrowser.CurrentPath;
                 if (string.IsNullOrWhiteSpace(newPath)) return;
 
-                if (string.IsNullOrEmpty(_homeDirectory))
+                if (string.IsNullOrEmpty(_homeDirectory) && newPath != "/")
                 {
                     _homeDirectory = newPath;
                 }
@@ -390,6 +605,15 @@ namespace RsyncZilla.Views
             }
         }
 
+        private string GetEffectiveHomeDirectory()
+        {
+            if (!string.IsNullOrWhiteSpace(_homeDirectory) && _homeDirectory != "/") return _homeDirectory;
+            if (!string.IsNullOrWhiteSpace(_session.RemoteBrowser.CurrentPath) && _session.RemoteBrowser.CurrentPath != "/") return _session.RemoteBrowser.CurrentPath;
+            if (!string.IsNullOrWhiteSpace(_session.SftpService.CurrentPath) && _session.SftpService.CurrentPath != "/") return _session.SftpService.CurrentPath;
+            if (!string.IsNullOrWhiteSpace(_session.InitialTerminalPath) && _session.InitialTerminalPath != "/") return _session.InitialTerminalPath;
+            return _session.Username == "root" ? "/root" : $"/home/{_session.Username}";
+        }
+
         public static string ResolveRemotePath(string rawPath, string? homeDirectory)
         {
             if (string.IsNullOrWhiteSpace(rawPath)) return "";
@@ -405,28 +629,114 @@ namespace RsyncZilla.Views
             return resolved;
         }
 
-        private async void HandleTerminalDirectoryChanged(string? rawPath)
+        private static readonly System.Text.RegularExpressions.Regex AnsiEscapeRegex = new(
+            @"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]|\].*?(?:\x07|\x1B\\))",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        private static readonly System.Text.RegularExpressions.Regex PromptRegex1 = new(
+            @"(?:^|[\r\n])(?:\([^\)]+\)\s*)?[\w.-]+@[\w.-]+[:\s]+([~/][^\$#>]*?)[\$#>]\s*$",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        private static readonly System.Text.RegularExpressions.Regex PromptRegex2 = new(
+            @"(?:^|[\r\n])\[(?:\([^\)]+\)\s*)?[\w.-]+@[\w.-]+\s+([~/][^\]\$#>]*?)\]\s*[\$#>]\s*$",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        private static readonly System.Text.RegularExpressions.Regex PromptRegex3 = new(
+            @"(?:^|[\r\n])(?:\([^\)]+\)\s*)?([~/][^\s\$#>]+)\s*[\$#>]\s*$",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        public static string? TryExtractDirectoryFromPrompt(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return null;
+
+            // Strip ANSI color and OSC escape codes
+            var clean = AnsiEscapeRegex.Replace(text, "");
+
+            // Examine the last line of the buffer
+            var lastNewline = clean.LastIndexOfAny(new[] { '\r', '\n' });
+            var lastLine = lastNewline >= 0 ? clean.Substring(lastNewline + 1) : clean;
+
+            if (string.IsNullOrWhiteSpace(lastLine)) return null;
+
+            var trimmedEnd = lastLine.TrimEnd();
+            if (!trimmedEnd.EndsWith("$") && !trimmedEnd.EndsWith("#") && !trimmedEnd.EndsWith(">"))
+            {
+                return null;
+            }
+
+            var m1 = PromptRegex1.Match(lastLine);
+            if (m1.Success && m1.Groups[1].Length > 0)
+            {
+                return m1.Groups[1].Value.Trim();
+            }
+
+            var m2 = PromptRegex2.Match(lastLine);
+            if (m2.Success && m2.Groups[1].Length > 0)
+            {
+                return m2.Groups[1].Value.Trim();
+            }
+
+            var m3 = PromptRegex3.Match(lastLine);
+            if (m3.Success && m3.Groups[1].Length > 0)
+            {
+                return m3.Groups[1].Value.Trim();
+            }
+
+            return null;
+        }
+
+        private void ProcessTerminalOutputForDirectoryChange(string chunk)
+        {
+            if (!_isSyncEnabled || string.IsNullOrEmpty(chunk)) return;
+
+            string bufferToAnalyze;
+            lock (_bufferLock)
+            {
+                _rollingOutputBuffer += chunk;
+                if (_rollingOutputBuffer.Length > 2048)
+                {
+                    _rollingOutputBuffer = _rollingOutputBuffer.Substring(_rollingOutputBuffer.Length - 2048);
+                }
+                bufferToAnalyze = _rollingOutputBuffer;
+            }
+
+            var detectedPath = TryExtractDirectoryFromPrompt(bufferToAnalyze);
+            if (!string.IsNullOrWhiteSpace(detectedPath))
+            {
+                Dispatcher.InvokeAsync(async () =>
+                {
+                    await HandleTerminalDirectoryChangedAsync(detectedPath);
+                });
+            }
+        }
+
+        public async Task HandleTerminalDirectoryChangedAsync(string? rawPath)
         {
             if (string.IsNullOrWhiteSpace(rawPath) || !_isSyncEnabled) return;
 
-            var resolvedPath = ResolveRemotePath(rawPath, _homeDirectory);
+            var home = GetEffectiveHomeDirectory();
+            var resolvedPath = ResolveRemotePath(rawPath, home);
             if (!resolvedPath.StartsWith("/")) return;
-
-            _lastKnownTerminalPath = resolvedPath;
 
             if (_isSyncing) return;
 
-            if (string.Equals(_session.RemoteBrowser.CurrentPath, resolvedPath, StringComparison.Ordinal))
+            if (string.Equals(_session.RemoteBrowser.CurrentPath, resolvedPath, StringComparison.Ordinal) && _session.RemoteBrowser.Items.Count > 0)
             {
+                _lastKnownTerminalPath = resolvedPath;
                 return;
             }
 
             try
             {
                 _isSyncing = true;
-                await _session.RemoteBrowser.NavigateToAsync(resolvedPath);
+                _lastKnownTerminalPath = resolvedPath;
+                _mainViewModel.AddLog($"[Terminal Sync] Terminal changed directory to '{resolvedPath}', syncing tree...", false);
+                await EnsureTreeLoadedAsync(resolvedPath, forceReload: false);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _mainViewModel.AddLog($"[Terminal Sync] Failed to sync tree to '{resolvedPath}': {ex.Message}", true);
+            }
             finally
             {
                 _ = Task.Delay(600).ContinueWith(_ => _isSyncing = false);
@@ -442,7 +752,7 @@ namespace RsyncZilla.Views
             if (e.Key == Key.Enter)
             {
                 e.Handled = true;
-                await _session.RemoteBrowser.NavigateToAsync(RemotePathTextBox.Text);
+                await EnsureTreeLoadedAsync(RemotePathTextBox.Text, forceReload: !_session.SftpService.IsConnected);
             }
         }
 
@@ -452,7 +762,7 @@ namespace RsyncZilla.Views
             {
                 if (item.IsDirectory)
                 {
-                    await _session.RemoteBrowser.NavigateToAsync(item.FullPath);
+                    await EnsureTreeLoadedAsync(item.FullPath, forceReload: !_session.SftpService.IsConnected);
                 }
                 else if (!item.IsParent)
                 {
@@ -657,6 +967,12 @@ namespace RsyncZilla.Views
                 try
                 {
                     _session.TerminalSession?.Dispose();
+                }
+                catch { }
+
+                try
+                {
+                    _treeLock.Dispose();
                 }
                 catch { }
             }

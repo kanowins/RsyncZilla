@@ -34,9 +34,14 @@ namespace RsyncZilla.Services
             InitialPath = initialPath;
         }
 
-        public async Task<(bool success, string? error)> ConnectAsync(uint cols = 80, uint rows = 24)
+        public SshDiagnosticResult? LastDiagnostic { get; private set; }
+
+        public async Task<(bool success, string? error, SshDiagnosticResult? diagnostic)> ConnectAsync(uint cols = 80, uint rows = 24)
         {
             Disconnect();
+
+            cols = Math.Max(cols > 0 ? cols : 80u, 20u);
+            rows = Math.Max(rows > 0 ? rows : 24u, 5u);
 
             return await Task.Run(() =>
             {
@@ -84,17 +89,19 @@ namespace RsyncZilla.Services
                         _ = Task.Run(async () =>
                         {
                             await Task.Delay(250);
-                            SendInput($"cd '{InitialPath.Replace("'", "'\\''")}'\n");
+                            SendInput($"cd '{InitialPath.Replace("'", "'\\''")}'\r");
                         });
                     }
 
-                    return (true, (string?)null);
+                    LastDiagnostic = null;
+                    return (true, (string?)null, (SshDiagnosticResult?)null);
                 }
                 catch (Exception ex)
                 {
-                    var msg = ex.InnerException != null ? $"{ex.Message} ({ex.InnerException.Message})" : ex.Message;
+                    var diag = SshDiagnostics.Analyze(ex, Host, Port, Username);
+                    LastDiagnostic = diag;
                     Disconnect();
-                    return (false, (string?)msg);
+                    return (false, diag.Summary, diag);
                 }
             });
         }

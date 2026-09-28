@@ -833,33 +833,6 @@ namespace RsyncZilla.ViewModels
             RemoteSessions.Add(session);
             ActiveSession = session;
 
-            // Connect SFTP for the compact remote file tree in background
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    var (ok, err) = await session.SftpService.ConnectAsync(host, session.Port, username, password);
-                    if (ok)
-                    {
-                        await Application.Current.Dispatcher.InvokeAsync(async () =>
-                        {
-                            session.NotifyConnectionChanged();
-                            OnSessionStateChanged();
-                            var startPath = !string.IsNullOrWhiteSpace(initialPath) ? initialPath : "/";
-                            await session.RemoteBrowser.NavigateToAsync(startPath);
-                        });
-                    }
-                    else
-                    {
-                        AddLog($"[Terminal SFTP] Connection error: {err}", true);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    AddLog($"[Terminal SFTP] Error: {ex.Message}", true);
-                }
-            });
-
             AddLog($"[Terminal] Opened SSH terminal tab for {username}@{host}:{initialPath ?? "/"}", false);
             return session;
         }

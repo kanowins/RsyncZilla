@@ -13,6 +13,8 @@ namespace RsyncZilla.Services
     {
         private SftpClient? _client;
         private ConnectionInfo? _connectionInfo;
+        private readonly System.Threading.SemaphoreSlim _connectionLock = new(1, 1);
+
         public bool IsConnected => _client != null && _client.IsConnected;
         public string CurrentPath { get; private set; } = "/";
 
@@ -20,44 +22,74 @@ namespace RsyncZilla.Services
 
         public async Task<(bool success, string? error)> ConnectAsync(string host, int port, string username, string password)
         {
-            Disconnect();
-
-            return await Task.Run(() =>
+            await _connectionLock.WaitAsync();
+            try
             {
-                try
+                if (IsConnected && _connectionInfo != null &&
+                    string.Equals(_connectionInfo.Host, host, StringComparison.OrdinalIgnoreCase) &&
+                    _connectionInfo.Port == port &&
+                    string.Equals(_connectionInfo.Username, username, StringComparison.Ordinal))
                 {
-                    LogMessageReceived?.Invoke($"Connecting to {username}@{host}:{port} via SFTP...", false);
-                    var connectionInfo = new ConnectionInfo(
-                        host,
-                        port,
-                        username,
-                        new PasswordAuthenticationMethod(username, password)
-                    )
+                    return (true, null);
+                }
+
+                DisconnectInternal();
+
+                return await Task.Run(() =>
+                {
+                    try
                     {
-                        Timeout = TimeSpan.FromSeconds(15)
-                    };
+                        LogMessageReceived?.Invoke($"Connecting to {username}@{host}:{port} via SFTP...", false);
+                        var connectionInfo = new ConnectionInfo(
+                            host,
+                            port,
+                            username,
+                            new PasswordAuthenticationMethod(username, password)
+                        )
+                        {
+                            Timeout = TimeSpan.FromSeconds(15)
+                        };
 
-                    _client = new SftpClient(connectionInfo);
-                    _client.Connect();
-                    _connectionInfo = connectionInfo;
+                        var client = new SftpClient(connectionInfo);
+                        client.Connect();
+                        _client = client;
+                        _connectionInfo = connectionInfo;
 
-                    CurrentPath = _client.WorkingDirectory;
-                    LogMessageReceived?.Invoke($"Connected successfully. Initial directory: {CurrentPath}", false);
-                    return (true, (string?)null);
-                }
-                catch (Exception ex)
-                {
-                    var errorMsg = ex.InnerException != null 
-                        ? $"{ex.Message} ({ex.InnerException.Message})" 
-                        : ex.Message;
-                    LogMessageReceived?.Invoke($"SFTP connection error: {errorMsg}", true);
-                    Disconnect();
-                    return (false, (string?)errorMsg);
-                }
-            });
+                        CurrentPath = _client.WorkingDirectory;
+                        LogMessageReceived?.Invoke($"Connected successfully. Initial directory: {CurrentPath}", false);
+                        return (true, (string?)null);
+                    }
+                    catch (Exception ex)
+                    {
+                        var errorMsg = ex.InnerException != null 
+                            ? $"{ex.Message} ({ex.InnerException.Message})" 
+                            : ex.Message;
+                        LogMessageReceived?.Invoke($"SFTP connection error: {errorMsg}", true);
+                        DisconnectInternal();
+                        return (false, (string?)errorMsg);
+                    }
+                });
+            }
+            finally
+            {
+                _connectionLock.Release();
+            }
         }
 
         public void Disconnect()
+        {
+            _connectionLock.Wait();
+            try
+            {
+                DisconnectInternal();
+            }
+            finally
+            {
+                _connectionLock.Release();
+            }
+        }
+
+        private void DisconnectInternal()
         {
             _connectionInfo = null;
             if (_client != null)
@@ -418,6 +450,7 @@ namespace RsyncZilla.Services
         public void Dispose()
         {
             Disconnect();
+            _connectionLock.Dispose();
         }
     }
 }
