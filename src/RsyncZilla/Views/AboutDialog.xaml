@@ -67,6 +67,17 @@
                             <TextBlock Text="Terminal:" Foreground="#555555"/>
                             <TextBlock Grid.Column="1" Text="Integrated SSH Terminal (xterm.js + SSH.NET)"/>
                         </Grid>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="140"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="License:" Foreground="#555555"/>
+                            <TextBlock Grid.Column="1">
+                                <Run Text="MIT (" Foreground="#111111"/>
+                                <Hyperlink NavigateUri="https://github.com/kanowins/RsyncZilla/blob/main/THIRD_PARTY_LICENSES.md" RequestNavigate="Hyperlink_RequestNavigate">
+                                    Third-Party Licenses
+                                </Hyperlink>
+                                <Run Text=")" Foreground="#111111"/>
+                            </TextBlock>
+                        </Grid>
                     </StackPanel>
                 </GroupBox>
 

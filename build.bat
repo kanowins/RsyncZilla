@@ -9,6 +9,9 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b %ERRORLEVEL%
 )
 
+copy /y LICENSE dist\RsyncZilla\LICENSE >nul
+copy /y THIRD_PARTY_LICENSES.md dist\RsyncZilla\THIRD_PARTY_LICENSES.md >nul
+
 echo.
 echo ========================================================
 echo   Compilacion finalizada con exito!

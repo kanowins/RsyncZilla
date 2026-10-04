@@ -23,6 +23,7 @@ PrivilegesRequiredOverridesAllowed=commandline dialog
 OutputDir=..\dist\installer
 OutputBaseFilename=RsyncZilla-Setup-v{#MyAppVersion}-win-x64
 SetupIconFile=..\src\RsyncZilla\app_icon.ico
+LicenseFile=..\LICENSE
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2/ultra64
 SolidCompression=yes

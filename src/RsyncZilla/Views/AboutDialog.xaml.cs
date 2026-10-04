@@ -48,6 +48,7 @@ namespace RsyncZilla.Views
             catch { }
         }
 
+
         private void CopyButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -61,6 +62,8 @@ namespace RsyncZilla.Views
                 sb.AppendLine($"  Compiled for: win-x64 (.NET {Environment.Version})");
                 sb.AppendLine("  Sync Engine: rsync 3.x (SSH delta-transfer)");
                 sb.AppendLine("  SSH & SFTP: SSH.NET / OpenSSH");
+                sb.AppendLine("  License: MIT (Bundled tools: GPLv3, LGPLv3, BSD)");
+                sb.AppendLine("  Third-Party Licenses: https://github.com/kanowins/RsyncZilla/blob/main/THIRD_PARTY_LICENSES.md");
                 sb.AppendLine();
                 sb.AppendLine("System details:");
                 sb.AppendLine($"  Operating System: {TxtOsVersion.Text}");

@@ -157,4 +157,13 @@ A wishlist, a review, or simply telling someone about them helps us more than a 
 
 ## 📄 License
 
-MIT License. Open source and free to use.
+RsyncZilla is licensed under the **[MIT License](LICENSE)**.
+
+### Third-Party Software & Bundled Tools
+The binary releases (standalone ZIP packages and Windows installers) bundle pre-compiled third-party tools to allow seamless file synchronization out of the box without requiring manual setup. Each bundled tool is distributed under its own open-source license:
+* **rsync 3.3.0**: [GNU General Public License v3.0](src/RsyncZilla/tools/cygwin64/COPYING.gpl3.txt) ([Official Source Code](https://download.samba.org/pub/rsync/))
+* **Cygwin API (`cygwin1.dll`)**: [GNU Lesser General Public License v3.0](src/RsyncZilla/tools/cygwin64/COPYING.lgpl3.txt) ([Official Source Code](https://cygwin.com/git/newlib-cygwin.git))
+* **OpenSSH (`ssh.exe`)**: [BSD / ISC License](https://www.openssh.com/licence.html)
+* **OpenSSL (`cygcrypto-3.dll`)**: [Apache License 2.0](https://www.openssl.org/source/license.html)
+
+For complete details, license texts, copyright notices, and instructions on accessing the corresponding source code for all bundled and managed components in compliance with GPLv3 / LGPLv3, please refer to **[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)**.
