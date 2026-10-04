@@ -1,5 +1,22 @@
 # RsyncZilla Release Notes
 
+## Version 1.6.0 (2026-10-04)
+
+### ✨ Open Source Licensing & Compliance
+- **Formal MIT License & Multi-License Distribution Architecture**:
+  - Added official **MIT License** for RsyncZilla's original C#/WPF source code.
+  - Created comprehensive **[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)** documenting the aggregate distribution of bundled tools and runtime libraries (`rsync 3.3.0`, `Cygwin API cygwin1.dll`, `OpenSSH ssh.exe`, `OpenSSL`, etc.).
+  - **Full GPLv3 Compliance (Section 6)**: Provided clear attribution, direct links to upstream source code tarballs and repositories for `rsync 3.3.0` and Cygwin.
+  - Bundled official GNU GPLv3 (`COPYING.gpl3.txt`) and LGPLv3 (`COPYING.lgpl3.txt`) license texts within the distribution package.
+  - Updated Inno Setup Windows installer to display license terms and automatically install license and attribution files into the application directory.
+- **Enhanced About Dialog**:
+  - Added dedicated License status and a direct link to **Third-Party Licenses** that opens formatted documentation on GitHub.
+  - Included license details in the "Copy to clipboard" system details export.
+- **Documentation**:
+  - Updated `README.md` with transparent licensing breakdown and source code references.
+
+---
+
 ## Version 1.5.0 (2026-09-28)
 
 ### ✨ New Features & Improvements
