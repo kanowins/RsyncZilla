@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Renci.SshNet;
+using Renci.SshNet.Common;
 using Renci.SshNet.Sftp;
 using RsyncZilla.Models;
 
@@ -15,64 +17,58 @@ namespace RsyncZilla.Services
         private ConnectionInfo? _connectionInfo;
         private readonly System.Threading.SemaphoreSlim _connectionLock = new(1, 1);
 
-        public bool IsConnected => _client != null && _client.IsConnected;
+        private string? _lastHost;
+        private int _lastPort = 22;
+        private string? _lastUsername;
+        private string? _lastPassword;
+        private bool _hasActiveSession;
+
+        public bool HasActiveClient => _client != null && _client.IsConnected;
+        public bool CanReconnect => _hasActiveSession && !string.IsNullOrWhiteSpace(_lastHost) && !string.IsNullOrWhiteSpace(_lastUsername);
+        public bool IsConnected => _hasActiveSession || HasActiveClient;
         public string CurrentPath { get; private set; } = "/";
         public string? HomeDirectory { get; private set; }
 
         public event Action<string, bool>? LogMessageReceived; // (message, isError)
+        public event Action? ConnectionStateChanged;
 
         public async Task<(bool success, string? error)> ConnectAsync(string host, int port, string username, string password)
         {
             await _connectionLock.WaitAsync();
             try
             {
-                if (IsConnected && _connectionInfo != null &&
+                if (HasActiveClient && _connectionInfo != null &&
                     string.Equals(_connectionInfo.Host, host, StringComparison.OrdinalIgnoreCase) &&
                     _connectionInfo.Port == port &&
                     string.Equals(_connectionInfo.Username, username, StringComparison.Ordinal))
                 {
+                    _lastHost = host;
+                    _lastPort = port;
+                    _lastUsername = username;
+                    _lastPassword = password;
+                    _hasActiveSession = true;
                     return (true, null);
                 }
 
-                DisconnectInternal();
+                DisconnectInternal(clearSessionCredentials: false);
 
                 return await Task.Run(() =>
                 {
-                    try
+                    var (ok, err) = ConnectInternal(host, port, username, password, isReconnect: false);
+                    if (ok)
                     {
-                        LogMessageReceived?.Invoke($"Connecting to {username}@{host}:{port} via SFTP...", false);
-                        var connectionInfo = new ConnectionInfo(
-                            host,
-                            port,
-                            username,
-                            new PasswordAuthenticationMethod(username, password)
-                        )
-                        {
-                            Timeout = TimeSpan.FromSeconds(15)
-                        };
-
-                        var client = new SftpClient(connectionInfo);
-                        client.Connect();
-                        _client = client;
-                        _connectionInfo = connectionInfo;
-
-                        CurrentPath = _client.WorkingDirectory;
-                        if (string.IsNullOrEmpty(HomeDirectory))
-                        {
-                            HomeDirectory = CurrentPath;
-                        }
-                        LogMessageReceived?.Invoke($"Connected successfully. Initial directory: {CurrentPath}", false);
-                        return (true, (string?)null);
+                        _lastHost = host;
+                        _lastPort = port;
+                        _lastUsername = username;
+                        _lastPassword = password;
+                        _hasActiveSession = true;
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        var errorMsg = ex.InnerException != null 
-                            ? $"{ex.Message} ({ex.InnerException.Message})" 
-                            : ex.Message;
-                        LogMessageReceived?.Invoke($"SFTP connection error: {errorMsg}", true);
-                        DisconnectInternal();
-                        return (false, (string?)errorMsg);
+                        _hasActiveSession = false;
                     }
+                    ConnectionStateChanged?.Invoke();
+                    return (ok, err);
                 });
             }
             finally
@@ -81,32 +77,139 @@ namespace RsyncZilla.Services
             }
         }
 
-        public void Disconnect()
+        private (bool success, string? error) ConnectInternal(string host, int port, string username, string password, bool isReconnect)
         {
-            _connectionLock.Wait();
             try
             {
-                DisconnectInternal();
+                if (!isReconnect)
+                {
+                    LogMessageReceived?.Invoke($"Connecting to {username}@{host}:{port} via SFTP...", false);
+                }
+
+                var connectionInfo = new ConnectionInfo(
+                    host,
+                    port,
+                    username,
+                    new PasswordAuthenticationMethod(username, password)
+                )
+                {
+                    Timeout = TimeSpan.FromSeconds(15)
+                };
+
+                var client = new SftpClient(connectionInfo)
+                {
+                    KeepAliveInterval = TimeSpan.FromSeconds(15),
+                    OperationTimeout = TimeSpan.FromSeconds(15)
+                };
+
+                client.ErrorOccurred += (s, e) =>
+                {
+                    if (_hasActiveSession)
+                    {
+                        LogMessageReceived?.Invoke($"[SFTP] Idle connection dropped ({e.Exception?.Message ?? "socket closed"}). Will auto-reconnect on next operation.", false);
+                    }
+                };
+
+                client.Connect();
+                _client = client;
+                _connectionInfo = connectionInfo;
+
+                if (isReconnect && !string.IsNullOrWhiteSpace(CurrentPath) && CurrentPath != "/")
+                {
+                    try
+                    {
+                        _client.ChangeDirectory(CurrentPath);
+                    }
+                    catch
+                    {
+                        CurrentPath = _client.WorkingDirectory;
+                    }
+                }
+                else
+                {
+                    CurrentPath = _client.WorkingDirectory;
+                }
+
+                if (string.IsNullOrEmpty(HomeDirectory))
+                {
+                    HomeDirectory = _client.WorkingDirectory;
+                }
+
+                if (isReconnect)
+                {
+                    LogMessageReceived?.Invoke($"Reconnected to {username}@{host}:{port}.", false);
+                }
+                else
+                {
+                    LogMessageReceived?.Invoke($"Connected successfully. Initial directory: {CurrentPath}", false);
+                }
+
+                return (true, null);
             }
-            finally
+            catch (Exception ex)
             {
-                _connectionLock.Release();
+                var errorMsg = ex.InnerException != null
+                    ? $"{ex.Message} ({ex.InnerException.Message})"
+                    : ex.Message;
+                LogMessageReceived?.Invoke($"SFTP connection error: {errorMsg}", true);
+                DisposeClientOnly();
+                return (false, errorMsg);
             }
         }
 
-        private void DisconnectInternal()
+        private (bool success, string? error) EnsureConnectedInternal()
         {
-            _connectionInfo = null;
-            HomeDirectory = null;
-            if (_client != null)
+            if (HasActiveClient)
+            {
+                return (true, null);
+            }
+
+            if (!CanReconnect)
+            {
+                return (false, "No active connection to SFTP server.");
+            }
+
+            DisposeClientOnly();
+            LogMessageReceived?.Invoke($"Connection lost. Reconnecting to {_lastUsername}@{_lastHost}:{_lastPort}...", false);
+            return ConnectInternal(_lastHost!, _lastPort, _lastUsername!, _lastPassword ?? "", isReconnect: true);
+        }
+
+        public void Disconnect()
+        {
+            _hasActiveSession = false;
+            _lastHost = null;
+            _lastUsername = null;
+            _lastPassword = null;
+
+            // Abort any in-flight socket operation immediately so Disconnect never blocks UI thread
+            DisposeClientOnly(logDisconnect: true);
+
+            if (_connectionLock.Wait(TimeSpan.FromMilliseconds(500)))
             {
                 try
                 {
-                    if (_client.IsConnected)
+                    DisconnectInternal(clearSessionCredentials: true);
+                }
+                finally
+                {
+                    _connectionLock.Release();
+                }
+            }
+            ConnectionStateChanged?.Invoke();
+        }
+
+        private void DisposeClientOnly(bool logDisconnect = false)
+        {
+            var client = System.Threading.Interlocked.Exchange(ref _client, null);
+            if (client != null)
+            {
+                try
+                {
+                    if (client.IsConnected)
                     {
-                        _client.Disconnect();
+                        client.Disconnect();
                     }
-                    _client.Dispose();
+                    client.Dispose();
                 }
                 catch
                 {
@@ -114,32 +217,167 @@ namespace RsyncZilla.Services
                 }
                 finally
                 {
-                    _client = null;
-                    LogMessageReceived?.Invoke("Disconnected from SFTP server.", false);
+                    if (logDisconnect)
+                    {
+                        LogMessageReceived?.Invoke("Disconnected from SFTP server.", false);
+                    }
                 }
+            }
+        }
+
+        private void DisconnectInternal(bool clearSessionCredentials = true)
+        {
+            if (clearSessionCredentials)
+            {
+                _hasActiveSession = false;
+                _lastHost = null;
+                _lastUsername = null;
+                _lastPassword = null;
+                _connectionInfo = null;
+                HomeDirectory = null;
+            }
+            DisposeClientOnly(logDisconnect: clearSessionCredentials);
+        }
+
+        private bool IsConnectionLost(Exception ex)
+        {
+            if (_client == null || !_client.IsConnected)
+            {
+                return true;
+            }
+
+            if (ex is SftpPermissionDeniedException || ex is SftpPathNotFoundException)
+            {
+                return false;
+            }
+
+            if (ex is SshConnectionException ||
+                ex is SshOperationTimeoutException ||
+                ex is SocketException ||
+                ex is IOException ||
+                ex is ObjectDisposedException)
+            {
+                return true;
+            }
+
+            if (ex is SshException sshEx &&
+                (sshEx.Message.Contains("not connected", StringComparison.OrdinalIgnoreCase) ||
+                 sshEx.Message.Contains("closed", StringComparison.OrdinalIgnoreCase) ||
+                 sshEx.Message.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
+                 sshEx.Message.Contains("aborted", StringComparison.OrdinalIgnoreCase) ||
+                 sshEx.Message.Contains("reset", StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+
+            if (ex.InnerException != null)
+            {
+                return IsConnectionLost(ex.InnerException);
+            }
+
+            return false;
+        }
+
+        private async Task<T> ExecuteWithReconnectAsync<T>(
+            Func<SftpClient, T> operation,
+            Func<string, T> onError,
+            string errorPrefix)
+        {
+            await _connectionLock.WaitAsync();
+            try
+            {
+                return await Task.Run(() => ExecuteWithReconnectCore(operation, onError, errorPrefix));
+            }
+            finally
+            {
+                _connectionLock.Release();
+            }
+        }
+
+        private T ExecuteWithReconnectSync<T>(
+            Func<SftpClient, T> operation,
+            Func<string, T> onError,
+            string errorPrefix)
+        {
+            _connectionLock.Wait();
+            try
+            {
+                return ExecuteWithReconnectCore(operation, onError, errorPrefix);
+            }
+            finally
+            {
+                _connectionLock.Release();
+            }
+        }
+
+        private T ExecuteWithReconnectCore<T>(
+            Func<SftpClient, T> operation,
+            Func<string, T> onError,
+            string errorPrefix)
+        {
+            var (connected, connErr) = EnsureConnectedInternal();
+            if (!connected || _client == null)
+            {
+                var msg = connErr ?? "No active connection to SFTP server.";
+                LogMessageReceived?.Invoke($"{errorPrefix}: {msg}", true);
+                return onError(msg);
+            }
+
+            try
+            {
+                return operation(_client);
+            }
+            catch (Exception ex) when (CanReconnect && IsConnectionLost(ex))
+            {
+                LogMessageReceived?.Invoke($"SFTP connection interrupted ({ex.Message}). Reconnecting...", false);
+                DisposeClientOnly();
+
+                var (reconnected, reconnErr) = EnsureConnectedInternal();
+                if (!reconnected || _client == null)
+                {
+                    var msg = $"{errorPrefix}: {reconnErr ?? ex.Message}";
+                    LogMessageReceived?.Invoke(msg, true);
+                    return onError(msg);
+                }
+
+                try
+                {
+                    return operation(_client);
+                }
+                catch (Exception retryEx)
+                {
+                    var msg = $"{errorPrefix}: {retryEx.Message}";
+                    LogMessageReceived?.Invoke(msg, true);
+                    return onError(msg);
+                }
+            }
+            catch (Exception ex)
+            {
+                var msg = $"{errorPrefix}: {ex.Message}";
+                LogMessageReceived?.Invoke(msg, true);
+                return onError(msg);
             }
         }
 
         public async Task<(List<FileItem> items, string? error)> GetDirectoryContentsAsync(string remotePath)
         {
-            var results = new List<FileItem>();
-            if (_client == null || !_client.IsConnected)
+            if (!IsConnected)
             {
-                return (results, "No active connection to SFTP server.");
+                return (new List<FileItem>(), "No active connection to SFTP server.");
             }
 
-            return await Task.Run<(List<FileItem> items, string? error)>(() =>
-            {
-                try
+            return await ExecuteWithReconnectAsync<(List<FileItem> items, string? error)>(
+                client =>
                 {
-                    // Normalise path
-                    if (string.IsNullOrWhiteSpace(remotePath))
+                    var results = new List<FileItem>();
+                    var targetPath = remotePath;
+                    if (string.IsNullOrWhiteSpace(targetPath))
                     {
-                        remotePath = _client.WorkingDirectory;
+                        targetPath = !string.IsNullOrWhiteSpace(CurrentPath) ? CurrentPath : client.WorkingDirectory;
                     }
 
-                    _client.ChangeDirectory(remotePath);
-                    CurrentPath = _client.WorkingDirectory;
+                    client.ChangeDirectory(targetPath);
+                    CurrentPath = client.WorkingDirectory;
 
                     // Add parent directory item '..' if not root
                     if (CurrentPath != "/" && !string.IsNullOrEmpty(CurrentPath))
@@ -155,7 +393,7 @@ namespace RsyncZilla.Services
                         });
                     }
 
-                    var files = _client.ListDirectory(CurrentPath);
+                    var files = client.ListDirectory(CurrentPath);
 
                     var dirItems = files
                         .Where(f => f.IsDirectory && f.Name != "." && f.Name != "..")
@@ -188,97 +426,96 @@ namespace RsyncZilla.Services
 
                     LogMessageReceived?.Invoke($"Remote directory listed: {CurrentPath} ({results.Count} items)", false);
                     return (results, null);
-                }
-                catch (Exception ex)
-                {
-                    var msg = $"Error listing remote directory '{remotePath}': {ex.Message}";
-                    LogMessageReceived?.Invoke(msg, true);
-                    return (results, msg);
-                }
-            });
+                },
+                err => (new List<FileItem>(), err),
+                $"Error listing remote directory '{remotePath}'");
         }
 
         public async Task<bool> CreateDirectoryAsync(string path)
         {
-            if (_client == null || !_client.IsConnected) return false;
-            return await Task.Run(() =>
-            {
-                try
+            if (!IsConnected) return false;
+            return await ExecuteWithReconnectAsync(
+                client =>
                 {
-                    _client.CreateDirectory(path);
+                    client.CreateDirectory(path);
                     LogMessageReceived?.Invoke($"Remote folder created: {path}", false);
                     return true;
-                }
-                catch (Exception ex)
-                {
-                    LogMessageReceived?.Invoke($"Error creating remote folder '{path}': {ex.Message}", true);
-                    return false;
-                }
-            });
+                },
+                _ => false,
+                $"Error creating remote folder '{path}'");
         }
 
         public async Task<bool> DeleteItemsAsync(IEnumerable<(string path, bool isDirectory)> items)
         {
-            if (_client == null || !_client.IsConnected) return false;
+            if (!IsConnected) return false;
             var itemList = items.ToList();
             if (!itemList.Any()) return true;
 
-            return await Task.Run(() =>
-            {
-                // 1. Try fast batch deletion via SSH command (rm -rf)
-                if (_connectionInfo != null)
+            return await ExecuteWithReconnectAsync(
+                client =>
                 {
-                    try
+                    // 1. Try fast batch deletion via SSH command (rm -rf)
+                    if (_connectionInfo != null)
                     {
-                        using var sshClient = new SshClient(_connectionInfo);
-                        sshClient.Connect();
-                        if (sshClient.IsConnected)
+                        try
                         {
-                            var escapedPaths = string.Join(" ", itemList.Select(i => $"'{i.path.Replace("'", "'\\''")}'"));
-                            var cmd = sshClient.RunCommand($"rm -rf -- {escapedPaths}");
-                            if (cmd.ExitStatus == 0)
+                            using var sshClient = new SshClient(_connectionInfo);
+                            sshClient.Connect();
+                            if (sshClient.IsConnected)
                             {
-                                LogMessageReceived?.Invoke($"[SSH] Successfully deleted {itemList.Count} items via rm -rf", false);
-                                return true;
+                                var escapedPaths = string.Join(" ", itemList.Select(i => $"'{i.path.Replace("'", "'\\''")}'"));
+                                using var cmd = sshClient.CreateCommand($"rm -rf -- {escapedPaths}");
+                                cmd.CommandTimeout = TimeSpan.FromSeconds(15);
+                                cmd.Execute();
+                                if (cmd.ExitStatus == 0)
+                                {
+                                    LogMessageReceived?.Invoke($"[SSH] Successfully deleted {itemList.Count} items via rm -rf", false);
+                                    return true;
+                                }
+                                else if (!string.IsNullOrEmpty(cmd.Error))
+                                {
+                                    LogMessageReceived?.Invoke($"[SSH] rm -rf note: {cmd.Error.Trim()}", false);
+                                }
                             }
-                            else if (!string.IsNullOrEmpty(cmd.Error))
+                        }
+                        catch (Exception ex)
+                        {
+                            LogMessageReceived?.Invoke($"[SSH] Direct shell unavailable ({ex.Message}). Using SFTP batch deletion...", false);
+                        }
+                    }
+
+                    // 2. Fallback: Batch delete directly over SFTP
+                    bool allSuccess = true;
+                    foreach (var item in itemList)
+                    {
+                        try
+                        {
+                            if (item.isDirectory)
                             {
-                                LogMessageReceived?.Invoke($"[SSH] rm -rf note: {cmd.Error.Trim()}", false);
+                                DeleteDirectoryRecursive(client, item.path);
+                                LogMessageReceived?.Invoke($"Remote folder deleted: {item.path}", false);
+                            }
+                            else
+                            {
+                                client.DeleteFile(item.path);
+                                LogMessageReceived?.Invoke($"Remote file deleted: {item.path}", false);
                             }
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        LogMessageReceived?.Invoke($"[SSH] Direct shell unavailable ({ex.Message}). Using SFTP batch deletion...", false);
-                    }
-                }
-
-                // 2. Fallback: Batch delete directly over SFTP
-                bool allSuccess = true;
-                foreach (var item in itemList)
-                {
-                    try
-                    {
-                        if (item.isDirectory)
+                        catch (Exception ex) when (CanReconnect && IsConnectionLost(ex))
                         {
-                            DeleteDirectoryRecursive(_client, item.path);
-                            LogMessageReceived?.Invoke($"Remote folder deleted: {item.path}", false);
+                            throw;
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            _client.DeleteFile(item.path);
-                            LogMessageReceived?.Invoke($"Remote file deleted: {item.path}", false);
+                            allSuccess = false;
+                            LogMessageReceived?.Invoke($"Error deleting remote item '{item.path}': {ex.Message}", true);
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        allSuccess = false;
-                        LogMessageReceived?.Invoke($"Error deleting remote item '{item.path}': {ex.Message}", true);
-                    }
-                }
 
-                return allSuccess;
-            });
+                    return allSuccess;
+                },
+                _ => false,
+                "Error deleting remote items");
         }
 
         public async Task<bool> DeleteItemAsync(string path, bool isDirectory)
@@ -288,104 +525,84 @@ namespace RsyncZilla.Services
 
         public async Task<bool> RenameItemAsync(string oldPath, string newName)
         {
-            if (_client == null || !_client.IsConnected) return false;
+            if (!IsConnected) return false;
             if (string.IsNullOrWhiteSpace(oldPath) || string.IsNullOrWhiteSpace(newName)) return false;
 
             var parent = GetParentDirectory(oldPath);
             var newPath = parent == "/" ? $"/{newName.Trim()}" : $"{parent}/{newName.Trim()}";
             if (string.Equals(oldPath, newPath, StringComparison.Ordinal)) return true;
 
-            return await Task.Run(() =>
-            {
-                try
+            return await ExecuteWithReconnectAsync(
+                client =>
                 {
-                    _client.RenameFile(oldPath, newPath);
+                    client.RenameFile(oldPath, newPath);
                     LogMessageReceived?.Invoke($"Renamed remote item '{oldPath}' to '{newPath}'", false);
                     return true;
-                }
-                catch (Exception ex)
-                {
-                    LogMessageReceived?.Invoke($"Error renaming remote item '{oldPath}' to '{newPath}': {ex.Message}", true);
-                    return false;
-                }
-            });
+                },
+                _ => false,
+                $"Error renaming remote item '{oldPath}' to '{newPath}'");
         }
 
         public async Task<(bool success, string? error)> DownloadFileAsync(string remotePath, string localPath)
         {
-            if (_client == null || !_client.IsConnected) return (false, "Not connected to SFTP server.");
-            return await Task.Run<(bool success, string? error)>(() =>
-            {
-                try
+            if (!IsConnected) return (false, "Not connected to SFTP server.");
+            return await ExecuteWithReconnectAsync<(bool success, string? error)>(
+                client =>
                 {
                     var localDir = Path.GetDirectoryName(localPath);
                     if (!string.IsNullOrEmpty(localDir)) Directory.CreateDirectory(localDir);
 
                     using var fs = File.Create(localPath);
-                    _client.DownloadFile(remotePath, fs);
+                    client.DownloadFile(remotePath, fs);
                     LogMessageReceived?.Invoke($"Downloaded '{remotePath}' to '{localPath}'", false);
                     return (true, null);
-                }
-                catch (Exception ex)
-                {
-                    var msg = $"Error downloading '{remotePath}': {ex.Message}";
-                    LogMessageReceived?.Invoke(msg, true);
-                    return (false, msg);
-                }
-            });
+                },
+                err => (false, err),
+                $"Error downloading '{remotePath}'");
         }
 
         public async Task<(bool success, string? error)> UploadFileAsync(string localPath, string remotePath)
         {
-            if (_client == null || !_client.IsConnected) return (false, "Not connected to SFTP server.");
-            return await Task.Run<(bool success, string? error)>(() =>
-            {
-                try
+            if (!IsConnected) return (false, "Not connected to SFTP server.");
+            return await ExecuteWithReconnectAsync<(bool success, string? error)>(
+                client =>
                 {
                     using var fs = File.OpenRead(localPath);
-                    _client.UploadFile(fs, remotePath, true);
+                    client.UploadFile(fs, remotePath, true);
                     LogMessageReceived?.Invoke($"Uploaded '{localPath}' to '{remotePath}'", false);
                     return (true, null);
-                }
-                catch (Exception ex)
-                {
-                    var msg = $"Error uploading '{localPath}' to '{remotePath}': {ex.Message}";
-                    LogMessageReceived?.Invoke(msg, true);
-                    return (false, msg);
-                }
-            });
+                },
+                err => (false, err),
+                $"Error uploading '{localPath}' to '{remotePath}'");
         }
 
         public bool DownloadFileToStream(string remotePath, Stream output)
         {
-            if (_client == null || !_client.IsConnected) return false;
-            try
-            {
-                _client.DownloadFile(remotePath, output);
-                LogMessageReceived?.Invoke($"Streamed '{remotePath}' successfully", false);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                var msg = $"Error streaming '{remotePath}': {ex.Message}";
-                LogMessageReceived?.Invoke(msg, true);
-                return false;
-            }
+            if (!IsConnected) return false;
+            return ExecuteWithReconnectSync(
+                client =>
+                {
+                    if (output.CanSeek) output.Position = 0;
+                    client.DownloadFile(remotePath, output);
+                    LogMessageReceived?.Invoke($"Streamed '{remotePath}' successfully", false);
+                    return true;
+                },
+                _ => false,
+                $"Error streaming '{remotePath}'");
         }
 
         public List<(string relativePath, string fullPath, long size, DateTime? modified)> GetFilesRecursive(string remotePath, string baseName)
         {
-            var list = new List<(string relativePath, string fullPath, long size, DateTime? modified)>();
-            if (_client == null || !_client.IsConnected) return list;
-            try
-            {
-                CollectFilesRecursive(_client, remotePath, baseName, list);
-            }
-            catch (Exception ex)
-            {
-                LogMessageReceived?.Invoke($"Error enumerating files in '{remotePath}': {ex.Message}", true);
-            }
-            return list;
+            if (!IsConnected) return new List<(string relativePath, string fullPath, long size, DateTime? modified)>();
+            return ExecuteWithReconnectSync(
+                client =>
+                {
+                    var list = new List<(string relativePath, string fullPath, long size, DateTime? modified)>();
+                    CollectFilesRecursive(client, remotePath, baseName, list);
+                    return list;
+                },
+                _ => new List<(string relativePath, string fullPath, long size, DateTime? modified)>(),
+                $"Error enumerating files in '{remotePath}'");
         }
 
         private static void CollectFilesRecursive(SftpClient client, string currentRemotePath, string currentRelativePath, List<(string relativePath, string fullPath, long size, DateTime? modified)> list)

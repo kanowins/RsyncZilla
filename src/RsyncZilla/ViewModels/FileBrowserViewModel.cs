@@ -164,7 +164,6 @@ namespace RsyncZilla.ViewModels
                 {
                     if (_sftpService == null || !_sftpService.IsConnected)
                     {
-                        RunOnUi(() => Items.Clear());
                         ErrorMessage = "Not connected.";
                         return;
                     }

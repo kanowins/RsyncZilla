@@ -191,5 +191,19 @@ namespace RsyncZilla.Tests
             Assert.False(session.IsTabNameReset);
             Assert.Equal("admin@other.com", session.Title);
         }
+
+        [Fact]
+        public async Task RemoteBrowser_NavigateToAsync_ShouldNotWipeExistingItemsOnConnectionLoss()
+        {
+            var session = new RemoteSessionViewModel();
+            session.RemoteBrowser.Items.Add(new FileItem { Name = "existing_folder", FullPath = "/var/www/existing_folder", IsDirectory = true });
+
+            // Attempting to navigate when disconnected or after idle drop should preserve visible items rather than blanking the view
+            await session.RemoteBrowser.NavigateToAsync("/var/www/existing_folder");
+
+            Assert.Single(session.RemoteBrowser.Items);
+            Assert.Equal("existing_folder", session.RemoteBrowser.Items[0].Name);
+            Assert.NotNull(session.RemoteBrowser.ErrorMessage);
+        }
     }
 }

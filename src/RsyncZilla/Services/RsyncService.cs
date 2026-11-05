@@ -237,7 +237,7 @@ namespace RsyncZilla.Services
                 ? "--no-perms --no-owner --no-group --omit-dir-times --chmod=D755,F644 "
                 : "--no-owner --no-group ";
 
-            return $"-avzP -s --stats {permFlags}{overwriteFlag}-e \"{sshCommand}\" {sourcesArg} {destArg}";
+            return $"-avzP -s --stats --timeout=30 {permFlags}{overwriteFlag}-e \"{sshCommand}\" {sourcesArg} {destArg}";
         }
 
         public async Task<bool> ExecuteTransferAsync(
@@ -385,7 +385,7 @@ namespace RsyncZilla.Services
             var askPassBinary = FindAskPassBinary();
             var askPassCygwinPath = ToCygwinPath(askPassBinary);
 
-            string sshCommand = $"ssh -p {connection.Port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=15 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -o LogLevel=ERROR";
+            string sshCommand = $"ssh -p {connection.Port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=15 -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -o NumberOfPasswordPrompts=1 -o LogLevel=ERROR";
 
             var firstTask = tasks[0];
             var direction = firstTask.Direction;

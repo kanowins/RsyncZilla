@@ -198,6 +198,8 @@ namespace RsyncZilla.ViewModels
             LocalBrowser = new FileBrowserViewModel(localService);
             RemoteBrowser = new FileBrowserViewModel(SftpService);
 
+            SftpService.ConnectionStateChanged += () => NotifyConnectionChanged();
+
             CloseCommand = new RelayCommand(() => CloseRequested?.Invoke(this));
         }
 

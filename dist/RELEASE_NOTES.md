@@ -1,5 +1,19 @@
 # RsyncZilla Release Notes
 
+## Version 1.6.1 (2026-11-05)
+
+### ✨ Bug Fixes & Stability Improvements
+- **SFTP Idle Keep-Alive & Transparent Auto-Reconnection**:
+  - Added SSH keep-alive packets (`KeepAliveInterval = 15s`) and operation timeouts (`OperationTimeout = 15s`) to prevent idle sessions from silently dropping or hanging on half-open sockets.
+  - Added automatic transparent reconnection across all SFTP operations (directory navigation, folder creation, deletion, rename, and file streaming): if the server or NAT router drops an idle connection, RsyncZilla seamlessly reconnects in the background, restores the working directory, and retries the operation.
+- **Remote File Browser Resilience**:
+  - Prevented the remote file list from clearing to a blank screen when a directory navigation or refresh encounters a transient connection error.
+- **Transfer Queue & Rsync Timeout Hardening**:
+  - Decoupled post-transfer remote directory refreshes from the transfer queue loop so slow SFTP directory listings never block subsequent file uploads.
+  - Added `--timeout=30` and `-o NumberOfPasswordPrompts=1` to `rsync` / `ssh` invocations so stalled network connections fail fast and trigger automatic transfer retries.
+
+---
+
 ## Version 1.6.0 (2026-10-04)
 
 ### ✨ Open Source Licensing & Compliance

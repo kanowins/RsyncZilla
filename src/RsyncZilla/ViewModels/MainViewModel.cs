@@ -358,6 +358,17 @@ namespace RsyncZilla.ViewModels
 
             session.CloseRequested += (s) => CloseTab(s);
             session.SftpService.LogMessageReceived += (msg, isErr) => AddLog($"[{session.Title}] {msg}", isErr);
+            session.SftpService.ConnectionStateChanged += () =>
+            {
+                RunOnUi(() =>
+                {
+                    session.NotifyConnectionChanged();
+                    if (ActiveSession == session)
+                    {
+                        OnSessionStateChanged();
+                    }
+                });
+            };
             session.RemoteBrowser.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(FileBrowserViewModel.CurrentPath))
@@ -845,6 +856,17 @@ namespace RsyncZilla.ViewModels
 
             session.CloseRequested += (s) => CloseTab(s);
             session.SftpService.LogMessageReceived += (msg, isErr) => AddLog($"[{session.Title}] {msg}", isErr);
+            session.SftpService.ConnectionStateChanged += () =>
+            {
+                RunOnUi(() =>
+                {
+                    session.NotifyConnectionChanged();
+                    if (ActiveSession == session)
+                    {
+                        OnSessionStateChanged();
+                    }
+                });
+            };
             session.RemoteBrowser.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(FileBrowserViewModel.CurrentPath))
@@ -1228,12 +1250,12 @@ namespace RsyncZilla.ViewModels
                                 var targetSession = RemoteSessions.FirstOrDefault(s => s.Id == batch[0].SessionId) ?? ActiveSession;
                                 if (targetSession != null)
                                 {
-                                    await targetSession.RemoteBrowser.RefreshAsync();
+                                    _ = targetSession.RemoteBrowser.RefreshAsync();
                                 }
                             }
                             else
                             {
-                                await LocalBrowser.RefreshAsync();
+                                _ = LocalBrowser.RefreshAsync();
                             }
                         }
                     }
@@ -1278,6 +1300,16 @@ namespace RsyncZilla.ViewModels
                 lock (_queueLock)
                 {
                     _isProcessingQueue = false;
+                }
+
+                bool hasPending = false;
+                RunOnUi(() =>
+                {
+                    hasPending = ActiveTransfers.Any(t => !t.IsChild && t.Status == TransferStatus.Pending);
+                });
+                if (hasPending)
+                {
+                    _ = ProcessQueueAsync();
                 }
             }
         }
