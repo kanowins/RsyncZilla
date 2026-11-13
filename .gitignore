@@ -20,3 +20,4 @@ crash.log
 dist/installer/
 /rsync-win.exe
 /cygwin64/
+/web/
