@@ -38,12 +38,22 @@ Engineered to eliminate the classic issue of silent FTP transfer failures, ensur
    - Instantly opens a dedicated tab with a full interactive SSH terminal and a synchronized remote file tree positioned directly inside your current remote directory.
    - Run server-side commands (`npm run build`, `composer install`, `git pull`, `pm2 restart`, etc.) without opening PuTTY or manually typing `cd` paths.
 
-4. **📝 Live Remote File Editing (`F4`):**
+4. **🤖 Built-in AI MCP Server for Terminal Control (Claude, ChatGPT, Antigravity, Cursor):**
+   - Connect your favorite AI assistant directly to RsyncZilla's live SSH terminals via the **Model Context Protocol (MCP)**—without ever sharing your SSH passwords or private keys with the AI.
+   - **Strict Per-Tab Permissions (Default `Off`):**
+     - **`🔒 AI: Off` (Default):** Every terminal tab starts completely isolated from AI access and resets to `Off` on disconnect.
+     - **`🛡️ AI: Confirm` (Read & Confirm):** The AI can freely inspect terminal output, list remote directories, and read remote files, but must request your approval via an in-terminal floating banner (**`✅ Allow`** / **`❌ Deny`**) before running any command or modifying files.
+     - **`⚡ AI: Auto`:** Full autonomous terminal execution on the selected tab.
+   - **100% Live Visibility:** Every command the AI runs executes live inside your `xterm.js` terminal tab with real-time streaming output, `[🤖 AI MCP1]` activity notices, and automatic SFTP directory tree synchronization.
+   - **Multi-Tab Addressing (`MCP1`, `MCP2`, ...):** Terminal tabs are automatically labeled `(MCP1)`, `(MCP2)`, etc. in their tab header so you can tell the AI exactly which server tab to target (e.g., *"check nginx logs on MCP1 and restart the service on MCP2"*).
+   - **One-Click Setup (`🤖 MCP`):** Click the `🤖 MCP` button in the terminal toolbar to copy the ready-to-use `mcpServers` JSON snippet directly to your clipboard.
+
+5. **📝 Live Remote File Editing (`F4`):**
    - Press `F4` or double-click on any remote file to open it in your favorite local text editor (VS Code, Notepad++, Sublime, etc.).
    - On save (`Ctrl + S`), a background file watcher debounces writes (450 ms), computes SHA256 hashes, and quietly auto-uploads the file via SFTP.
    - If the connection drops or permissions fail, a clear error dialog alerts you immediately and preserves changes for automatic retry.
 
-5. **Site Manager & Encrypted Password Vault (AES-256-GCM):**
+6. **Site Manager & Encrypted Password Vault (AES-256-GCM):**
    - **Site Manager (📂 Sites):** Save frequently used servers (Host, User, Port, Site Name, and custom Paths) to connect in a single click.
    - **Optional Encrypted Password Vault:** Protect all your server passwords behind a single **Master Password**.
    - **Zero Plaintext Storage:** Passwords are encrypted on disk with industry-standard authenticated **AES-256-GCM** and **PBKDF2** key derivation (HMAC-SHA256, 100,000 iterations, random 32-byte salt). Unlike FileZilla's vulnerable plaintext XML (`sitemanager.xml`), your credentials are safe from infostealers and malware.
@@ -52,7 +62,7 @@ Engineered to eliminate the classic issue of silent FTP transfer failures, ensur
    - **Opt-in Flexibility:** If the vault is not activated, RsyncZilla operates in zero-disk mode, keeping passwords strictly in ephemeral session memory.
    - Built-in `RsyncAskPass.exe` and `SSH_ASKPASS` helper pipes credentials to OpenSSH subprocesses in-memory without intrusive popups.
 
-6. **Transfer Queue & Real-Time Logs:**
+7. **Transfer Queue & Real-Time Logs:**
    - **🚀 Queue:** Shows the active transfer with live progress, speed, and ETA, alongside queued tasks.
    - **⏹ Cancel All:** Immediately terminates active rsync processes and clears pending queue tasks.
    - **❌ Failed Transfers:** Dedicated tab with the exact exit code and stderr error output. Retry single items or **retry all failed** with one click.
@@ -74,11 +84,13 @@ Engineered to eliminate the classic issue of silent FTP transfer failures, ensur
     - `ConnectionManagerService.cs`: Site manager persistence (metadata and saved connections).
     - `VaultService.cs`: AES-256-GCM encrypted credential vault with PBKDF2 key derivation.
     - `FileZillaImportService.cs`: Native import of FileZilla `sitemanager.xml` configurations.
+    - `SshTerminalSession.cs`: Interactive SSH shell streaming, screen buffer, and sentinel command execution.
+    - `McpServerService.cs`: JSON-RPC 2.0 Model Context Protocol (MCP) server over Named Pipes with per-tab AI permission enforcement (`Off`, `ReadAndConfirm`, `Auto`).
   - `ViewModels/`: Decoupled MVVM presentation logic.
-  - `Views/`: Custom XAML dialogs (Site Manager, Vault Setup/Unlock/ChangePassword, SiteEditDialog, FileZilla Import, InputDialog).
-- `src/RsyncAskPass/`: Secure credential pipe bridge for OpenSSH `SSH_ASKPASS`.
+  - `Views/`: Custom XAML views and dialogs (TerminalView, Site Manager, Vault Setup/Unlock/ChangePassword, SiteEditDialog, FileZilla Import, InputDialog).
+- `src/RsyncAskPass/`: Secure credential pipe bridge for OpenSSH `SSH_ASKPASS` and zero-overhead `stdio`-to-NamedPipe MCP bridge (`--mcp`).
 - `installer/`: Inno Setup configuration (`RsyncZilla.iss`) for building the standalone Windows installer.
-- `tests/RsyncZilla.Tests/`: xUnit test suite (155 tests covering rsync path translation, watchers, explorer integration, vault cryptography, multi-selection, and dialogs).
+- `tests/RsyncZilla.Tests/`: xUnit test suite (201 tests covering rsync path translation, watchers, explorer integration, vault cryptography, MCP server protocol & permissions, multi-selection, and dialogs).
 - `dist/RsyncZilla/`: Ready-to-run precompiled portable distribution (`RsyncZilla.exe`).
 
 ---

@@ -77,10 +77,24 @@ namespace RsyncZilla.Tests
             Assert.Equal("My Site", termSession.SiteName);
             Assert.Equal(initialCount + 1, vm.RemoteSessions.Count);
             Assert.Same(termSession, vm.ActiveSession);
-            Assert.Equal("Terminal: admin@test.server.com", termSession.Title);
+            Assert.Equal("MCP1", termSession.McpName);
+            Assert.Equal("Terminal: admin@test.server.com (MCP1)", termSession.Title);
 
-            // Now close the tab
+            // Open a second terminal tab -> should get MCP2
+            var termSession2 = vm.OpenTerminalTab("test2.server.com", 22, "admin", "pwd123", "/var/www");
+            Assert.Equal("MCP2", termSession2.McpName);
+            Assert.Equal("Terminal: admin@test2.server.com (MCP2)", termSession2.Title);
+
+            // Close MCP1 and open another -> reuses MCP1 while MCP2 stays MCP2
             vm.CloseTab(termSession);
+            Assert.Equal("MCP2", termSession2.McpName);
+
+            var termSession3 = vm.OpenTerminalTab("test3.server.com", 22, "admin", "pwd123", "/home");
+            Assert.Equal("MCP1", termSession3.McpName);
+            Assert.Equal("Terminal: admin@test3.server.com (MCP1)", termSession3.Title);
+
+            vm.CloseTab(termSession2);
+            vm.CloseTab(termSession3);
             Assert.Equal(initialCount, vm.RemoteSessions.Count);
             Assert.NotSame(termSession, vm.ActiveSession);
         }

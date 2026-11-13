@@ -1,5 +1,24 @@
 # RsyncZilla Release Notes
 
+## Version 1.7.0 (2026-11-13)
+
+### ✨ New Features & Improvements
+- **Integrated AI MCP Server for SSH Terminal Mode**:
+  - Added a built-in **Model Context Protocol (MCP) Server** (`RsyncAskPass.exe --mcp` stdio-to-NamedPipe bridge) allowing external AI assistants (**Antigravity**, **Claude Desktop**, **ChatGPT**, **Cursor**, **Windsurf**, etc.) to interact with live SSH terminal tabs in real time without exposing server credentials.
+  - **Per-Tab AI Permission Controls (Default Off)**:
+    - **`🔒 AI: Off` (Default)**: Every tab starts with AI access completely disabled and automatically resets to `Off` upon disconnecting.
+    - **`🛡️ AI: Confirm` (Read & Confirm)**: AI can freely read terminal screen buffers, list remote directories, and read remote files, while any write or execution action pops up an interactive in-terminal confirmation banner (**`✅ Allow`** / **`❌ Deny`**) showing the exact command before it runs.
+    - **`⚡ AI: Auto`**: Grants the AI direct execution access inside the enabled terminal tab without per-command confirmation prompts.
+  - **Full Live Terminal Visibility**:
+    - Commands run directly inside the active `xterm.js` interactive shell stream so users watch every command, color output, and directory navigation (`cd`) happen live on screen alongside automatic SFTP file tree synchronization.
+    - Read-only queries print real-time `[🤖 AI MCP1]` notices in the terminal and application log console.
+  - **Multi-Tab MCP Identifiers (`MCP1`, `MCP2`, ...)**:
+    - SSH terminal tabs are automatically labeled `(MCP1)`, `(MCP2)`, etc. in the tab title and terminal header so users can easily instruct the AI model which specific server tab to operate on.
+  - **One-Click MCP Config Copy (`🤖 MCP`)**:
+    - Added a toolbar button that copies the ready-to-paste `mcpServers` JSON snippet with the exact local executable path directly to the clipboard.
+
+---
+
 ## Version 1.6.1 (2026-11-05)
 
 ### ✨ Bug Fixes & Stability Improvements

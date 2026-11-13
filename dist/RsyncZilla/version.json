@@ -1,8 +1,8 @@
 {
-  "version": "1.6.1",
-  "release_date": "2026-11-05",
-  "release_name": "RsyncZilla 1.6.1",
-  "installer_url": "https://github.com/kanowins/RsyncZilla/releases/download/v1.6.1/RsyncZilla-Setup-v1.6.1-win-x64.exe",
+  "version": "1.7.0",
+  "release_date": "2026-11-13",
+  "release_name": "RsyncZilla 1.7.0",
+  "installer_url": "https://github.com/kanowins/RsyncZilla/releases/download/v1.7.0/RsyncZilla-Setup-v1.7.0-win-x64.exe",
   "release_notes_url": "https://github.com/kanowins/RsyncZilla/blob/main/dist/RELEASE_NOTES.md",
   "github_release_url": "https://github.com/kanowins/RsyncZilla/releases"
 }

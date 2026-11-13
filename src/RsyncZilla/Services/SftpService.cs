@@ -576,6 +576,44 @@ namespace RsyncZilla.Services
                 $"Error uploading '{localPath}' to '{remotePath}'");
         }
 
+        public async Task<(bool success, string content, string? error)> ReadAllTextAsync(string remotePath, int maxBytes = 262144)
+        {
+            if (!IsConnected) return (false, string.Empty, "Not connected to SFTP server.");
+            return await ExecuteWithReconnectAsync<(bool success, string content, string? error)>(
+                client =>
+                {
+                    using var ms = new MemoryStream();
+                    client.DownloadFile(remotePath, ms);
+                    var bytes = ms.ToArray();
+                    if (bytes.Length > maxBytes)
+                    {
+                        var truncated = System.Text.Encoding.UTF8.GetString(bytes, 0, maxBytes) + $"\n\n[... Truncated at {maxBytes} bytes (total {bytes.Length} bytes) ...]";
+                        return (true, truncated, null);
+                    }
+                    var text = System.Text.Encoding.UTF8.GetString(bytes);
+                    LogMessageReceived?.Invoke($"Read remote file '{remotePath}' ({bytes.Length} bytes)", false);
+                    return (true, text, null);
+                },
+                err => (false, string.Empty, err),
+                $"Error reading remote file '{remotePath}'");
+        }
+
+        public async Task<(bool success, string? error)> WriteAllTextAsync(string remotePath, string content)
+        {
+            if (!IsConnected) return (false, "Not connected to SFTP server.");
+            return await ExecuteWithReconnectAsync<(bool success, string? error)>(
+                client =>
+                {
+                    var bytes = System.Text.Encoding.UTF8.GetBytes(content ?? string.Empty);
+                    using var ms = new MemoryStream(bytes);
+                    client.UploadFile(ms, remotePath, true);
+                    LogMessageReceived?.Invoke($"Wrote remote file '{remotePath}' ({bytes.Length} bytes)", false);
+                    return (true, null);
+                },
+                err => (false, err),
+                $"Error writing remote file '{remotePath}'");
+        }
+
         public bool DownloadFileToStream(string remotePath, Stream output)
         {
             if (!IsConnected) return false;

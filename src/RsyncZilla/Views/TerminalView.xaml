@@ -322,6 +322,7 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
@@ -342,6 +343,49 @@
 
                         <!-- Action Buttons -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- AI MCP Permission Mode Button -->
+                            <Button x:Name="AiModeButton"
+                                    Command="{Binding CycleAiPermissionCommand}"
+                                    ToolTip="{Binding AiPermissionTooltip}"
+                                    Margin="0,0,4,0">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource TerminalToolbarButtonStyle}">
+                                        <Setter Property="Background" Value="#252A34"/>
+                                        <Setter Property="BorderBrush" Value="#384152"/>
+                                        <Setter Property="Foreground" Value="#94A3B8"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsAiReadAndConfirm}" Value="True">
+                                                <Setter Property="Background" Value="#1E3A5F"/>
+                                                <Setter Property="BorderBrush" Value="#38BDF8"/>
+                                                <Setter Property="Foreground" Value="#E0F2FE"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsAiAuto}" Value="True">
+                                                <Setter Property="Background" Value="#14532D"/>
+                                                <Setter Property="BorderBrush" Value="#22C55E"/>
+                                                <Setter Property="Foreground" Value="#DCFCE7"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <Button.ContextMenu>
+                                    <ContextMenu Background="#1E232B" Foreground="#E2E8F0" BorderBrush="#384152">
+                                        <MenuItem Header="🔒 AI: Off (Default - Disabled)" Command="{Binding SetAiPermissionCommand}" CommandParameter="Off"/>
+                                        <MenuItem Header="🛡️ AI: Read &amp; Confirm (Ask before running commands)" Command="{Binding SetAiPermissionCommand}" CommandParameter="ReadAndConfirm"/>
+                                        <MenuItem Header="⚡ AI: Auto (Full terminal control)" Command="{Binding SetAiPermissionCommand}" CommandParameter="Auto"/>
+                                        <Separator Background="#384152"/>
+                                        <MenuItem Header="📋 Copy MCP Server Config JSON..." Click="CopyMcpConfigButton_Click"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                                <TextBlock Text="{Binding AiPermissionBadgeText}" FontSize="11" FontWeight="SemiBold"/>
+                            </Button>
+
+                            <Button ToolTip="Copy MCP Server JSON configuration for Claude / ChatGPT / Cursor / Antigravity"
+                                    Click="CopyMcpConfigButton_Click"
+                                    Margin="0,0,8,0"
+                                    Style="{StaticResource TerminalToolbarButtonStyle}">
+                                <TextBlock Text="🤖 MCP" FontSize="11"/>
+                            </Button>
+
                             <Button ToolTip="Copy selected text (Ctrl+Shift+C)" Click="CopyButton_Click"
                                     Style="{StaticResource TerminalToolbarButtonStyle}">
                                 <TextBlock Text="📋 Copy" FontSize="11"/>
@@ -362,11 +406,63 @@
                     </Grid>
                 </Border>
 
+                <!-- AI Confirmation Prompt Banner (Visible in Read & Confirm mode when AI requests to execute a command) -->
+                <Border Grid.Row="1"
+                        Visibility="{Binding HasPendingAiConfirmation, Converter={StaticResource BoolToVisConverter}}"
+                        Background="#1E293B"
+                        BorderBrush="#F59E0B"
+                        BorderThickness="0,0,0,2"
+                        Padding="10,7">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                            <TextBlock Text="🤖" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding PendingAiActionTitle}" Foreground="#FBBF24" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <Border Grid.Column="1" Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="3" Padding="8,4" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding PendingAiCommandPreview}"
+                                       FontFamily="Cascadia Code, Consolas"
+                                       FontSize="12"
+                                       Foreground="#F8FAFC"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip="{Binding PendingAiCommandPreview}"/>
+                        </Border>
+
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Command="{Binding ApproveAiActionCommand}"
+                                    Style="{StaticResource TerminalToolbarButtonStyle}"
+                                    Background="#16A34A"
+                                    BorderBrush="#22C55E"
+                                    Foreground="#FFFFFF"
+                                    Padding="10,4"
+                                    Margin="0,0,6,0"
+                                    ToolTip="Allow the AI to execute this action in the terminal">
+                                <TextBlock Text="✅ Allow" FontWeight="Bold" FontSize="11"/>
+                            </Button>
+                            <Button Command="{Binding RejectAiActionCommand}"
+                                    Style="{StaticResource TerminalToolbarButtonStyle}"
+                                    Background="#DC2626"
+                                    BorderBrush="#EF4444"
+                                    Foreground="#FFFFFF"
+                                    Padding="10,4"
+                                    ToolTip="Reject this AI action">
+                                <TextBlock Text="❌ Deny" FontWeight="Bold" FontSize="11"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
                 <!-- WebView2 Terminal Host -->
-                <wv2:WebView2 Grid.Row="1" x:Name="TerminalWebView" DefaultBackgroundColor="#12151A"/>
+                <wv2:WebView2 Grid.Row="2" x:Name="TerminalWebView" DefaultBackgroundColor="#12151A"/>
 
                 <!-- Connecting / Error Overlay -->
-                <Border Grid.Row="1" x:Name="ConnectingOverlay" Background="#12151A" Visibility="Visible">
+                <Border Grid.Row="2" x:Name="ConnectingOverlay" Background="#12151A" Visibility="Visible">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="400">
                         <ProgressBar x:Name="ConnectingProgressBar" IsIndeterminate="True" Width="160" Height="4" Margin="0,0,0,12" Background="#1E232A" Foreground="#38BDF8" BorderThickness="0"/>
                         <TextBlock x:Name="ConnectingText" Text="Connecting SSH Terminal..." Foreground="#94A3B8" FontSize="13" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>

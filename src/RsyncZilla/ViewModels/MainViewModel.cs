@@ -25,6 +25,7 @@ namespace RsyncZilla.ViewModels
         private readonly SettingsService _settingsService;
         private readonly VaultService _vaultService;
         public VaultService VaultService => _vaultService;
+        public McpServerService McpServer { get; }
 
         private FileExistsAction _fileExistsAction;
         public FileExistsAction CurrentFileExistsAction
@@ -224,6 +225,10 @@ namespace RsyncZilla.ViewModels
             _settingsService = settingsService ?? new SettingsService();
             _vaultService = vaultService ?? new VaultService(_settingsService);
             _fileExistsAction = _settingsService.Current.FileExistsAction;
+            McpServer = new McpServerService(
+                () => RemoteSessions.ToList(),
+                () => ActiveSession,
+                (msg, isErr) => AddLog(msg, isErr));
             _remoteEditService.LogMessageReceived += (msg, isErr) => AddLog(msg, isErr);
             _remoteEditService.FileUploaded += (session, path, len, time) => OnRemoteFileUploaded(session, path, len, time);
             _remoteEditService.FileUploadFailed += (session, path, file, err) => OnRemoteFileUploadFailed(session, path, file, err);
@@ -441,6 +446,7 @@ namespace RsyncZilla.ViewModels
                 session.RemoteBrowser.Items.Clear();
                 session.RemoteBrowser.CurrentPath = "";
                 session.IsTerminalTab = false;
+                session.McpName = null;
                 session.NotifyConnectionChanged();
                 OnSessionStateChanged();
                 return;
@@ -841,11 +847,30 @@ namespace RsyncZilla.ViewModels
             OpenTerminalTab(host, port, username, password, targetPath, ActiveSession.SiteName);
         }
 
+        public string GetNextAvailableMcpName()
+        {
+            var usedNames = new HashSet<string>(
+                RemoteSessions
+                    .Where(s => !string.IsNullOrWhiteSpace(s.McpName))
+                    .Select(s => s.McpName!.Trim()),
+                StringComparer.OrdinalIgnoreCase);
+
+            int index = 1;
+            while (usedNames.Contains($"MCP{index}"))
+            {
+                index++;
+            }
+
+            return $"MCP{index}";
+        }
+
         public RemoteSessionViewModel OpenTerminalTab(string host, int port, string username, string password, string? initialPath = null, string? siteName = null)
         {
+            var mcpName = GetNextAvailableMcpName();
             var session = new RemoteSessionViewModel(_localService, new SftpService())
             {
                 IsTerminalTab = true,
+                McpName = mcpName,
                 Host = host,
                 Port = port > 0 ? port : 22,
                 Username = username,

@@ -7,7 +7,7 @@
   "targets": {
     ".NETCoreApp,Version=v8.0": {},
     ".NETCoreApp,Version=v8.0/win-x64": {
-      "RsyncZilla/1.6.1": {
+      "RsyncZilla/1.7.0": {
         "dependencies": {
           "Microsoft.Web.WebView2": "1.0.4258.31",
           "RsyncAskPass": "1.6.1",
@@ -78,8 +78,8 @@
       "RsyncAskPass/1.6.1": {
         "runtime": {
           "RsyncAskPass.dll": {
-            "assemblyVersion": "1.6.1.0",
-            "fileVersion": "1.6.1.0"
+            "assemblyVersion": "1.7.0.0",
+            "fileVersion": "1.7.0.0"
           }
         }
       },
@@ -110,7 +110,7 @@
     }
   },
   "libraries": {
-    "RsyncZilla/1.6.1": {
+    "RsyncZilla/1.7.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

@@ -214,7 +214,10 @@ namespace RsyncZilla.Views
                     _session.Port,
                     _session.Username,
                     _session.Password,
-                    _session.InitialTerminalPath);
+                    _session.InitialTerminalPath)
+                {
+                    McpLabel = _session.McpName
+                };
 
                 terminal.OutputReceived += text =>
                 {
@@ -230,14 +233,26 @@ namespace RsyncZilla.Views
                     ProcessTerminalOutputForDirectoryChange(text);
                 };
 
+                terminal.WorkingDirectoryDetected += pwd =>
+                {
+                    if (!string.IsNullOrWhiteSpace(pwd))
+                    {
+                        Dispatcher.InvokeAsync(async () =>
+                        {
+                            await HandleTerminalDirectoryChangedAsync(pwd);
+                        });
+                    }
+                };
+
                 terminal.Disconnected += () =>
                 {
                     Dispatcher.InvokeAsync(() =>
                     {
+                        var mcpSuffix = !string.IsNullOrWhiteSpace(_session.McpName) ? $" ({_session.McpName})" : "";
                         StatusDot.Text = "🔴";
-                        TerminalTitleText.Text = $"{_session.Username}@{_session.Host} (Disconnected)";
+                        TerminalTitleText.Text = $"{_session.Username}@{_session.Host}{mcpSuffix} (Disconnected)";
                         _session.NotifyConnectionChanged();
-                        _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] SSH shell disconnected.", false);
+                        _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}{mcpSuffix}] SSH shell disconnected.", false);
                     });
                 };
 
@@ -255,13 +270,14 @@ namespace RsyncZilla.Views
                 {
                     if (success)
                     {
+                        var mcpSuffix = !string.IsNullOrWhiteSpace(_session.McpName) ? $" ({_session.McpName})" : "";
                         _session.TerminalSession = terminal;
                         StatusDot.Text = "🟢";
-                        TerminalTitleText.Text = $"{_session.Username}@{_session.Host}:{_session.Port}";
+                        TerminalTitleText.Text = $"{_session.Username}@{_session.Host}:{_session.Port}{mcpSuffix}";
                         HideConnecting();
                         _session.NotifyConnectionChanged();
                         _mainViewModel.OnSessionStateChanged();
-                        _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}] SSH shell connected successfully ({cols}x{rows}).", false);
+                        _mainViewModel.AddLog($"[Terminal: {_session.Username}@{_session.Host}{mcpSuffix}] SSH shell connected successfully ({cols}x{rows}).", false);
 
                         TerminalWebView.Focus();
                         try
@@ -553,6 +569,28 @@ namespace RsyncZilla.Views
         private async void ReconnectButton_Click(object sender, RoutedEventArgs e)
         {
             await ReconnectAllAsync();
+        }
+
+        private void CopyMcpConfigButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var snippet = McpServerService.GetMcpConfigJsonSnippet();
+                Clipboard.SetText(snippet);
+                _session.TerminalSession?.WriteAiNoticeToTerminal("📋 MCP Server JSON configuration copied to clipboard!");
+                _mainViewModel.AddLog("[MCP] Copied MCP server JSON configuration to clipboard.", false);
+                MessageBox.Show(
+                    "The RsyncZilla MCP Server configuration JSON has been copied to your clipboard!\n\n" +
+                    snippet + "\n\n" +
+                    "Paste this into your AI client's MCP configuration (Antigravity, Claude Desktop, ChatGPT, Cursor, Windsurf, etc.), then set this tab's AI button to '🛡️ AI: Confirm' or '⚡ AI: Auto'.",
+                    "MCP Configuration Copied",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _mainViewModel.AddLog($"[MCP] Failed to copy MCP config: {ex.Message}", true);
+            }
         }
 
         // ==========================================

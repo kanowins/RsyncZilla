@@ -14,6 +14,7 @@ If you are a developer, sysadmin, or DevOps engineer managing servers over SSH/S
 | **Differential Sync** | ❌ Always uploads the whole file (0% to 100%) | ✅ **Transfers only modified byte deltas** (saves up to 99% bandwidth) |
 | **Atomic Writes & Integrity** | ❌ Network blip = truncated/corrupted file in production | ✅ **Atomic replacement** via hidden temp files; zero broken deploys |
 | **Integrated SSH Terminal** | ❌ None. Must open external PuTTY and `cd` manually | ✅ **Built-in Tabbed SSH Terminal (`Ctrl + T`)** with auto-sync remote tree |
+| **AI MCP Terminal Control** | ❌ None | ✅ **Built-in MCP Server (`MCP1`, `MCP2`)** with `Off` / `Confirm` / `Auto` modes & live view |
 | **Live Remote Editing** | ⚠️ Annoying popup prompts every time you save | ✅ **Seamless auto-upload on save (`Ctrl + S`)** with `F4` & SHA256 hashing |
 | **Local File Handling** | ⚠️ Clunky, rigid experience | ✅ Double-click, `Enter`, `F4`, and native **"Show in Explorer"** (`/select`) |
 | **Credential Security** | 🚨 **Plaintext passwords** stored on disk (`sitemanager.xml`) | 🔒 **AES-256-GCM Encrypted Vault** (Master Password) or zero-disk RAM mode |
@@ -23,7 +24,7 @@ If you are a developer, sysadmin, or DevOps engineer managing servers over SSH/S
 
 ---
 
-## 💥 The 7 Core Reasons to Switch
+## 💥 The 8 Core Reasons to Switch
 
 ### 1. Intelligent Delta-Transfer with rsync
 - **The FileZilla Problem:** When working with large JavaScript bundles (25+ MB), SQLite databases, Docker volumes, SQL dumps, or logs, changing just one line forces FileZilla to re-upload the entire multi-megabyte file across the internet.
@@ -37,21 +38,28 @@ If you are a developer, sysadmin, or DevOps engineer managing servers over SSH/S
 - **The FileZilla Problem:** You navigate deep into `/var/www/my-app/releases/v2.4/` and need to run `npm run build`, `composer install`, `git pull`, `pm2 restart`, or inspect system logs. You have to open a separate terminal (PuTTY or Windows Terminal), re-enter your host, username, and credentials, and manually `cd` through the directory tree.
 - **The RsyncZilla Advantage:** RsyncZilla includes a fully integrated, interactive **SSH Terminal** in a dedicated tab (powered by xterm.js and SSH.NET) with an auto-synchronized remote file tree sidebar. Press **`Ctrl + T`** or right-click -> *"Open terminal here"*, and an authenticated SSH terminal tab instantly opens, already positioned inside the exact remote directory you were browsing.
 
-### 4. Frictionless Live Remote Editing (`F4`)
+### 4. Built-in AI MCP Server for Live Server Control (`MCP1`, `MCP2`, ...)
+- **The Traditional Problem:** Letting an AI assistant (Claude Desktop, ChatGPT, Antigravity, Cursor, Windsurf) troubleshoot or manage a remote server usually means either copy-pasting terminal outputs back and forth by hand, or giving an external tool raw SSH credentials and blind background access where you can't see what it is running.
+- **The RsyncZilla Advantage:**
+  - **Zero Credential Exposure:** RsyncZilla includes a native **Model Context Protocol (MCP) Server** that bridges your AI client directly to your already-authenticated SSH terminal tabs (`MCP1`, `MCP2`, etc.)—the AI never sees your passwords or keys.
+  - **Granular Per-Tab Permissions (Default `🔒 AI: Off`):** Every tab starts completely isolated from AI access. You decide per tab whether to enable **`🛡️ AI: Confirm`** (AI can read screen output and files freely, but every command pops up an in-terminal **`✅ Allow` / `❌ Deny`** confirmation banner before executing) or **`⚡ AI: Auto`** (full autonomous execution).
+  - **100% Live Visual Transparency:** Everything the AI does happens right in front of your eyes inside the `xterm.js` terminal tab with real-time command streaming, `[🤖 AI MCP1]` notices, and synchronized SFTP directory navigation.
+
+### 5. Frictionless Live Remote Editing (`F4`)
 - **The FileZilla Problem:** FileZilla’s remote editing interrupts your flow with constant confirmation dialogs: *"A file has changed. Do you want to upload it now? [Yes/No]"*. If you miss the prompt or close it by mistake, your changes are lost on the server.
 - **The RsyncZilla Advantage:**
   - Press **`F4`** (or double-click) on any remote file to open it in your favorite local editor (VS Code, Notepad++, Sublime, etc.).
   - Every time you press **`Ctrl + S`**, a background watcher debounces writes (450 ms), checks the SHA256 hash, and quietly auto-uploads the updated file via SFTP.
   - If your network drops or permissions fail, a clear error dialog alerts you immediately and preserves the file state so re-saving retries automatically without losing code.
 
-### 5. Modern Local Navigation & "Show in Explorer"
+### 6. Modern Local Navigation & "Show in Explorer"
 - **The FileZilla Problem:** FileZilla’s local browser feels like Windows 98; opening files in native apps or jumping to the local directory in Windows Explorer is frustrating and clunky.
 - **The RsyncZilla Advantage:**
   - Double-click or press `Enter` on any local file to launch it directly in Windows.
   - Right-click -> **`📂 Show in Explorer`** (or click the header button) to reveal and highlight that exact file inside Windows Explorer (`/select`).
   - Native Drag & Drop: Drag files directly from your desktop or Windows Explorer windows into the remote panel to trigger an rsync upload.
 
-### 6. Real Security: Encrypted Vault vs Plaintext Disaster
+### 7. Real Security: Encrypted Vault vs Plaintext Disaster
 - **The FileZilla Danger:** FileZilla notoriously stores all saved Site Manager passwords in **unencrypted plaintext XML** inside `%APPDATA%\FileZilla\sitemanager.xml`. This file is the primary target for infostealers and trojans (RedLine, Raccoon, Vidar, AgentTesla), causing countless server compromises every day.
 - **The RsyncZilla Security Model:**
   - **Zero Plaintext Ever:** Passwords are never written unencrypted to disk.
@@ -59,7 +67,7 @@ If you are a developer, sysadmin, or DevOps engineer managing servers over SSH/S
   - **Zero-Trust Memory Lifecycle:** The vault requires your master password when opening Site Manager and automatically locks and clears decrypted credentials from RAM as soon as Site Manager is closed.
   - **Opt-in Freedom:** If you choose not to activate the vault, credentials remain 100% ephemeral in session memory and are never written to disk at all.
 
-### 7. No Adware, No Bloatware, 100% Open Source
+### 8. No Adware, No Bloatware, 100% Open Source
 - **The FileZilla Installer Issue:** The official FileZilla website has historically bundled adware, search hijackers, and Potentially Unwanted Programs (PUPs) into its primary installer executable.
 - **The RsyncZilla Standard:** 100% clean, transparent, open-source code built on modern .NET 8 WPF, Cygwin rsync 3.3.0, SSH.NET, and xterm.js. Fully portable—extract and run anywhere without system bloat.
 
@@ -71,6 +79,7 @@ If you are a developer, sysadmin, or DevOps engineer managing servers over SSH/S
 - **Sync Engine:** Portable rsync 3.3.0 (Cygwin64) over SSH.
 - **SFTP Engine:** SSH.NET.
 - **Embedded Terminal:** xterm.js + SSH.NET shell streaming.
+- **AI MCP Integration:** JSON-RPC 2.0 Model Context Protocol server over Named Pipes (`RsyncAskPass.exe --mcp`).
 - **Vault Security:** Native AES-256-GCM authenticated encryption with PBKDF2.
 - **Credential Bridge:** Internal `RsyncAskPass.exe` secure pipe.
 
