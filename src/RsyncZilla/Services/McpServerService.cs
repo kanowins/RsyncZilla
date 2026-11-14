@@ -32,7 +32,7 @@ namespace RsyncZilla.Services
         private bool _disposed;
 
         public string PipeName => _pipeName;
-        public int TcpPort => _tcpPort;
+        public int TcpPort { get; private set; }
         public bool IsRunning => _cts != null && !_cts.IsCancellationRequested;
 
         public McpServerService(
@@ -47,6 +47,7 @@ namespace RsyncZilla.Services
             _logger = logger;
             _pipeName = string.IsNullOrWhiteSpace(pipeName) ? DefaultPipeName : pipeName;
             _tcpPort = tcpPort;
+            TcpPort = tcpPort;
         }
 
         public void Start()
@@ -55,11 +56,24 @@ namespace RsyncZilla.Services
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
             _ = Task.Run(() => ListenLoopAsync(token), token);
-            if (_tcpPort > 0)
+            if (_tcpPort >= 0)
             {
-                _ = Task.Run(() => ListenTcpLoopAsync(token), token);
+                try
+                {
+                    _tcpListener = new TcpListener(IPAddress.Loopback, _tcpPort);
+                    _tcpListener.Start();
+                    if (_tcpListener.LocalEndpoint is IPEndPoint ep)
+                    {
+                        TcpPort = ep.Port;
+                    }
+                    _ = Task.Run(() => ListenTcpLoopAsync(_tcpListener, token), token);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.Invoke($"[MCP] TCP loopback listener notice (127.0.0.1:{_tcpPort}): {ex.Message}", false);
+                }
             }
-            _logger?.Invoke($"[MCP] AI Terminal MCP Server listening on pipe '{_pipeName}' and 127.0.0.1:{_tcpPort}.", false);
+            _logger?.Invoke($"[MCP] AI Terminal MCP Server listening on 127.0.0.1:{TcpPort} and pipe '{_pipeName}'.", false);
         }
 
         public void Stop()
@@ -80,33 +94,23 @@ namespace RsyncZilla.Services
             try
             {
                 var pipeSecurity = new PipeSecurity();
+                pipeSecurity.AddAccessRule(new PipeAccessRule(
+                    new SecurityIdentifier(WellKnownSidType.WorldSid, null),
+                    PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
+                    AccessControlType.Allow));
+
                 try
                 {
-                    // Grant Read/Write to Everyone (WD), All Application Packages / MSIX (AC),
-                    // Restricted AppContainers (S-1-15-2-2), and set Untrusted/Low Mandatory Integrity Label
-                    // so sandboxed AI clients (e.g. OpenAI CodexSandboxOffline / CodexSandboxOnline) can connect.
-                    pipeSecurity.SetSecurityDescriptorSddlForm("D:(A;;GA;;;WD)(A;;GA;;;AC)(A;;GA;;;S-1-15-2-2)S:(ML;;;;;LW)");
-                }
-                catch
-                {
                     pipeSecurity.AddAccessRule(new PipeAccessRule(
-                        new SecurityIdentifier(WellKnownSidType.WorldSid, null),
-                        PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
+                        new SecurityIdentifier("S-1-15-2-1"), // ALL APPLICATION PACKAGES
+                        PipeAccessRights.ReadWrite,
                         AccessControlType.Allow));
-
-                    try
-                    {
-                        pipeSecurity.AddAccessRule(new PipeAccessRule(
-                            new SecurityIdentifier("S-1-15-2-1"), // ALL APPLICATION PACKAGES
-                            PipeAccessRights.ReadWrite,
-                            AccessControlType.Allow));
-                        pipeSecurity.AddAccessRule(new PipeAccessRule(
-                            new SecurityIdentifier("S-1-15-2-2"), // ALL RESTRICTED APPLICATION PACKAGES
-                            PipeAccessRights.ReadWrite,
-                            AccessControlType.Allow));
-                    }
-                    catch { }
+                    pipeSecurity.AddAccessRule(new PipeAccessRule(
+                        new SecurityIdentifier("S-1-15-2-2"), // ALL RESTRICTED APPLICATION PACKAGES
+                        PipeAccessRights.ReadWrite,
+                        AccessControlType.Allow));
                 }
+                catch { }
 
                 return NamedPipeServerStreamAcl.Create(
                     pipeName,
@@ -160,16 +164,13 @@ namespace RsyncZilla.Services
             }
         }
 
-        private async Task ListenTcpLoopAsync(CancellationToken token)
+        private async Task ListenTcpLoopAsync(TcpListener listener, CancellationToken token)
         {
             try
             {
-                _tcpListener = new TcpListener(IPAddress.Loopback, _tcpPort);
-                _tcpListener.Start();
-
                 while (!token.IsCancellationRequested)
                 {
-                    var tcpClient = await _tcpListener.AcceptTcpClientAsync(token);
+                    var tcpClient = await listener.AcceptTcpClientAsync(token);
                     _ = Task.Run(async () =>
                     {
                         using (tcpClient)
@@ -185,7 +186,7 @@ namespace RsyncZilla.Services
             {
                 if (!token.IsCancellationRequested)
                 {
-                    _logger?.Invoke($"[MCP] TCP loopback listener notice (127.0.0.1:{_tcpPort}): {ex.Message}", false);
+                    _logger?.Invoke($"[MCP] TCP loopback listener notice (127.0.0.1:{TcpPort}): {ex.Message}", false);
                 }
             }
         }

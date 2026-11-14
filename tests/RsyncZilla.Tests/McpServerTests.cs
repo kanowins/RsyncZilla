@@ -278,7 +278,7 @@ namespace RsyncZilla.Tests
                 () => new[] { session },
                 () => session,
                 pipeName: pipeName,
-                tcpPort: 0);
+                tcpPort: -1);
 
             server.Start();
             try
@@ -307,7 +307,6 @@ namespace RsyncZilla.Tests
         public async Task McpServer_TcpLoopbackTransport_ShouldHandleSandboxedClientRequests()
         {
             var pipeName = $"RsyncZilla_TestPipe_{Guid.NewGuid():N}";
-            var tcpPort = 49889;
             var session = new RemoteSessionViewModel
             {
                 IsTerminalTab = true,
@@ -321,14 +320,13 @@ namespace RsyncZilla.Tests
                 () => new[] { session },
                 () => session,
                 pipeName: pipeName,
-                tcpPort: tcpPort);
+                tcpPort: 0);
 
             server.Start();
             try
             {
-                await Task.Delay(50);
                 using var tcpClient = new System.Net.Sockets.TcpClient();
-                await tcpClient.ConnectAsync("127.0.0.1", tcpPort);
+                await tcpClient.ConnectAsync("127.0.0.1", server.TcpPort);
 
                 var utf8 = new UTF8Encoding(false);
                 await using var stream = tcpClient.GetStream();

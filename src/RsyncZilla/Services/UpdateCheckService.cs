@@ -148,7 +148,22 @@ namespace RsyncZilla.Services
                         if (IsNewerVersion(CurrentVersion, candidate))
                         {
                             LatestVersion = candidate.StartsWith("v", StringComparison.OrdinalIgnoreCase) ? candidate : $"v{candidate}";
-                            ReleaseNotes = $"A new version ({LatestVersion}) is available on GitHub.";
+                            var cleanVer = candidate.TrimStart('v', 'V');
+                            string resolvedNotes = $"A new version ({LatestVersion}) is available on GitHub.";
+                            try
+                            {
+                                var rawNotes = await HttpClient.GetStringAsync("https://raw.githubusercontent.com/kanowins/RsyncZilla/main/dist/RELEASE_NOTES.md");
+                                if (!string.IsNullOrWhiteSpace(rawNotes))
+                                {
+                                    var match = System.Text.RegularExpressions.Regex.Match(
+                                        rawNotes,
+                                        $@"(?s)(## Version {System.Text.RegularExpressions.Regex.Escape(cleanVer)}\b.*?)(?=\r?\n## Version |\Z)");
+                                    resolvedNotes = match.Success ? match.Groups[1].Value.Trim() : rawNotes.Trim();
+                                }
+                            }
+                            catch { }
+
+                            ReleaseNotes = resolvedNotes;
                             ReleaseUrl = relUrl ?? notesUrl ?? ReleaseUrl;
                             var iUrl = root.TryGetProperty("installer_url", out var instElem) ? instElem.GetString() : null;
                             InstallerUrl = iUrl ?? $"https://github.com/kanowins/RsyncZilla/releases/download/{LatestVersion}/RsyncZilla-Setup-{LatestVersion}-win-x64.exe";

@@ -53,6 +53,13 @@ namespace RsyncZilla.Views
             }
 
             _session.RemoteBrowser.PropertyChanged += OnRemoteBrowserPropertyChanged;
+            _session.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(RemoteSessionViewModel.AiPermission) && _session.AiPermission != AiPermissionLevel.Off)
+                {
+                    _mainViewModel.McpServer.Start();
+                }
+            };
 
             Loaded += TerminalView_Loaded;
             Unloaded += TerminalView_Unloaded;

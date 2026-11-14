@@ -362,13 +362,6 @@ namespace RsyncZilla.ViewModels
             }
 
             session.CloseRequested += (s) => CloseTab(s);
-            session.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(RemoteSessionViewModel.AiPermission) && session.AiPermission != AiPermissionLevel.Off)
-                {
-                    McpServer.Start();
-                }
-            };
             session.SftpService.LogMessageReceived += (msg, isErr) => AddLog($"[{session.Title}] {msg}", isErr);
             session.SftpService.ConnectionStateChanged += () =>
             {
@@ -887,13 +880,6 @@ namespace RsyncZilla.ViewModels
             };
 
             session.CloseRequested += (s) => CloseTab(s);
-            session.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(RemoteSessionViewModel.AiPermission) && session.AiPermission != AiPermissionLevel.Off)
-                {
-                    McpServer.Start();
-                }
-            };
             session.SftpService.LogMessageReceived += (msg, isErr) => AddLog($"[{session.Title}] {msg}", isErr);
             session.SftpService.ConnectionStateChanged += () =>
             {
