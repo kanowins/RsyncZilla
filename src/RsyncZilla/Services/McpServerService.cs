@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -16,27 +20,33 @@ namespace RsyncZilla.Services
     public class McpServerService : IDisposable
     {
         public const string DefaultPipeName = "RsyncZilla_MCP_Pipe";
+        public const int DefaultTcpPort = 49876;
 
         private readonly Func<IReadOnlyList<RemoteSessionViewModel>> _getSessions;
         private readonly Func<RemoteSessionViewModel?> _getActiveSession;
         private readonly Action<string, bool>? _logger;
         private readonly string _pipeName;
+        private readonly int _tcpPort;
+        private TcpListener? _tcpListener;
         private CancellationTokenSource? _cts;
         private bool _disposed;
 
         public string PipeName => _pipeName;
+        public int TcpPort => _tcpPort;
         public bool IsRunning => _cts != null && !_cts.IsCancellationRequested;
 
         public McpServerService(
             Func<IReadOnlyList<RemoteSessionViewModel>> getSessions,
             Func<RemoteSessionViewModel?> getActiveSession,
             Action<string, bool>? logger = null,
-            string pipeName = DefaultPipeName)
+            string pipeName = DefaultPipeName,
+            int tcpPort = DefaultTcpPort)
         {
             _getSessions = getSessions ?? throw new ArgumentNullException(nameof(getSessions));
             _getActiveSession = getActiveSession ?? throw new ArgumentNullException(nameof(getActiveSession));
             _logger = logger;
             _pipeName = string.IsNullOrWhiteSpace(pipeName) ? DefaultPipeName : pipeName;
+            _tcpPort = tcpPort;
         }
 
         public void Start()
@@ -45,7 +55,11 @@ namespace RsyncZilla.Services
             _cts = new CancellationTokenSource();
             var token = _cts.Token;
             _ = Task.Run(() => ListenLoopAsync(token), token);
-            _logger?.Invoke($"[MCP] AI Terminal MCP Server listening on pipe '{_pipeName}'.", false);
+            if (_tcpPort > 0)
+            {
+                _ = Task.Run(() => ListenTcpLoopAsync(token), token);
+            }
+            _logger?.Invoke($"[MCP] AI Terminal MCP Server listening on pipe '{_pipeName}' and 127.0.0.1:{_tcpPort}.", false);
         }
 
         public void Stop()
@@ -53,10 +67,66 @@ namespace RsyncZilla.Services
             try
             {
                 _cts?.Cancel();
+                try { _tcpListener?.Stop(); } catch { }
+                _tcpListener = null;
                 _cts?.Dispose();
                 _cts = null;
             }
             catch { }
+        }
+
+        private static NamedPipeServerStream CreatePermissivePipeServer(string pipeName)
+        {
+            try
+            {
+                var pipeSecurity = new PipeSecurity();
+                try
+                {
+                    // Grant Read/Write to Everyone (WD), All Application Packages / MSIX (AC),
+                    // Restricted AppContainers (S-1-15-2-2), and set Untrusted/Low Mandatory Integrity Label
+                    // so sandboxed AI clients (e.g. OpenAI CodexSandboxOffline / CodexSandboxOnline) can connect.
+                    pipeSecurity.SetSecurityDescriptorSddlForm("D:(A;;GA;;;WD)(A;;GA;;;AC)(A;;GA;;;S-1-15-2-2)S:(ML;;;;;LW)");
+                }
+                catch
+                {
+                    pipeSecurity.AddAccessRule(new PipeAccessRule(
+                        new SecurityIdentifier(WellKnownSidType.WorldSid, null),
+                        PipeAccessRights.ReadWrite | PipeAccessRights.CreateNewInstance,
+                        AccessControlType.Allow));
+
+                    try
+                    {
+                        pipeSecurity.AddAccessRule(new PipeAccessRule(
+                            new SecurityIdentifier("S-1-15-2-1"), // ALL APPLICATION PACKAGES
+                            PipeAccessRights.ReadWrite,
+                            AccessControlType.Allow));
+                        pipeSecurity.AddAccessRule(new PipeAccessRule(
+                            new SecurityIdentifier("S-1-15-2-2"), // ALL RESTRICTED APPLICATION PACKAGES
+                            PipeAccessRights.ReadWrite,
+                            AccessControlType.Allow));
+                    }
+                    catch { }
+                }
+
+                return NamedPipeServerStreamAcl.Create(
+                    pipeName,
+                    PipeDirection.InOut,
+                    NamedPipeServerStream.MaxAllowedServerInstances,
+                    PipeTransmissionMode.Byte,
+                    PipeOptions.Asynchronous,
+                    inBufferSize: 4096,
+                    outBufferSize: 4096,
+                    pipeSecurity);
+            }
+            catch
+            {
+                return new NamedPipeServerStream(
+                    pipeName,
+                    PipeDirection.InOut,
+                    NamedPipeServerStream.MaxAllowedServerInstances,
+                    PipeTransmissionMode.Byte,
+                    PipeOptions.Asynchronous);
+            }
         }
 
         private async Task ListenLoopAsync(CancellationToken token)
@@ -66,17 +136,12 @@ namespace RsyncZilla.Services
                 NamedPipeServerStream? serverStream = null;
                 try
                 {
-                    serverStream = new NamedPipeServerStream(
-                        _pipeName,
-                        PipeDirection.InOut,
-                        NamedPipeServerStream.MaxAllowedServerInstances,
-                        PipeTransmissionMode.Byte,
-                        PipeOptions.Asynchronous);
+                    serverStream = CreatePermissivePipeServer(_pipeName);
 
                     await serverStream.WaitForConnectionAsync(token);
                     var connectedClient = serverStream;
                     serverStream = null; // Hand off ownership to client handler task
-                    _ = Task.Run(() => HandleClientPipeAsync(connectedClient, token), token);
+                    _ = Task.Run(() => HandleClientStreamAsync(connectedClient, () => connectedClient.IsConnected, token), token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -95,24 +160,54 @@ namespace RsyncZilla.Services
             }
         }
 
-        private async Task HandleClientPipeAsync(NamedPipeServerStream pipe, CancellationToken token)
+        private async Task ListenTcpLoopAsync(CancellationToken token)
         {
-            using (pipe)
+            try
+            {
+                _tcpListener = new TcpListener(IPAddress.Loopback, _tcpPort);
+                _tcpListener.Start();
+
+                while (!token.IsCancellationRequested)
+                {
+                    var tcpClient = await _tcpListener.AcceptTcpClientAsync(token);
+                    _ = Task.Run(async () =>
+                    {
+                        using (tcpClient)
+                        await using (var netStream = tcpClient.GetStream())
+                        {
+                            await HandleClientStreamAsync(netStream, () => tcpClient.Connected, token);
+                        }
+                    }, token);
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                if (!token.IsCancellationRequested)
+                {
+                    _logger?.Invoke($"[MCP] TCP loopback listener notice (127.0.0.1:{_tcpPort}): {ex.Message}", false);
+                }
+            }
+        }
+
+        private async Task HandleClientStreamAsync(Stream stream, Func<bool> isConnected, CancellationToken token)
+        {
+            using (stream)
             {
                 try
                 {
                     var utf8NoBom = new UTF8Encoding(false);
-                    using var reader = new StreamReader(pipe, utf8NoBom, detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
-                    using var writer = new StreamWriter(pipe, utf8NoBom, bufferSize: 4096, leaveOpen: true) { AutoFlush = true };
+                    using var reader = new StreamReader(stream, utf8NoBom, detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
+                    using var writer = new StreamWriter(stream, utf8NoBom, bufferSize: 4096, leaveOpen: true) { AutoFlush = true };
 
-                    while (pipe.IsConnected && !token.IsCancellationRequested)
+                    while (isConnected() && !token.IsCancellationRequested)
                     {
                         var line = await reader.ReadLineAsync(token);
                         if (line == null) break;
                         if (string.IsNullOrWhiteSpace(line)) continue;
 
                         var response = await HandleJsonRpcMessageAsync(line, token);
-                        if (!string.IsNullOrEmpty(response) && pipe.IsConnected)
+                        if (!string.IsNullOrEmpty(response) && isConnected())
                         {
                             await writer.WriteLineAsync(response);
                         }
@@ -199,7 +294,7 @@ namespace RsyncZilla.Services
                 ["serverInfo"] = new JsonObject
                 {
                     ["name"] = "RsyncZilla-Terminal-MCP",
-                    ["version"] = "1.7.0"
+                    ["version"] = "1.7.1"
                 }
             };
         }

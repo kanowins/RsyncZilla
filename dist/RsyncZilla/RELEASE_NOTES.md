@@ -1,5 +1,16 @@
 # RsyncZilla Release Notes
 
+## Version 1.7.1 (2026-11-14)
+
+### ✨ Improvements & Fixes
+- **On-Demand AI MCP Server Startup**:
+  - The MCP server listener is no longer started on application launch; it now activates on demand only when clicking the **`🤖 MCP`** toolbar button or switching a terminal tab from `🔒 AI: Off` to `🛡️ AI: Confirm` / `⚡ AI: Auto`.
+  - Updated the `🤖 MCP` configuration dialog to confirm when the MCP server is active and ready.
+- **Sandboxed AI Client Compatibility (ChatGPT / Codex / AppContainer)**:
+  - Added dual-transport support combining a **localhost TCP loopback listener (`127.0.0.1:49876`)** with a **permissive Named Pipe ACL (`PipeSecurity` + Low Integrity SDDL)** so sandboxed AI desktop clients (such as OpenAI ChatGPT / Codex running under `CodexSandboxOffline` / `CodexSandboxOnline` or MSIX AppContainers) can connect seamlessly.
+
+---
+
 ## Version 1.7.0 (2026-11-13)
 
 ### ✨ New Features & Improvements

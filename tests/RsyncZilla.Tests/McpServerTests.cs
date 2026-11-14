@@ -277,7 +277,8 @@ namespace RsyncZilla.Tests
             using var server = new McpServerService(
                 () => new[] { session },
                 () => session,
-                pipeName: pipeName);
+                pipeName: pipeName,
+                tcpPort: 0);
 
             server.Start();
             try
@@ -295,6 +296,51 @@ namespace RsyncZilla.Tests
                 Assert.NotNull(responseLine);
                 Assert.Contains("ubuntu@node1.internal", responseLine);
                 Assert.Contains("Auto", responseLine);
+            }
+            finally
+            {
+                server.Stop();
+            }
+        }
+
+        [Fact]
+        public async Task McpServer_TcpLoopbackTransport_ShouldHandleSandboxedClientRequests()
+        {
+            var pipeName = $"RsyncZilla_TestPipe_{Guid.NewGuid():N}";
+            var tcpPort = 49889;
+            var session = new RemoteSessionViewModel
+            {
+                IsTerminalTab = true,
+                McpName = "MCP1",
+                Host = "sandbox.internal",
+                Username = "debian",
+                AiPermission = AiPermissionLevel.Auto
+            };
+
+            using var server = new McpServerService(
+                () => new[] { session },
+                () => session,
+                pipeName: pipeName,
+                tcpPort: tcpPort);
+
+            server.Start();
+            try
+            {
+                await Task.Delay(50);
+                using var tcpClient = new System.Net.Sockets.TcpClient();
+                await tcpClient.ConnectAsync("127.0.0.1", tcpPort);
+
+                var utf8 = new UTF8Encoding(false);
+                await using var stream = tcpClient.GetStream();
+                using var writer = new StreamWriter(stream, utf8, 4096, leaveOpen: true) { AutoFlush = true };
+                using var reader = new StreamReader(stream, utf8, false, 4096, leaveOpen: true);
+
+                await writer.WriteLineAsync("""{"jsonrpc":"2.0","id":100,"method":"tools/call","params":{"name":"list_terminal_sessions","arguments":{}}}""");
+                var responseLine = await reader.ReadLineAsync();
+
+                Assert.NotNull(responseLine);
+                Assert.Contains("debian@sandbox.internal", responseLine);
+                Assert.Contains("MCP1", responseLine);
             }
             finally
             {

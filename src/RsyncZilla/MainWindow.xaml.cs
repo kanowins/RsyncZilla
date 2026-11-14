@@ -104,7 +104,6 @@ namespace RsyncZilla
 
             _viewModel.ExitAction = () => Close();
 
-            Loaded += (s, e) => _viewModel.McpServer.Start();
             Closed += (s, e) => _viewModel.McpServer.Dispose();
 
             // Update password field when a site is loaded from manager

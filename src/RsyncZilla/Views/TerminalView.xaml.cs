@@ -575,15 +575,17 @@ namespace RsyncZilla.Views
         {
             try
             {
+                _mainViewModel.McpServer.Start();
                 var snippet = McpServerService.GetMcpConfigJsonSnippet();
                 Clipboard.SetText(snippet);
-                _session.TerminalSession?.WriteAiNoticeToTerminal("📋 MCP Server JSON configuration copied to clipboard!");
-                _mainViewModel.AddLog("[MCP] Copied MCP server JSON configuration to clipboard.", false);
+                _session.TerminalSession?.WriteAiNoticeToTerminal("🟢 MCP Server started & JSON configuration copied to clipboard!");
+                _mainViewModel.AddLog("[MCP] MCP Server started and JSON configuration copied to clipboard.", false);
                 MessageBox.Show(
-                    "The RsyncZilla MCP Server configuration JSON has been copied to your clipboard!\n\n" +
+                    "✅ MCP Server is now active and ready!\n\n" +
+                    "The RsyncZilla MCP Server configuration JSON has been copied to your clipboard:\n\n" +
                     snippet + "\n\n" +
                     "Paste this into your AI client's MCP configuration (Antigravity, Claude Desktop, ChatGPT, Cursor, Windsurf, etc.), then set this tab's AI button to '🛡️ AI: Confirm' or '⚡ AI: Auto'.",
-                    "MCP Configuration Copied",
+                    "MCP Server Ready & Config Copied",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }

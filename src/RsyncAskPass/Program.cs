@@ -2,9 +2,11 @@ using System;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace RsyncAskPass
@@ -12,6 +14,7 @@ namespace RsyncAskPass
     internal class Program
     {
         private const string DefaultPipeName = "RsyncZilla_MCP_Pipe";
+        private const int DefaultTcpPort = 49876;
 
         static async Task<int> Main(string[] args)
         {
@@ -70,34 +73,63 @@ namespace RsyncAskPass
 
         private static async Task<string?> ForwardOrHandleMessageAsync(string jsonLine, string pipeName, Encoding encoding)
         {
-            // First try forwarding to the running RsyncZilla instance over the Named Pipe
+            var isNotification = false;
+            try
+            {
+                var node = JsonNode.Parse(jsonLine) as JsonObject;
+                if (node != null && node["id"] == null)
+                {
+                    isNotification = true;
+                }
+            }
+            catch { }
+
+            string? lastError = null;
+
+            // 1. First try localhost TCP loopback (127.0.0.1:49876) - zero Windows user/ACL permission dependencies
+            try
+            {
+                using var tcpClient = new TcpClient();
+                using var cts = new CancellationTokenSource(1200);
+                await tcpClient.ConnectAsync("127.0.0.1", DefaultTcpPort, cts.Token);
+
+                await using var netStream = tcpClient.GetStream();
+                using var writer = new StreamWriter(netStream, encoding, 4096, leaveOpen: true) { AutoFlush = true };
+                using var reader = new StreamReader(netStream, encoding, detectEncodingFromByteOrderMarks: false, 4096, leaveOpen: true);
+
+                await writer.WriteLineAsync(jsonLine);
+                if (isNotification) return null;
+
+                return await reader.ReadLineAsync();
+            }
+            catch (Exception ex)
+            {
+                lastError = $"{ex.GetType().Name}: {ex.Message}";
+            }
+
+            // 2. Fallback to Named Pipe (for offline sandboxes that block loopback TCP via firewall)
             try
             {
                 using var pipeClient = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-                await pipeClient.ConnectAsync(1500);
+                await pipeClient.ConnectAsync(1200);
 
                 using var writer = new StreamWriter(pipeClient, encoding, 4096, leaveOpen: true) { AutoFlush = true };
                 using var reader = new StreamReader(pipeClient, encoding, detectEncodingFromByteOrderMarks: false, 4096, leaveOpen: true);
 
                 await writer.WriteLineAsync(jsonLine);
-
-                // Parse to check if it's a notification (no "id")
-                var node = JsonNode.Parse(jsonLine) as JsonObject;
-                if (node != null && node["id"] == null)
-                {
-                    return null;
-                }
+                if (isNotification) return null;
 
                 return await reader.ReadLineAsync();
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback when RsyncZilla GUI is not currently running so MCP client initialization still succeeds
-                return HandleOfflineFallback(jsonLine);
+                lastError = $"{ex.GetType().Name}: {ex.Message}";
+                // Fallback when RsyncZilla GUI is not currently running or MCP server has not been started yet
+                return HandleOfflineFallback(jsonLine, lastError);
             }
         }
 
-        private static string? HandleOfflineFallback(string jsonLine)
+        private static string? HandleOfflineFallback(string jsonLine, string? pipeError = null)
         {
             try
             {
@@ -121,7 +153,7 @@ namespace RsyncAskPass
                             ["serverInfo"] = new JsonObject
                             {
                                 ["name"] = "RsyncZilla-Terminal-MCP",
-                                ["version"] = "1.7.0"
+                                ["version"] = "1.7.1"
                             }
                         }
                     };
@@ -262,7 +294,7 @@ namespace RsyncAskPass
                             new JsonObject
                             {
                                 ["type"] = "text",
-                                ["text"] = "RsyncZilla is not currently open. Please launch RsyncZilla, open an SSH Terminal tab, and switch its AI mode from '🔒 AI: Off' to '🛡️ AI: Confirm' or '⚡ AI: Auto'."
+                                ["text"] = $"RsyncZilla is not currently open (or unreachable from sandbox: {pipeError ?? "connection refused"}). Please launch RsyncZilla, open an SSH Terminal tab, and switch its AI mode from '🔒 AI: Off' to '🛡️ AI: Confirm' or '⚡ AI: Auto'."
                             }
                         },
                         ["isError"] = true
