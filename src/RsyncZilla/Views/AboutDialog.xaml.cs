@@ -73,7 +73,7 @@ namespace RsyncZilla.Views
                 sb.AppendLine();
                 sb.AppendLine("Created by Sumalab: https://sumalab.com");
 
-                Clipboard.SetText(sb.ToString());
+                TerminalView.TrySetClipboardText(sb.ToString());
                 MessageBox.Show(this, "System and build details copied to clipboard.", "RsyncZilla", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch { }

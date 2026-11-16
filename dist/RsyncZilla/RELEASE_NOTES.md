@@ -1,5 +1,14 @@
 # RsyncZilla Release Notes
 
+## Version 1.7.2 (2026-11-16)
+
+### ✨ Bug Fixes & Stability Improvements
+- **Windows 11 Clipboard & MCP Popup Fix (`CLIPBRD_E_CANT_OPEN`)**:
+  - Fixed an issue on recent Windows 11 updates where clicking the **`🤖 MCP`** button (or copying terminal text / remote paths) could fail silently without showing the confirmation dialog due to Windows Clipboard History (`cbdhsvc`) locking the clipboard during WPF's `Clipboard.SetText` flush (`0x800401D0 - CLIPBRD_E_CANT_OPEN`).
+  - Replaced WPF clipboard writes with an atomic native Win32 clipboard implementation (`OpenClipboard` / `SetClipboardData` / `CloseClipboard` with automatic retry and fallback) across the terminal view and About dialog.
+
+---
+
 ## Version 1.7.1 (2026-11-14)
 
 ### ✨ Improvements & Fixes

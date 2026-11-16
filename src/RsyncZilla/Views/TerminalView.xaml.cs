@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -174,7 +176,7 @@ namespace RsyncZilla.Views
                             var text = textProp.GetString();
                             if (!string.IsNullOrEmpty(text))
                             {
-                                Clipboard.SetText(text);
+                                TrySetClipboardText(text);
                             }
                         }
                         break;
@@ -578,23 +580,96 @@ namespace RsyncZilla.Views
             await ReconnectAllAsync();
         }
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool OpenClipboard(IntPtr hWndNewOwner);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool CloseClipboard();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool EmptyClipboard();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SetClipboardData(uint uFormat, IntPtr hMem);
+
+        public static bool TrySetClipboardText(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return false;
+
+            const uint CF_UNICODETEXT = 13;
+            for (int i = 0; i < 10; i++)
+            {
+                if (OpenClipboard(IntPtr.Zero))
+                {
+                    IntPtr hGlobal = IntPtr.Zero;
+                    try
+                    {
+                        EmptyClipboard();
+                        hGlobal = Marshal.StringToHGlobalUni(text);
+                        if (SetClipboardData(CF_UNICODETEXT, hGlobal) != IntPtr.Zero)
+                        {
+                            hGlobal = IntPtr.Zero; // Owned by Windows clipboard now
+                            return true;
+                        }
+                    }
+                    catch { }
+                    finally
+                    {
+                        if (hGlobal != IntPtr.Zero)
+                        {
+                            Marshal.FreeHGlobal(hGlobal);
+                        }
+                        CloseClipboard();
+                    }
+                }
+                Thread.Sleep(15);
+            }
+
+            try
+            {
+                Clipboard.SetDataObject(text, false);
+                return true;
+            }
+            catch
+            {
+                try
+                {
+                    Clipboard.SetText(text);
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+        }
+
         private void CopyMcpConfigButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
                 _mainViewModel.McpServer.Start();
                 var snippet = McpServerService.GetMcpConfigJsonSnippet();
-                Clipboard.SetText(snippet);
+                TrySetClipboardText(snippet);
                 _session.TerminalSession?.WriteAiNoticeToTerminal("🟢 MCP Server started & JSON configuration copied to clipboard!");
                 _mainViewModel.AddLog("[MCP] MCP Server started and JSON configuration copied to clipboard.", false);
-                MessageBox.Show(
+
+                var owner = Window.GetWindow(this) ?? Application.Current?.MainWindow;
+                const string title = "MCP Server Ready & Config Copied";
+                var msg =
                     "✅ MCP Server is now active and ready!\n\n" +
                     "The RsyncZilla MCP Server configuration JSON has been copied to your clipboard:\n\n" +
                     snippet + "\n\n" +
-                    "Paste this into your AI client's MCP configuration (Antigravity, Claude Desktop, ChatGPT, Cursor, Windsurf, etc.), then set this tab's AI button to '🛡️ AI: Confirm' or '⚡ AI: Auto'.",
-                    "MCP Server Ready & Config Copied",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                    "Paste this into your AI client's MCP configuration (Antigravity, Claude Desktop, ChatGPT, Cursor, Windsurf, etc.), then set this tab's AI button to '🛡️ AI: Confirm' or '⚡ AI: Auto'.";
+
+                if (owner != null)
+                {
+                    MessageBox.Show(owner, msg, title, MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show(msg, title, MessageBoxButton.OK, MessageBoxImage.Information);
+                }
             }
             catch (Exception ex)
             {
@@ -1273,7 +1348,7 @@ namespace RsyncZilla.Views
         {
             if (RemoteDataGrid.SelectedItem is FileItem item && !item.IsParent)
             {
-                Clipboard.SetText(item.FullPath);
+                TrySetClipboardText(item.FullPath);
             }
         }
 

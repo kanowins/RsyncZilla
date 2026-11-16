@@ -153,7 +153,7 @@ namespace RsyncAskPass
                             ["serverInfo"] = new JsonObject
                             {
                                 ["name"] = "RsyncZilla-Terminal-MCP",
-                                ["version"] = "1.7.1"
+                                ["version"] = typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "1.7.2"
                             }
                         }
                     };

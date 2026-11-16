@@ -295,7 +295,7 @@ namespace RsyncZilla.Services
                 ["serverInfo"] = new JsonObject
                 {
                     ["name"] = "RsyncZilla-Terminal-MCP",
-                    ["version"] = "1.7.1"
+                    ["version"] = typeof(McpServerService).Assembly.GetName().Version?.ToString(3) ?? "1.7.2"
                 }
             };
         }
