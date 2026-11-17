@@ -1,5 +1,18 @@
 # RsyncZilla Release Notes
 
+## Version 1.7.3 (2026-11-17)
+
+### ✨ New Features & Improvements
+- **Local Quick Navigation Panel (`[🖥️ Local ▾]`) & Enhanced `This PC` View**:
+  - Added a quick-navigation dropdown button (`Local ▾`) to the left of the local path bar that opens a categorized popup panel for instant 1-click navigation to:
+    - **☁️ Cloud & Apps**: Automatically discovers cloud storage and application folders registered in Windows Explorer's Navigation Pane (`Desktop\NameSpace`, such as **Dropbox**, **OneDrive**, **Google Drive**, **iCloud Drive**, **Nextcloud**, etc.) with their native custom shell icons.
+    - **🖴 Drives**: All local, removable, and network drives (`C:`, `E:`, etc.) with drive type and total capacity.
+    - **📁 System Folders**: Direct access to `Desktop`, `Downloads`, `Documents`, `Pictures`, `Music`, and `Videos`.
+    - **📌 Quick Access (Explorer)**: Automatically reads custom folders pinned to Windows Explorer's Quick Access list.
+  - Enriched the root **`This PC`** directory view in the local file table so navigating up (`..`) to `This PC` displays Cloud/App folders, Drives, System Folders, and Quick Access folders together with their real Windows 11 shell icons.
+
+---
+
 ## Version 1.7.2 (2026-11-16)
 
 ### ✨ Bug Fixes & Stability Improvements

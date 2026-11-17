@@ -862,10 +862,42 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,6,0" VerticalAlignment="Center">
-                                <Image Source="{StaticResource FluentComputerIcon}" Width="15" Height="15" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Local:" FontWeight="Bold" Foreground="#0066CC" VerticalAlignment="Center"/>
-                            </StackPanel>
+                            <Button Grid.Column="0" x:Name="LocalPlacesButton"
+                                    Click="LocalPlacesButton_Click"
+                                    ToolTip="Quick Navigation: This PC, Cloud folders (Dropbox, OneDrive...), Drives, System Folders, and Quick Access"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Height="26" Padding="7,0" Margin="0,0,5,0">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Image Source="{StaticResource FluentComputerIcon}" Width="15" Height="15" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Local" FontWeight="Bold" Foreground="#0066CC" VerticalAlignment="Center"/>
+                                    <TextBlock Text="▾" FontSize="10" Foreground="#0066CC" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Popup x:Name="LocalPlacesPopup"
+                                   Opened="LocalPlacesPopup_Opened"
+                                   Closed="LocalPlacesPopup_Closed"
+                                   PlacementTarget="{Binding ElementName=LocalPlacesButton}"
+                                   Placement="Bottom"
+                                   StaysOpen="False"
+                                   AllowsTransparency="True"
+                                   PopupAnimation="Fade">
+                                <Border Background="#FFFFFF"
+                                        BorderBrush="#CBD5E1"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Margin="0,2,10,10"
+                                        MinWidth="350"
+                                        MaxWidth="460"
+                                        MaxHeight="480">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="14" ShadowDepth="4" Opacity="0.20" Color="#000000"/>
+                                    </Border.Effect>
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <StackPanel x:Name="LocalPlacesPanel" Margin="6"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
 
                             <TextBox Grid.Column="1" x:Name="LocalPathTextBox" 
                                      Text="{Binding LocalBrowser.CurrentPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"

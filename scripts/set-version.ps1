@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Updates the RsyncZilla project version across all project files.
 
@@ -144,11 +144,17 @@ if (Test-Path $askPassCsproj) {
 
 # 3. Update dist/version.json
 if (Test-Path $manifestJson) {
+    $todayDate = (Get-Date).ToString("yyyy-MM-dd")
     $manifestContent = Get-Content $manifestJson -Raw
     $manifestContent = [System.Text.RegularExpressions.Regex]::Replace(
         $manifestContent,
         '"version":\s*".*?"',
         "`"version`": `"$newVersion`""
+    )
+    $manifestContent = [System.Text.RegularExpressions.Regex]::Replace(
+        $manifestContent,
+        '"release_date":\s*".*?"',
+        "`"release_date`": `"$todayDate`""
     )
     $manifestContent = [System.Text.RegularExpressions.Regex]::Replace(
         $manifestContent,
@@ -162,6 +168,18 @@ if (Test-Path $manifestJson) {
     )
     Set-Content -Path $manifestJson -Value $manifestContent -NoNewline
     Write-Host "  [OK] Updated $manifestJson" -ForegroundColor Green
+}
+
+$issFile = Join-Path $repoRoot "installer\RsyncZilla.iss"
+if (Test-Path $issFile) {
+    $issContent = Get-Content $issFile -Raw
+    $issContent = [System.Text.RegularExpressions.Regex]::Replace(
+        $issContent,
+        '#define MyAppVersion ".*?"',
+        "#define MyAppVersion `"$newVersion`""
+    )
+    Set-Content -Path $issFile -Value $issContent -NoNewline
+    Write-Host "  [OK] Updated $issFile" -ForegroundColor Green
 }
 
 # 4. Update dist/RELEASE_NOTES.md if version section is missing

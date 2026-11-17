@@ -245,7 +245,7 @@ namespace RsyncZilla.ViewModels
 
         public async Task DeleteItemsAsync(IEnumerable<FileItem> items)
         {
-            var validItems = items.Where(i => i != null && !i.IsParent && !i.IsDrive).ToList();
+            var validItems = items.Where(i => i != null && !i.IsParent && !i.IsDrive && !i.IsSpecialShortcut).ToList();
             if (!validItems.Any()) return;
 
             if (IsRemote)
@@ -273,7 +273,7 @@ namespace RsyncZilla.ViewModels
 
         public async Task RenameItemAsync(FileItem item, string newName)
         {
-            if (item == null || item.IsParent || item.IsDrive) return;
+            if (item == null || item.IsParent || item.IsDrive || item.IsSpecialShortcut) return;
             if (string.IsNullOrWhiteSpace(newName) || string.Equals(item.Name, newName.Trim(), StringComparison.Ordinal)) return;
 
             var trimmedNewName = newName.Trim();

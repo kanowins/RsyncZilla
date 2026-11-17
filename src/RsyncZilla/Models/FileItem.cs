@@ -97,8 +97,28 @@ namespace RsyncZilla.Models
             }
         }
 
+        private bool _useRealShellIcon;
+        public bool UseRealShellIcon
+        {
+            get => _useRealShellIcon;
+            set
+            {
+                if (SetProperty(ref _useRealShellIcon, value))
+                {
+                    _icon = null;
+                    OnPropertyChanged(nameof(Icon));
+                }
+            }
+        }
+
+        public bool IsSpecialShortcut { get; set; }
+        public string? CustomType { get; set; }
+        public string Category { get; set; } = string.Empty;
+
         private ImageSource? _icon;
-        public ImageSource? Icon => _icon ??= ShellIconHelper.GetIcon(IsDirectory, Name, IsDrive, IsParent);
+        public ImageSource? Icon => _icon ??= (UseRealShellIcon && !string.IsNullOrWhiteSpace(FullPath))
+            ? ShellIconHelper.GetPathIcon(FullPath, IsDrive)
+            : ShellIconHelper.GetIcon(IsDirectory, Name, IsDrive, IsParent);
 
         public string DisplaySize
         {
@@ -115,6 +135,7 @@ namespace RsyncZilla.Models
             get
             {
                 if (IsParent) return "Up one level";
+                if (!string.IsNullOrWhiteSpace(CustomType)) return CustomType!;
                 if (IsDrive) return "Drive";
                 if (IsDirectory) return "File folder";
                 var ext = System.IO.Path.GetExtension(Name).ToLowerInvariant();

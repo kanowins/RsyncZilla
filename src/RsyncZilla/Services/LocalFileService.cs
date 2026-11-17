@@ -2,12 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using Microsoft.Win32;
 using RsyncZilla.Models;
 
 namespace RsyncZilla.Services
 {
     public class LocalFileService
     {
+        private static readonly Guid DownloadsKnownFolderGuid = new("374DE290-123F-4565-9164-39C4925E467B");
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
+        private static extern int SHGetKnownFolderPath([MarshalAs(UnmanagedType.LPStruct)] Guid rfid, uint dwFlags, IntPtr hToken, out IntPtr ppszPath);
+
         public List<string> GetDrives()
         {
             try
@@ -55,6 +62,9 @@ namespace RsyncZilla.Services
                             FullPath = drive.RootDirectory.FullName,
                             IsDirectory = true,
                             IsDrive = true,
+                            UseRealShellIcon = true,
+                            CustomType = driveType,
+                            Category = "Drives",
                             Length = totalSize,
                             LastWriteTime = DateTime.Now,
                             Permissions = driveType
@@ -68,6 +78,238 @@ namespace RsyncZilla.Services
             return results;
         }
 
+        /// <summary>
+        /// Discovers cloud & app folders registered in Windows Explorer's Navigation Pane at the "This PC" level
+        /// (HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{CLSID}), such as Dropbox, OneDrive, iCloud, Google Drive, Nextcloud.
+        /// </summary>
+        public List<FileItem> GetCloudNamespaceItems(HashSet<string>? seenPaths = null)
+        {
+            seenPaths ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var results = new List<FileItem>();
+
+            try
+            {
+                using var nsKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace");
+                if (nsKey != null)
+                {
+                    foreach (var clsid in nsKey.GetSubKeyNames())
+                    {
+                        try
+                        {
+                            using var subKey = nsKey.OpenSubKey(clsid);
+                            var nsDefaultName = subKey?.GetValue(null)?.ToString();
+
+                            using var clsidKey = Registry.CurrentUser.OpenSubKey($@"Software\Classes\CLSID\{clsid}")
+                                              ?? Registry.LocalMachine.OpenSubKey($@"Software\Classes\CLSID\{clsid}");
+                            if (clsidKey == null) continue;
+
+                            var pinnedObj = clsidKey.GetValue("System.IsPinnedToNamespaceTree")
+                                         ?? clsidKey.GetValue("System.IsPinnedToNameSpaceTree");
+                            if (pinnedObj is int pinnedInt && pinnedInt == 0)
+                            {
+                                continue;
+                            }
+
+                            using var bagKey = clsidKey.OpenSubKey(@"Instance\InitPropertyBag");
+                            var targetPath = bagKey?.GetValue("TargetFolderPath")?.ToString()
+                                          ?? bagKey?.GetValue("TargetKnownFolderPath")?.ToString();
+
+                            if (string.IsNullOrWhiteSpace(targetPath) || !Directory.Exists(targetPath))
+                            {
+                                continue;
+                            }
+
+                            var fullPath = Path.GetFullPath(targetPath);
+                            if (!seenPaths.Add(fullPath.TrimEnd('\\')))
+                            {
+                                continue;
+                            }
+
+                            var displayName = clsidKey.GetValue(null)?.ToString();
+                            if (string.IsNullOrWhiteSpace(displayName))
+                            {
+                                displayName = !string.IsNullOrWhiteSpace(nsDefaultName) && !nsDefaultName.Contains('!')
+                                    ? nsDefaultName
+                                    : Path.GetFileName(fullPath.TrimEnd('\\'));
+                            }
+
+                            var dirInfo = new DirectoryInfo(fullPath);
+                            results.Add(new FileItem
+                            {
+                                Name = displayName!,
+                                FullPath = fullPath,
+                                IsDirectory = true,
+                                IsSpecialShortcut = true,
+                                UseRealShellIcon = true,
+                                CustomType = "Cloud / App Folder",
+                                Category = "Cloud & Apps",
+                                LastWriteTime = dirInfo.Exists ? dirInfo.LastWriteTime : DateTime.Now,
+                                Permissions = fullPath
+                            });
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch { }
+
+            // Also check OneDrive environment variables if not already discovered via CLSID
+            try
+            {
+                string[] envVars = { "OneDrive", "OneDriveConsumer", "OneDriveCommercial" };
+                foreach (var envVar in envVars)
+                {
+                    var path = Environment.GetEnvironmentVariable(envVar);
+                    if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
+                    {
+                        var fullPath = Path.GetFullPath(path);
+                        if (seenPaths.Add(fullPath.TrimEnd('\\')))
+                        {
+                            var dirInfo = new DirectoryInfo(fullPath);
+                            results.Add(new FileItem
+                            {
+                                Name = Path.GetFileName(fullPath.TrimEnd('\\')) is { Length: > 0 } n ? n : "OneDrive",
+                                FullPath = fullPath,
+                                IsDirectory = true,
+                                IsSpecialShortcut = true,
+                                UseRealShellIcon = true,
+                                CustomType = "Cloud / App Folder",
+                                Category = "Cloud & Apps",
+                                LastWriteTime = dirInfo.Exists ? dirInfo.LastWriteTime : DateTime.Now,
+                                Permissions = fullPath
+                            });
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return results;
+        }
+
+        /// <summary>
+        /// Returns standard Windows user folders (Desktop, Downloads, Documents, Pictures, Music, Videos)
+        /// and custom folders pinned to Windows Explorer's Quick Access.
+        /// </summary>
+        public List<FileItem> GetSystemAndQuickAccessItems(HashSet<string>? seenPaths = null)
+        {
+            seenPaths ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var results = new List<FileItem>();
+
+            void TryAddFolder(string name, string? path, string customType, string category)
+            {
+                if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) return;
+                try
+                {
+                    var fullPath = Path.GetFullPath(path);
+                    if (!seenPaths.Add(fullPath.TrimEnd('\\'))) return;
+
+                    var dirInfo = new DirectoryInfo(fullPath);
+                    results.Add(new FileItem
+                    {
+                        Name = name,
+                        FullPath = fullPath,
+                        IsDirectory = true,
+                        IsSpecialShortcut = true,
+                        UseRealShellIcon = true,
+                        CustomType = customType,
+                        Category = category,
+                        LastWriteTime = dirInfo.Exists ? dirInfo.LastWriteTime : DateTime.Now,
+                        Permissions = fullPath
+                    });
+                }
+                catch { }
+            }
+
+            // 1. Standard User / System Folders
+            TryAddFolder("Desktop", Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "System Folder", "System Folders");
+            TryAddFolder("Downloads", GetDownloadsFolderPath(), "System Folder", "System Folders");
+            TryAddFolder("Documents", Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "System Folder", "System Folders");
+            TryAddFolder("Pictures", Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "System Folder", "System Folders");
+            TryAddFolder("Music", Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "System Folder", "System Folders");
+            TryAddFolder("Videos", Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "System Folder", "System Folders");
+
+            // 2. Windows Explorer Quick Access pinned folders (shell:::{679f85cb-0220-4080-b29b-5540cc05aab6})
+            try
+            {
+                var shellType = Type.GetTypeFromProgID("Shell.Application");
+                if (shellType != null)
+                {
+                    dynamic? shell = Activator.CreateInstance(shellType);
+                    dynamic? folder = shell?.NameSpace("shell:::{679f85cb-0220-4080-b29b-5540cc05aab6}");
+                    dynamic? items = folder?.Items();
+                    if (items != null)
+                    {
+                        foreach (dynamic item in items)
+                        {
+                            try
+                            {
+                                string? itemPath = item?.Path as string;
+                                string? itemName = item?.Name as string;
+                                if (!string.IsNullOrWhiteSpace(itemPath) && Directory.Exists(itemPath))
+                                {
+                                    var displayName = !string.IsNullOrWhiteSpace(itemName)
+                                        ? itemName!
+                                        : Path.GetFileName(itemPath.TrimEnd('\\'));
+                                    TryAddFolder(displayName, itemPath, "Quick Access", "Quick Access");
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return results;
+        }
+
+        private static string? GetDownloadsFolderPath()
+        {
+            try
+            {
+                if (SHGetKnownFolderPath(DownloadsKnownFolderGuid, 0, IntPtr.Zero, out IntPtr pPath) == 0 && pPath != IntPtr.Zero)
+                {
+                    try
+                    {
+                        return Marshal.PtrToStringUni(pPath);
+                    }
+                    finally
+                    {
+                        Marshal.FreeCoTaskMem(pPath);
+                    }
+                }
+            }
+            catch { }
+
+            try
+            {
+                var fallback = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+                if (Directory.Exists(fallback)) return fallback;
+            }
+            catch { }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Returns all items displayed at the root "This PC" level:
+        /// 1. Cloud & App Namespace folders (Dropbox, OneDrive, etc.)
+        /// 2. Drives (C:, E:, etc.)
+        /// 3. System Folders & Quick Access folders (Desktop, Downloads, Documents, pinned folders)
+        /// </summary>
+        public List<FileItem> GetThisPcItems()
+        {
+            var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var all = new List<FileItem>();
+
+            all.AddRange(GetCloudNamespaceItems(seenPaths));
+            all.AddRange(GetDrivesItems());
+            all.AddRange(GetSystemAndQuickAccessItems(seenPaths));
+
+            return all;
+        }
+
         public (List<FileItem> items, string? error) GetDirectoryContents(string path)
         {
             var results = new List<FileItem>();
@@ -77,7 +319,7 @@ namespace RsyncZilla.Services
                     string.Equals(path?.Trim(), "My PC", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(path?.Trim(), "Drives", StringComparison.OrdinalIgnoreCase))
                 {
-                    return (GetDrivesItems(), null);
+                    return (GetThisPcItems(), null);
                 }
 
                 if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))

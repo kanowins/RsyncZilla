@@ -143,8 +143,20 @@ namespace RsyncZilla.Tests
 
             Assert.Null(error);
             Assert.NotEmpty(items);
-            Assert.All(items, item => Assert.True(item.IsDrive));
-            Assert.Contains(items, item => item.FullPath.StartsWith("C:", StringComparison.OrdinalIgnoreCase));
+            Assert.All(items, item => Assert.True(item.IsDrive || item.IsSpecialShortcut));
+            Assert.Contains(items, item => item.IsDrive && item.FullPath.StartsWith("C:", StringComparison.OrdinalIgnoreCase));
+        }
+
+        [Fact]
+        public void LocalFileService_ThisPC_ShouldIncludeSystemAndCloudShortcuts()
+        {
+            var service = new RsyncZilla.Services.LocalFileService();
+            var items = service.GetThisPcItems();
+
+            Assert.NotEmpty(items);
+            Assert.Contains(items, item => item.Category == "Drives");
+            Assert.Contains(items, item => item.Category == "System Folders");
+            Assert.All(items, item => Assert.True(item.UseRealShellIcon));
         }
 
         [Fact]

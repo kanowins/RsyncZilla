@@ -73,6 +73,53 @@ namespace RsyncZilla.Services
             return _iconCache.GetOrAdd(cacheKey, key => ExtractIcon(key, isDirectory, isDrive, name));
         }
 
+        /// <summary>
+        /// Retrieves the actual custom Windows Shell 16x16 icon for an existing local folder, cloud sync root (e.g. Dropbox, OneDrive),
+        /// system folder (Desktop, Downloads, etc.), or drive.
+        /// </summary>
+        public static ImageSource? GetPathIcon(string fullPath, bool isDrive = false)
+        {
+            if (string.IsNullOrWhiteSpace(fullPath))
+            {
+                return GetIcon(true, "folder", isDrive);
+            }
+
+            string cacheKey = "::real_path::" + fullPath;
+            return _iconCache.GetOrAdd(cacheKey, _ =>
+            {
+                try
+                {
+                    SHFILEINFO shinfo = new();
+                    uint flags = SHGFI_ICON | SHGFI_SMALLICON;
+                    IntPtr result = SHGetFileInfo(fullPath, 0, out shinfo, (uint)Marshal.SizeOf(shinfo), flags);
+                    if (result != IntPtr.Zero && shinfo.hIcon != IntPtr.Zero)
+                    {
+                        try
+                        {
+                            var bitmapSource = Imaging.CreateBitmapSourceFromHIcon(
+                                shinfo.hIcon,
+                                Int32Rect.Empty,
+                                BitmapSizeOptions.FromEmptyOptions());
+                            if (bitmapSource.CanFreeze)
+                            {
+                                bitmapSource.Freeze();
+                            }
+                            return bitmapSource;
+                        }
+                        finally
+                        {
+                            DestroyIcon(shinfo.hIcon);
+                        }
+                    }
+                }
+                catch
+                {
+                }
+
+                return GetIcon(true, fullPath, isDrive);
+            });
+        }
+
         private static ImageSource? ExtractIcon(string cacheKey, bool isDirectory, bool isDrive, string originalName)
         {
             try

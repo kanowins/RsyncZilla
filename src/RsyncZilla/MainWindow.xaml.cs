@@ -1111,7 +1111,7 @@ namespace RsyncZilla
         private async Task RenameLocalSelectedItemAsync()
         {
             var item = LocalDataGrid.SelectedItem as FileItem;
-            if (item == null || item.IsParent || item.IsDrive)
+            if (item == null || item.IsParent || item.IsDrive || item.IsSpecialShortcut)
             {
                 return;
             }
@@ -1167,7 +1167,7 @@ namespace RsyncZilla
         private async Task DeleteLocalSelectedItemsAsync()
         {
             var selected = LocalDataGrid.SelectedItems.Cast<FileItem>()
-                .Where(i => i != null && !i.IsParent && !i.IsDrive).ToList();
+                .Where(i => i != null && !i.IsParent && !i.IsDrive && !i.IsSpecialShortcut).ToList();
 
             if (!selected.Any()) return;
 
@@ -1279,6 +1279,187 @@ namespace RsyncZilla
             {
                 kvp.Value.Visibility = (kvp.Key == session.Id) ? Visibility.Visible : Visibility.Collapsed;
             }
+        }
+
+        // ==========================================
+        // LOCAL PLACES / THIS PC POPUP PANEL
+        // ==========================================
+
+        private void LocalPlacesPopup_Opened(object? sender, EventArgs e)
+        {
+            // While the popup is open (StaysOpen=False), disable hit-testing on the toggle button
+            // so clicking the button closes the popup without triggering a second Click that reopens it.
+            LocalPlacesButton.IsHitTestVisible = false;
+        }
+
+        private async void LocalPlacesPopup_Closed(object? sender, EventArgs e)
+        {
+            await Task.Delay(180);
+            LocalPlacesButton.IsHitTestVisible = true;
+        }
+
+        private void LocalPlacesButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (LocalPlacesPopup.IsOpen)
+            {
+                LocalPlacesPopup.IsOpen = false;
+                return;
+            }
+
+            PopulateLocalPlacesPanel();
+            LocalPlacesPopup.IsOpen = true;
+        }
+
+        private void PopulateLocalPlacesPanel()
+        {
+            LocalPlacesPanel.Children.Clear();
+
+            var localService = new LocalFileService();
+            var allItems = localService.GetThisPcItems();
+
+            // 1. Top "This PC" root entry
+            var pcIcon = TryFindResource("FluentComputerIcon") as ImageSource;
+            LocalPlacesPanel.Children.Add(CreatePlacesItemRow(
+                name: "This PC (All Drives & Folders)",
+                subtitle: "Root view",
+                icon: pcIcon,
+                targetPath: "This PC",
+                isCurrent: string.Equals(_viewModel.LocalBrowser.CurrentPath?.Trim(), "This PC", StringComparison.OrdinalIgnoreCase)));
+
+            void AddCategorySection(string categoryKey, string headerTitle)
+            {
+                var group = allItems.Where(i => string.Equals(i.Category, categoryKey, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (group.Count == 0) return;
+
+                LocalPlacesPanel.Children.Add(CreatePlacesSectionHeader(headerTitle));
+                foreach (var item in group)
+                {
+                    var subtitle = item.IsDrive
+                        ? $"{item.DisplayType} • {item.DisplaySize}"
+                        : item.FullPath;
+
+                    bool isCurrent = string.Equals(
+                        _viewModel.LocalBrowser.CurrentPath?.TrimEnd('\\'),
+                        item.FullPath.TrimEnd('\\'),
+                        StringComparison.OrdinalIgnoreCase);
+
+                    LocalPlacesPanel.Children.Add(CreatePlacesItemRow(
+                        name: item.Name,
+                        subtitle: subtitle,
+                        icon: item.Icon,
+                        targetPath: item.FullPath,
+                        isCurrent: isCurrent));
+                }
+            }
+
+            AddCategorySection("Cloud & Apps", "☁️ CLOUD & APPS");
+            AddCategorySection("Drives", "🖴 DRIVES");
+            AddCategorySection("System Folders", "📁 SYSTEM FOLDERS");
+            AddCategorySection("Quick Access", "📌 QUICK ACCESS (EXPLORER)");
+        }
+
+        private static UIElement CreatePlacesSectionHeader(string text)
+        {
+            var panel = new StackPanel { Margin = new Thickness(4, 8, 4, 3) };
+            panel.Children.Add(new Separator
+            {
+                Background = new SolidColorBrush(Color.FromRgb(226, 232, 240)),
+                Margin = new Thickness(0, 0, 0, 5)
+            });
+            panel.Children.Add(new TextBlock
+            {
+                Text = text,
+                FontSize = 10.5,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+                Margin = new Thickness(4, 0, 0, 0)
+            });
+            return panel;
+        }
+
+        private UIElement CreatePlacesItemRow(string name, string subtitle, ImageSource? icon, string targetPath, bool isCurrent)
+        {
+            var defaultBg = isCurrent
+                ? new SolidColorBrush(Color.FromRgb(224, 242, 254))
+                : Brushes.Transparent;
+            var hoverBg = new SolidColorBrush(Color.FromRgb(229, 243, 255));
+            var borderBrush = isCurrent
+                ? new SolidColorBrush(Color.FromRgb(2, 132, 199))
+                : Brushes.Transparent;
+
+            var border = new Border
+            {
+                Background = defaultBg,
+                BorderBrush = borderBrush,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(8, 5, 8, 5),
+                Margin = new Thickness(1),
+                Cursor = Cursors.Hand,
+                ToolTip = targetPath
+            };
+
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            if (icon != null)
+            {
+                var img = new Image
+                {
+                    Source = icon,
+                    Width = 16,
+                    Height = 16,
+                    Margin = new Thickness(0, 0, 8, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
+                Grid.SetColumn(img, 0);
+                grid.Children.Add(img);
+            }
+
+            var nameBlock = new TextBlock
+            {
+                Text = name,
+                FontWeight = FontWeights.SemiBold,
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            Grid.SetColumn(nameBlock, 1);
+            grid.Children.Add(nameBlock);
+
+            if (!string.IsNullOrWhiteSpace(subtitle))
+            {
+                var subBlock = new TextBlock
+                {
+                    Text = subtitle,
+                    FontSize = 11,
+                    Foreground = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
+                    Margin = new Thickness(12, 0, 0, 0),
+                    MaxWidth = 210,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextTrimming = TextTrimming.CharacterEllipsis
+                };
+                Grid.SetColumn(subBlock, 2);
+                grid.Children.Add(subBlock);
+            }
+
+            border.Child = grid;
+
+            border.MouseEnter += (s, e) => border.Background = hoverBg;
+            border.MouseLeave += (s, e) => border.Background = defaultBg;
+            border.MouseLeftButtonUp += async (s, e) =>
+            {
+                e.Handled = true;
+                LocalPlacesPopup.IsOpen = false;
+                await _viewModel.LocalBrowser.NavigateToAsync(targetPath);
+                FocusGridCellOrGrid(LocalDataGrid, null);
+            };
+
+            return border;
         }
 
         private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
