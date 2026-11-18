@@ -1,5 +1,18 @@
 # RsyncZilla Release Notes
 
+## Version 1.7.4 (2026-11-18)
+
+### ✨ New Features & Improvements
+- **Formatted Markdown Release Notes & `Help → Release Notes...` Menu**:
+  - Added a native WPF Markdown renderer (`MarkdownFlowDocumentBuilder`) to display release notes with styled headings, nested bullet lists, **bold** / *italic* text, `inline code`, `<kbd>` badges, dividers, and clickable hyperlinks in the software update dialog (`UpdateDialog`).
+  - Added **`Help → Release Notes...`** (`ReleaseNotesDialog`) so users can browse the full formatted changelog directly inside RsyncZilla at any time.
+- **Terminal Focus Restoration on Toolbar Buttons**:
+  - Clicking any terminal toolbar button (`AI: Off/Confirm/Auto`, `🤖 MCP`, `📋 Copy`, `📥 Paste`, `🧹 Clear`, `🔄 Reconnect`, `✅ Allow`, `❌ Deny`, `Up`, `Refresh`, `Sync`) no longer steals keyboard focus and immediately returns focus to the live `xterm.js` terminal so you can keep typing right away.
+- **Always-Ready Shell Prompt After MCP Commands & Notices**:
+  - Tracked the active remote shell prompt (preserving ANSI colors) and ensured that after every MCP command (`execute_terminal_command`) or AI activity notice (`read_terminal_output`, `read_remote_file`, `write_remote_file`, `list_remote_directory`, `🤖 MCP`), the terminal leaves an active, ready-to-type shell prompt without requiring the user to press <kbd>Enter</kbd>.
+
+---
+
 ## Version 1.7.3 (2026-11-17)
 
 ### ✨ New Features & Improvements

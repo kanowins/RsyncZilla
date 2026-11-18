@@ -18,14 +18,22 @@ namespace RsyncZilla.Services
         private readonly SemaphoreSlim _aiCommandLock = new(1, 1);
         private readonly object _screenBufferLock = new();
         private readonly StringBuilder _screenBuffer = new();
+        private string _currentDisplayLine = string.Empty;
+        private string? _lastPromptAnsi;
+        private volatile bool _isAtPrompt;
+        private TaskCompletionSource<bool>? _promptArrivedTcs;
         private const int MaxScreenBufferChars = 65536;
 
         private static readonly Regex AnsiEscapeRegex = new(
             @"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]|\].*?(?:\x07|\x1B\\))",
             RegexOptions.Compiled);
 
+        private static readonly Regex OscSequenceRegex = new(
+            @"\x1B\].*?(?:\x07|\x1B\\)",
+            RegexOptions.Compiled);
+
         private static readonly Regex InternalSentinelEchoRegex = new(
-            @";\s*printf\s+""\\n__RZ_DONE_[0-9a-f]+_%d_%s__\\n""\s+""\$\?""\s+""\$\(pwd\)""",
+            @"[;\r\n]?\s*printf\s+""\\n__RZ_DONE_[0-9a-f]+_%d_%s__\\n""\s+""\$\?""\s+""\$\(pwd\)""",
             RegexOptions.Compiled);
 
         private static readonly Regex InternalSentinelOutputRegex = new(
@@ -101,6 +109,7 @@ namespace RsyncZilla.Services
                             var displayText = CleanInternalMcpMarkersForDisplay(rawText);
                             if (!string.IsNullOrEmpty(displayText))
                             {
+                                UpdatePromptTracking(displayText);
                                 AppendToScreenBuffer(displayText);
                                 OutputReceived?.Invoke(displayText);
                             }
@@ -154,6 +163,64 @@ namespace RsyncZilla.Services
             return AnsiEscapeRegex.Replace(text, "");
         }
 
+        public static bool IsLikelyShellPrompt(string? line)
+        {
+            if (string.IsNullOrWhiteSpace(line)) return false;
+            var plain = StripAnsiCodes(line);
+            var trimmedEnd = plain.TrimEnd();
+            if (trimmedEnd.Length == 0 || trimmedEnd.Length > 200) return false;
+            if (trimmedEnd.StartsWith("[🤖 AI", StringComparison.Ordinal)) return false;
+
+            char last = trimmedEnd[^1];
+            if (last != '#' && last != '$' && last != '>' && last != '%') return false;
+
+            // Typical prompts contain user@host, a path separator, ~, or a colon (e.g. "root@host:/dir#", "user@host:~$", "[user@host dir]$")
+            return trimmedEnd.Contains('@') || trimmedEnd.Contains(':') || trimmedEnd.Contains('/') || trimmedEnd.Contains('~') || trimmedEnd.Length <= 8;
+        }
+
+        internal void UpdatePromptTracking(string displayText)
+        {
+            TaskCompletionSource<bool>? toNotify = null;
+            lock (_screenBufferLock)
+            {
+                int lastNl = displayText.LastIndexOf('\n');
+                if (lastNl >= 0)
+                {
+                    _currentDisplayLine = displayText.Substring(lastNl + 1);
+                }
+                else
+                {
+                    _currentDisplayLine += displayText;
+                    if (_currentDisplayLine.Length > 1024)
+                    {
+                        _currentDisplayLine = _currentDisplayLine.Substring(_currentDisplayLine.Length - 1024);
+                    }
+                }
+
+                // Handle carriage returns inside the current line (keep text after the last \r unless \r is at the very end)
+                int lastCr = _currentDisplayLine.LastIndexOf('\r');
+                if (lastCr >= 0 && lastCr < _currentDisplayLine.Length - 1)
+                {
+                    _currentDisplayLine = _currentDisplayLine.Substring(lastCr + 1);
+                }
+
+                var candidate = _currentDisplayLine.TrimStart('\r');
+                if (IsLikelyShellPrompt(candidate))
+                {
+                    _lastPromptAnsi = OscSequenceRegex.Replace(candidate, "");
+                    _isAtPrompt = true;
+                    toNotify = _promptArrivedTcs;
+                    _promptArrivedTcs = null;
+                }
+                else if (displayText.Contains('\n'))
+                {
+                    _isAtPrompt = false;
+                }
+            }
+
+            toNotify?.TrySetResult(true);
+        }
+
         public void AppendToScreenBuffer(string text)
         {
             if (string.IsNullOrEmpty(text)) return;
@@ -186,10 +253,34 @@ namespace RsyncZilla.Services
             return string.Join("\n", lines.Skip(lines.Length - maxLines)).Trim();
         }
 
-        public void WriteAiNoticeToTerminal(string notice, string ansiColor = "1;35")
+        public void WriteAiNoticeToTerminal(string notice, string ansiColor = "1;35", bool restorePrompt = true)
         {
             var tag = !string.IsNullOrWhiteSpace(McpLabel) ? $"🤖 AI {McpLabel}" : "🤖 AI MCP";
-            var formatted = $"\r\n\x1b[{ansiColor}m[{tag}]\x1b[0m {notice}\r\n";
+
+            string? promptToRestore;
+            bool wasAtPrompt;
+            lock (_screenBufferLock)
+            {
+                promptToRestore = _lastPromptAnsi;
+                wasAtPrompt = _isAtPrompt;
+                if (!restorePrompt)
+                {
+                    _isAtPrompt = false;
+                    _currentDisplayLine = string.Empty;
+                }
+                else if (!string.IsNullOrEmpty(promptToRestore))
+                {
+                    _isAtPrompt = true;
+                    _currentDisplayLine = promptToRestore;
+                }
+            }
+
+            string prefix = wasAtPrompt ? "\r\x1b[2K" : "\r\n";
+            string suffix = (restorePrompt && !string.IsNullOrEmpty(promptToRestore))
+                ? $"\r\n{promptToRestore}"
+                : "\r\n";
+
+            var formatted = $"{prefix}\x1b[{ansiColor}m[{tag}]\x1b[0m {notice}{suffix}";
             AppendToScreenBuffer(formatted);
             OutputReceived?.Invoke(formatted);
         }
@@ -197,6 +288,8 @@ namespace RsyncZilla.Services
         public void SendInput(string data)
         {
             if (string.IsNullOrEmpty(data)) return;
+
+            _isAtPrompt = false;
 
             if (_shellStream == null || !IsConnected)
             {
@@ -217,6 +310,37 @@ namespace RsyncZilla.Services
             catch { }
         }
 
+        private async Task EnsurePromptVisibleAfterCommandAsync(CancellationToken cancellationToken)
+        {
+            if (_shellStream == null || !IsConnected) return;
+
+            TaskCompletionSource<bool>? waitTcs = null;
+            lock (_screenBufferLock)
+            {
+                if (_isAtPrompt) return;
+                waitTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _promptArrivedTcs = waitTcs;
+            }
+
+            // Wait briefly for the remote shell's natural prompt to arrive right after the sentinel line
+            var completed = await Task.WhenAny(waitTcs.Task, Task.Delay(250, cancellationToken));
+            if (completed == waitTcs.Task && _isAtPrompt)
+            {
+                return;
+            }
+
+            // If the prompt still didn't appear on its own, send a clean Enter so the shell prints a fresh prompt
+            lock (_screenBufferLock)
+            {
+                if (_isAtPrompt) return;
+                waitTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _promptArrivedTcs = waitTcs;
+            }
+
+            SendInput("\r");
+            await Task.WhenAny(waitTcs.Task, Task.Delay(250, cancellationToken));
+        }
+
         public async Task<(bool completed, int? exitCode, string output, string? workingDirectory)> ExecuteCommandAsync(
             string command,
             int timeoutSeconds = 30,
@@ -233,7 +357,7 @@ namespace RsyncZilla.Services
             try
             {
                 var trimmedCommand = command.TrimEnd('\r', '\n');
-                WriteAiNoticeToTerminal($"\x1b[1;33m$ {trimmedCommand}\x1b[0m");
+                WriteAiNoticeToTerminal($"\x1b[1;33m$ {trimmedCommand}\x1b[0m", restorePrompt: false);
 
                 if (CustomCommandExecutor != null)
                 {
@@ -277,7 +401,22 @@ namespace RsyncZilla.Services
                 RawOutputReceived += OnRawData;
                 try
                 {
-                    var payload = $"{trimmedCommand}; printf \"\\n__RZ_DONE_{token}_%d_%s__\\n\" \"$?\" \"$(pwd)\"\r";
+                    var sanitizedCmd = trimmedCommand.TrimEnd();
+                    string separator;
+                    if (sanitizedCmd.Contains('\n') || sanitizedCmd.Contains('#'))
+                    {
+                        separator = "\n";
+                    }
+                    else if (sanitizedCmd.EndsWith(";", StringComparison.Ordinal) || sanitizedCmd.EndsWith("&", StringComparison.Ordinal))
+                    {
+                        separator = " ";
+                    }
+                    else
+                    {
+                        separator = "; ";
+                    }
+
+                    var payload = $"{sanitizedCmd}{separator}printf \"\\n__RZ_DONE_{token}_%d_%s__\\n\" \"$?\" \"$(pwd)\"\r";
                     SendInput(payload);
 
                     using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -295,6 +434,12 @@ namespace RsyncZilla.Services
                             {
                                 WorkingDirectoryDetected?.Invoke(pwd);
                             }
+
+                            try
+                            {
+                                await EnsurePromptVisibleAfterCommandAsync(cancellationToken);
+                            }
+                            catch { }
 
                             return (true, exitCode, cleanOutput, pwd);
                         }

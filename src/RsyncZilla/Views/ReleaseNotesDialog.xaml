@@ -1,0 +1,52 @@
+<Window x:Class="RsyncZilla.Views.ReleaseNotesDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Release Notes - RsyncZilla"
+        Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
+        Height="560" Width="660"
+        WindowStartupLocation="CenterOwner"
+        Background="#F0F2F5" Foreground="#111111"
+        FontFamily="Segoe UI, Arial"
+        MinHeight="400" MinWidth="500">
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- 0. Header -->
+            <RowDefinition Height="*"/>    <!-- 1. Formatted Release Notes -->
+            <RowDefinition Height="Auto"/> <!-- 2. Actions -->
+        </Grid.RowDefinitions>
+
+        <!-- 0. Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Image Source="{StaticResource FluentInfoIcon}" Width="34" Height="34" Margin="0,0,14,0" VerticalAlignment="Center"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="RsyncZilla Release Notes" FontSize="16" FontWeight="Bold" Foreground="#005A9E"/>
+                    <TextBlock x:Name="TxtCurrentVersion" Text="Installed version: 1.7.3" Foreground="#555555" Margin="0,2,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- 1. Release Notes (Formatted Markdown) -->
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Margin="0,0,0,12" Padding="8">
+            <FlowDocumentScrollViewer x:Name="NotesViewer"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      IsToolBarVisible="False"
+                                      IsSelectionEnabled="True"
+                                      Background="Transparent"
+                                      BorderThickness="0"/>
+        </Border>
+
+        <!-- 2. Actions -->
+        <Grid Grid.Row="2">
+            <Button Content="View Releases on GitHub" HorizontalAlignment="Left" Padding="12,7"
+                    Background="#FFFFFF" Foreground="#333333" BorderBrush="#CCCCCC" BorderThickness="1"
+                    Cursor="Hand" Click="ViewGitHubButton_Click"/>
+
+            <Button Content="Close" HorizontalAlignment="Right" Padding="18,7"
+                    Background="#F5F5F5" BorderBrush="#CCCCCC" BorderThickness="1"
+                    Cursor="Hand" IsCancel="True" Click="CloseButton_Click"/>
+        </Grid>
+    </Grid>
+</Window>

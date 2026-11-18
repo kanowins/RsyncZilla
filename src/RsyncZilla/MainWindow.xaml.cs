@@ -102,6 +102,15 @@ namespace RsyncZilla
                 dlg.ShowDialog();
             };
 
+            _viewModel.ShowReleaseNotesAction = () =>
+            {
+                var dlg = new ReleaseNotesDialog(_viewModel.UpdateService.CurrentVersion)
+                {
+                    Owner = this
+                };
+                dlg.ShowDialog();
+            };
+
             _viewModel.ExitAction = () => Close();
 
             Closed += (s, e) => _viewModel.McpServer.Dispose();

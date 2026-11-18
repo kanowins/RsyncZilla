@@ -1,3 +1,8 @@
+using System;
+using System.Linq;
+using System.Threading;
+using System.Windows;
+using System.Windows.Documents;
 using RsyncZilla.Services;
 using Xunit;
 
@@ -60,6 +65,73 @@ namespace RsyncZilla.Tests
 
             Assert.Equal("InstallerUrl", changedProp);
             Assert.Equal("https://example.com/Setup.exe", service.InstallerUrl);
+        }
+
+        [Fact]
+        public void MarkdownFlowDocumentBuilder_ShouldFormatHeadingsListsBoldCodeAndLinks()
+        {
+            Exception? threadEx = null;
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    var md = """
+                    # RsyncZilla Release Notes
+
+                    ## Version 1.7.4 (2026-11-18)
+
+                    ### ✨ Improvements
+                    - **Formatted Notes**: Renders `Markdown` with *emphasis* and [GitHub](https://github.com/kanowins/RsyncZilla).
+                      - Sub-item with <kbd>Enter</kbd> key.
+
+                    ---
+
+                    ```json
+                    { "ok": true }
+                    ```
+                    """;
+
+                    var doc = MarkdownFlowDocumentBuilder.Build(md);
+                    Assert.NotNull(doc);
+                    Assert.True(doc.Blocks.Count >= 6);
+
+                    // Verify there are no raw markdown headings or bold markers left in rendered text
+                    var fullText = new TextRange(doc.ContentStart, doc.ContentEnd).Text;
+                    Assert.DoesNotContain("## Version", fullText);
+                    Assert.DoesNotContain("### ✨", fullText);
+                    Assert.DoesNotContain("**Formatted", fullText);
+                    Assert.Contains("Version 1.7.4", fullText);
+                    Assert.Contains("Formatted Notes", fullText);
+                    Assert.Contains("Markdown", fullText);
+                    Assert.Contains("GitHub", fullText);
+                    Assert.Contains("Enter", fullText);
+                    Assert.Contains("{ \"ok\": true }", fullText);
+
+                    // Verify hyperlink was created
+                    var hasHyperlink = doc.Blocks
+                        .OfType<Paragraph>()
+                        .SelectMany(p => p.Inlines)
+                        .OfType<Hyperlink>()
+                        .Any(h => h.NavigateUri?.AbsoluteUri == "https://github.com/kanowins/RsyncZilla");
+                    Assert.True(hasHyperlink);
+
+                    // Verify empty/null markdown is handled safely
+                    var emptyDoc = MarkdownFlowDocumentBuilder.Build(null);
+                    Assert.Single(emptyDoc.Blocks);
+                }
+                catch (Exception ex)
+                {
+                    threadEx = ex;
+                }
+            });
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            thread.Join();
+
+            if (threadEx != null)
+            {
+                throw new Xunit.Sdk.XunitException($"STA test failed: {threadEx}");
+            }
         }
     }
 }

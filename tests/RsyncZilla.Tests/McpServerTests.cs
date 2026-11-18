@@ -378,5 +378,29 @@ namespace RsyncZilla.Tests
                 """{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"execute_terminal_command","arguments":{"command":"hostname","session_id":"mcp2"}}}""");
             Assert.Contains("from_tab2:hostname", resp2);
         }
+
+        [Fact]
+        public void SshTerminalSession_WriteAiNotice_ShouldPreserveAndRedrawShellPrompt()
+        {
+            Assert.True(SshTerminalSession.IsLikelyShellPrompt("root@ns3135789:/home/debian/oculus# "));
+            Assert.True(SshTerminalSession.IsLikelyShellPrompt("\x1b]0;root@ns3135789: /home/debian/oculus\x07\x1b[01;32mroot@ns3135789\x1b[00m:\x1b[01;34m/home/debian/oculus\x1b[00m# "));
+            Assert.False(SshTerminalSession.IsLikelyShellPrompt("[🤖 AI MCP1] $ ls"));
+            Assert.False(SshTerminalSession.IsLikelyShellPrompt("total 48"));
+
+            using var session = new SshTerminalSession("ns3135789", 22, "root", "pwd") { McpLabel = "MCP1" };
+            var received = new List<string>();
+            session.OutputReceived += text => received.Add(text);
+
+            // Simulate Debian prompt arriving from SSH shell
+            session.UpdatePromptTracking("\x1b]0;root@ns3135789: /home/debian/oculus\x07\x1b[01;32mroot@ns3135789\x1b[00m:\x1b[01;34m/home/debian/oculus\x1b[00m# ");
+
+            // Write an AI notice (e.g. from read_remote_file or MCP config copy)
+            session.WriteAiNoticeToTerminal("📄 Reading remote file: /home/debian/oculus/app.js");
+
+            Assert.Single(received);
+            Assert.StartsWith("\r\x1b[2K", received[0]);
+            Assert.Contains("[🤖 AI MCP1]", received[0]);
+            Assert.EndsWith("\x1b[01;32mroot@ns3135789\x1b[00m:\x1b[01;34m/home/debian/oculus\x1b[00m# ", received[0]);
+        }
     }
 }

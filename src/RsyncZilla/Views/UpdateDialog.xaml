@@ -3,11 +3,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Software Update - RsyncZilla"
         Icon="pack://application:,,,/RsyncZilla;component/app_icon.png"
-        Height="470" Width="580"
+        Height="510" Width="620"
         WindowStartupLocation="CenterOwner"
         Background="#F0F2F5" Foreground="#111111"
         FontFamily="Segoe UI, Arial"
-        MinHeight="350" MinWidth="450">
+        MinHeight="380" MinWidth="480">
 
     <Grid Margin="18">
         <Grid.RowDefinitions>
@@ -28,11 +28,15 @@
             </StackPanel>
         </StackPanel>
 
-        <!-- 1. Release Notes -->
-        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="3" Margin="0,0,0,12" Padding="10">
-            <TextBox x:Name="TxtNotes" IsReadOnly="True" BorderThickness="0" Background="Transparent"
-                     TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" AcceptsReturn="True"
-                     FontFamily="Consolas, Segoe UI" FontSize="12" Foreground="#222222"/>
+        <!-- 1. Release Notes (Formatted Markdown) -->
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Margin="0,0,0,12" Padding="8">
+            <FlowDocumentScrollViewer x:Name="NotesViewer"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      IsToolBarVisible="False"
+                                      IsSelectionEnabled="True"
+                                      Background="Transparent"
+                                      BorderThickness="0"/>
         </Border>
 
         <!-- 2. Download Progress Panel -->

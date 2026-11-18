@@ -718,7 +718,7 @@ namespace RsyncZilla.Services
                 }
             }
 
-            session.TerminalSession.WriteAiNoticeToTerminal($"⌨️ Sent terminal input: {displayInput}");
+            session.TerminalSession.WriteAiNoticeToTerminal($"⌨️ Sent terminal input: {displayInput}", restorePrompt: false);
             session.TerminalSession.SendInput(actualInput);
             _logger?.Invoke($"[MCP] Sent raw input to {session.Title}: {displayInput}", false);
 

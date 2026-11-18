@@ -677,6 +677,11 @@
                         <Image Source="{StaticResource FluentUpdateIcon}" Width="16" Height="16"/>
                     </MenuItem.Icon>
                 </MenuItem>
+                <MenuItem Header="Release _Notes..." Command="{Binding ShowReleaseNotesCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{StaticResource FluentEditIcon}" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
                 <MenuItem Header="RsyncZilla on GitHub..." Command="{Binding OpenUrlCommand}" CommandParameter="https://github.com/kanowins/RsyncZilla">
                     <MenuItem.Icon>

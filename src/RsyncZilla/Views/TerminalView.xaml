@@ -35,6 +35,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8,3"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -64,6 +65,7 @@
             <Setter Property="BorderBrush" Value="#CCCCCC"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -106,6 +108,7 @@
             <Setter Property="BorderBrush" Value="#CCCCCC"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
@@ -168,6 +171,7 @@
 
                     <Button Grid.Column="2" ToolTip="Up one level"
                             Command="{Binding RemoteBrowser.NavigateUpCommand}"
+                            Click="ReturnFocusToTerminal_Click"
                             Style="{StaticResource TerminalSecondaryButtonStyle}" Width="28" Height="26" Padding="0" Margin="0,0,4,0">
                         <ContentControl ContentTemplate="{StaticResource FolderUpIconTemplate}" Focusable="False"/>
                     </Button>
@@ -346,6 +350,7 @@
                             <!-- AI MCP Permission Mode Button -->
                             <Button x:Name="AiModeButton"
                                     Command="{Binding CycleAiPermissionCommand}"
+                                    Click="ReturnFocusToTerminal_Click"
                                     ToolTip="{Binding AiPermissionTooltip}"
                                     Margin="0,0,4,0">
                                 <Button.Style>
@@ -369,9 +374,9 @@
                                 </Button.Style>
                                 <Button.ContextMenu>
                                     <ContextMenu Background="#1E232B" Foreground="#E2E8F0" BorderBrush="#384152">
-                                        <MenuItem Header="🔒 AI: Off (Default - Disabled)" Command="{Binding SetAiPermissionCommand}" CommandParameter="Off"/>
-                                        <MenuItem Header="🛡️ AI: Read &amp; Confirm (Ask before running commands)" Command="{Binding SetAiPermissionCommand}" CommandParameter="ReadAndConfirm"/>
-                                        <MenuItem Header="⚡ AI: Auto (Full terminal control)" Command="{Binding SetAiPermissionCommand}" CommandParameter="Auto"/>
+                                        <MenuItem Header="🔒 AI: Off (Default - Disabled)" Command="{Binding SetAiPermissionCommand}" CommandParameter="Off" Click="ReturnFocusToTerminal_Click"/>
+                                        <MenuItem Header="🛡️ AI: Read &amp; Confirm (Ask before running commands)" Command="{Binding SetAiPermissionCommand}" CommandParameter="ReadAndConfirm" Click="ReturnFocusToTerminal_Click"/>
+                                        <MenuItem Header="⚡ AI: Auto (Full terminal control)" Command="{Binding SetAiPermissionCommand}" CommandParameter="Auto" Click="ReturnFocusToTerminal_Click"/>
                                         <Separator Background="#384152"/>
                                         <MenuItem Header="📋 Copy MCP Server Config JSON..." Click="CopyMcpConfigButton_Click"/>
                                     </ContextMenu>
@@ -436,6 +441,7 @@
 
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                             <Button Command="{Binding ApproveAiActionCommand}"
+                                    Click="ReturnFocusToTerminal_Click"
                                     Style="{StaticResource TerminalToolbarButtonStyle}"
                                     Background="#16A34A"
                                     BorderBrush="#22C55E"
@@ -446,6 +452,7 @@
                                 <TextBlock Text="✅ Allow" FontWeight="Bold" FontSize="11"/>
                             </Button>
                             <Button Command="{Binding RejectAiActionCommand}"
+                                    Click="ReturnFocusToTerminal_Click"
                                     Style="{StaticResource TerminalToolbarButtonStyle}"
                                     Background="#DC2626"
                                     BorderBrush="#EF4444"

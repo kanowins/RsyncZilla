@@ -28,9 +28,10 @@ namespace RsyncZilla.Views
 
             TxtTitle.Text = $"RsyncZilla {latestVersion} is available!";
             TxtVersions.Text = $"Installed version: {currentVersion}  |  Latest version: {latestVersion}";
-            TxtNotes.Text = string.IsNullOrWhiteSpace(releaseNotes)
+            var notesText = string.IsNullOrWhiteSpace(releaseNotes)
                 ? "No detailed release notes provided. Click below to view release assets on GitHub."
                 : releaseNotes;
+            NotesViewer.Document = MarkdownFlowDocumentBuilder.Build(notesText);
 
             if (string.IsNullOrWhiteSpace(_installerUrl) && _updateService?.InstallerUrl != null)
             {

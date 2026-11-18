@@ -520,9 +520,33 @@ namespace RsyncZilla.Views
             TreeStatusOverlay.Visibility = Visibility.Collapsed;
         }
 
+        private void FocusTerminal()
+        {
+            Dispatcher.BeginInvoke(new Action(async () =>
+            {
+                try
+                {
+                    if (_isDisposed) return;
+                    TerminalWebView.Focus();
+                    Keyboard.Focus(TerminalWebView);
+                    if (TerminalWebView.CoreWebView2 != null)
+                    {
+                        await TerminalWebView.CoreWebView2.ExecuteScriptAsync("if (typeof term !== 'undefined') term.focus();");
+                    }
+                }
+                catch { }
+            }), System.Windows.Threading.DispatcherPriority.Input);
+        }
+
+        private void ReturnFocusToTerminal_Click(object sender, RoutedEventArgs e)
+        {
+            FocusTerminal();
+        }
+
         private async void RefreshTreeButton_Click(object sender, RoutedEventArgs e)
         {
             await EnsureTreeLoadedAsync(targetPath: null, forceReload: true);
+            FocusTerminal();
         }
 
         // ==========================================
@@ -540,6 +564,10 @@ namespace RsyncZilla.Views
                 }
             }
             catch { }
+            finally
+            {
+                FocusTerminal();
+            }
         }
 
         private void PasteButton_Click(object sender, RoutedEventArgs e)
@@ -550,10 +578,13 @@ namespace RsyncZilla.Views
                 {
                     var text = Clipboard.GetText();
                     _session.TerminalSession?.SendInput(text);
-                    TerminalWebView.Focus();
                 }
             }
             catch { }
+            finally
+            {
+                FocusTerminal();
+            }
         }
 
         private async void ClearButton_Click(object sender, RoutedEventArgs e)
@@ -563,10 +594,13 @@ namespace RsyncZilla.Views
                 if (TerminalWebView.CoreWebView2 != null)
                 {
                     await TerminalWebView.CoreWebView2.ExecuteScriptAsync("term.clear();");
-                    TerminalWebView.Focus();
                 }
             }
             catch { }
+            finally
+            {
+                FocusTerminal();
+            }
         }
 
         public async Task ReconnectAllAsync()
@@ -578,6 +612,7 @@ namespace RsyncZilla.Views
         private async void ReconnectButton_Click(object sender, RoutedEventArgs e)
         {
             await ReconnectAllAsync();
+            FocusTerminal();
         }
 
         [DllImport("user32.dll", SetLastError = true)]
@@ -675,6 +710,10 @@ namespace RsyncZilla.Views
             {
                 _mainViewModel.AddLog($"[MCP] Failed to copy MCP config: {ex.Message}", true);
             }
+            finally
+            {
+                FocusTerminal();
+            }
         }
 
         // ==========================================
@@ -692,8 +731,8 @@ namespace RsyncZilla.Views
             {
                 var escaped = _session.RemoteBrowser.CurrentPath.Replace("'", "'\\''");
                 _session.TerminalSession?.SendInput($"cd '{escaped}'\r");
-                TerminalWebView.Focus();
             }
+            FocusTerminal();
         }
 
         private void OnRemoteBrowserPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

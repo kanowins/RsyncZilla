@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Updates the RsyncZilla project version across all project files.
 

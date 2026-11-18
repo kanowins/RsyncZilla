@@ -199,11 +199,13 @@ namespace RsyncZilla.ViewModels
         public ICommand CheckForUpdatesCommand { get; }
         public ICommand ShowAboutCommand { get; }
         public ICommand ShowUpdateCommand { get; }
+        public ICommand ShowReleaseNotesCommand { get; }
         public ICommand ExitCommand { get; }
         public ICommand OpenUrlCommand { get; }
 
         public Action? ShowAboutAction { get; set; }
         public Action? ShowUpdateAction { get; set; }
+        public Action? ShowReleaseNotesAction { get; set; }
         public Action? ExitAction { get; set; }
 
         public Func<IEnumerable<FileItem>>? GetLocalSelectedItemsFunc { get; set; }
@@ -296,6 +298,7 @@ namespace RsyncZilla.ViewModels
             ExitCommand = new RelayCommand(() => ExitAction?.Invoke());
             ShowAboutCommand = new RelayCommand(() => ShowAboutAction?.Invoke());
             ShowUpdateCommand = new RelayCommand(() => ShowUpdateAction?.Invoke());
+            ShowReleaseNotesCommand = new RelayCommand(() => ShowReleaseNotesAction?.Invoke());
             CheckForUpdatesCommand = new RelayCommand(async () =>
             {
                 AddLog("Checking for updates on GitHub...", false);
