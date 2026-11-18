@@ -179,3 +179,10 @@ The binary releases (standalone ZIP packages and Windows installers) bundle pre-
 * **OpenSSL (`cygcrypto-3.dll`)**: [Apache License 2.0](https://www.openssl.org/source/license.html)
 
 For complete details, license texts, copyright notices, and instructions on accessing the corresponding source code for all bundled and managed components in compliance with GPLv3 / LGPLv3, please refer to **[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)**.
+
+---
+
+## 🔐 Code Signing & Privacy
+
+- **Code Signing Policy:** Free code signing provided by [SignPath.io](https://signpath.io/), certificate by [SignPath Foundation](https://signpath.org/). See **[CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md)** for full details on team roles and build provenance.
+- **Privacy Policy:** RsyncZilla collects zero telemetry and never transmits personal data. See **[PRIVACY.md](PRIVACY.md)** for full details on network behavior and local storage.
